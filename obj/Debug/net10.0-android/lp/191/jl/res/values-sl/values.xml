@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding='utf-8' standalone='no'?>
+<resources>
+<!-- blaze-out/arm64-v8a-opt/genfiles/java/com/google/android/gmscore/integ/client/base/res/values-sl/strings.xml -->
+<eat-comment/>
+<string name="common_google_play_services_enable_button" msgid="2523291102206661146">Omogoči</string>
+<string name="common_google_play_services_enable_text" msgid="227660514972886228">Storitve Google Play morajo biti omogočene za aplikacijo %1$s.</string>
+<string name="common_google_play_services_enable_title" msgid="5122002158466380389">Omogočanje storitev Google Play</string>
+<string name="common_google_play_services_install_button" msgid="7153882981874058840">Namesti</string>
+<string name="common_google_play_services_install_text">Če želite še naprej uporabljati aplikacijo %1$s, namestite storitve Google Play.</string>
+<string name="common_google_play_services_install_title" msgid="7215213145546190223">Namestite storitve Google Play</string>
+<string name="common_google_play_services_notification_channel_name">Dostopnost storitev Google Play</string>
+<string name="common_google_play_services_notification_ticker">Napaka storitev Google Play</string>
+<string name="common_google_play_services_signin_required_text" msgid="9053896323427875356">Aplikacija %1$s se ni mogla povezati s storitvami Google Play. Prijavite se v račun Google.</string>
+<string name="common_google_play_services_signin_required_title">Zahtevana je prijava</string>
+<string name="common_google_play_services_try_again_text">Aplikacija %1$s se ni mogla povezati s storitvami Google Play. Poskusite znova.</string>
+<string name="common_google_play_services_try_again_title">Poskusite znova.</string>
+<string name="common_google_play_services_unsupported_text">Aplikacija %1$s ne more delovati, ker vaša naprava ne podpira storitev Google Play. Uporabite podprto napravo.</string>
+<string name="common_google_play_services_unsupported_title">Naprava ni združljiva</string>
+<string name="common_google_play_services_update_button" msgid="6556509956452265614">Posodobi</string>
+<string name="common_google_play_services_update_text" msgid="9053896323427875356">Posodobite storitve Google Play, če želite uporabljati aplikacijo %1$s.</string>
+<string name="common_google_play_services_update_title" msgid="6006316683626838685">Posodobitev storitev Google Play</string>
+<string name="common_google_play_services_updating_client_title">Posodabljanje storitev Google Play</string>
+<string name="common_google_play_services_updating_text">Aplikacija %1$s bo na voljo po končani posodobitvi storitev Google Play.</string>
+<string name="common_google_play_services_wear_update_text">Posodobite storitve Google Play, če želite uporabljati aplikacijo %1$s.</string>
+<string name="common_open_on_phone">Odpiranje v telefonu</string>
+<string name="common_signin_button_text">Prijava</string>
+<string name="common_signin_button_text_long">Prijava z računom Google</string>
+</resources>

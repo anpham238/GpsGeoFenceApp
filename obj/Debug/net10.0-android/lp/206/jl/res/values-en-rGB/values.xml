@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding='utf-8' standalone='no'?>
+<resources>
+<!-- blaze-out/arm64-v8a-opt/genfiles/java/com/google/android/gmscore/integ/client/base/res/values-en-rGB/strings.xml -->
+<eat-comment/>
+<string name="common_google_play_services_enable_button" msgid="2523291102206661146">Enable</string>
+<string name="common_google_play_services_enable_text" msgid="227660514972886228">Google Play services must be enabled for %1$s.</string>
+<string name="common_google_play_services_enable_title" msgid="5122002158466380389">Enable Google Play services</string>
+<string name="common_google_play_services_install_button" msgid="7153882981874058840">Install</string>
+<string name="common_google_play_services_install_text">Install Google Play services to continue using %1$s.</string>
+<string name="common_google_play_services_install_title" msgid="7215213145546190223">Install Google Play services</string>
+<string name="common_google_play_services_notification_channel_name">Google Play services availability</string>
+<string name="common_google_play_services_notification_ticker">Google Play services error</string>
+<string name="common_google_play_services_signin_required_text" msgid="9053896323427875356">%1$s couldn\'t connect to Google Play services. Please sign in to your Google Account.</string>
+<string name="common_google_play_services_signin_required_title">Sign-in required</string>
+<string name="common_google_play_services_try_again_text">%1$s couldn\'t connect to Google Play services. Please try again.</string>
+<string name="common_google_play_services_try_again_title">Please try again</string>
+<string name="common_google_play_services_unsupported_text">%1$s can\'t run because your device doesn\'t support Google Play services. Please use a supported device.</string>
+<string name="common_google_play_services_unsupported_title">Device not compatible</string>
+<string name="common_google_play_services_update_button" msgid="6556509956452265614">Update</string>
+<string name="common_google_play_services_update_text" msgid="9053896323427875356">Update Google Play services to use %1$s.</string>
+<string name="common_google_play_services_update_title" msgid="6006316683626838685">Update Google Play services</string>
+<string name="common_google_play_services_updating_client_title">Google Play services updating</string>
+<string name="common_google_play_services_updating_text">%1$s will be available once the Google Play services update is complete.</string>
+<string name="common_google_play_services_wear_update_text">Update Google Play services to use %1$s.</string>
+<string name="common_open_on_phone">Open on phone</string>
+<string name="common_signin_button_text">Sign In</string>
+<string name="common_signin_button_text_long">Sign in with Google</string>
+</resources>

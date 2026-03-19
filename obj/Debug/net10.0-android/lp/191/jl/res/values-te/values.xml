@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding='utf-8' standalone='no'?>
+<resources>
+<!-- blaze-out/arm64-v8a-opt/genfiles/java/com/google/android/gmscore/integ/client/base/res/values-te/strings.xml -->
+<eat-comment/>
+<string name="common_google_play_services_enable_button" msgid="2523291102206661146">ప్రారంభించండి</string>
+<string name="common_google_play_services_enable_text" msgid="227660514972886228">%1$s కోసం Google Play సర్వీస్‌లను తప్పనిసరిగా ఎనేబుల్ చేయాలి.</string>
+<string name="common_google_play_services_enable_title" msgid="5122002158466380389">Google Play సేవలను ప్రారంభించండి</string>
+<string name="common_google_play_services_install_button" msgid="7153882981874058840">ఇన్‌స్టాల్ చేయండి</string>
+<string name="common_google_play_services_install_text">%1$s‌ను ఉపయోగించడం కొనసాగించడానికి Google Play సర్వీసులను ఇన్‌స్టాల్ చేయండి.</string>
+<string name="common_google_play_services_install_title" msgid="7215213145546190223">Google Play సర్వీస్‌లను ఇన్‌స్టాల్ చేయండి</string>
+<string name="common_google_play_services_notification_channel_name">Google Play సేవల లభ్యత</string>
+<string name="common_google_play_services_notification_ticker">Google Play సేవల ఎర్రర్</string>
+<string name="common_google_play_services_signin_required_text" msgid="9053896323427875356">%1$s Google Play సర్వీస్‌లకు కనెక్ట్ కాలేదు. మీ Google ఖాతాకు సైన్ ఇన్ చేయండి.</string>
+<string name="common_google_play_services_signin_required_title">సైన్ ఇన్ అవసరం</string>
+<string name="common_google_play_services_try_again_text">%1$s Google Play సర్వీస్‌లకు కనెక్ట్ కాలేదు. దయచేసి మళ్లీ ట్రై చేయండి.</string>
+<string name="common_google_play_services_try_again_title">దయచేసి మళ్లీ ట్రై చేయండి</string>
+<string name="common_google_play_services_unsupported_text">మీ డివైజ్ Google Play సర్వీసులకు సపోర్ట్ చేయనందున %1$s రన్ అవ్వదు. దయచేసి సపోర్ట్ చేసే డివైజ్‌ను ఉపయోగించండి.</string>
+<string name="common_google_play_services_unsupported_title">ఈ డివైజ్ అనుకూలమైనది కాదు</string>
+<string name="common_google_play_services_update_button" msgid="6556509956452265614">అప్‌డేట్ చేయండి</string>
+<string name="common_google_play_services_update_text" msgid="9053896323427875356">%1$s‌ను ఉపయోగించడానికి Google Play సర్వీసులను అప్‌డేట్ చేయండి.</string>
+<string name="common_google_play_services_update_title" msgid="6006316683626838685">Google Play సేవలను అప్‌డేట్ చేయండి</string>
+<string name="common_google_play_services_updating_client_title">Google Play సర్వీసుల అప్‌డేట్ అవుతున్నాయి</string>
+<string name="common_google_play_services_updating_text">Google Play సర్వీసుల అప్‌డేట్ పూర్తయిన తర్వాత %1$s అందుబాటులో ఉంటుంది.</string>
+<string name="common_google_play_services_wear_update_text">%1$s‌ను ఉపయోగించడానికి Google Play సర్వీసులను అప్‌డేట్ చేయండి.</string>
+<string name="common_open_on_phone">ఫోన్‌లో తెరువు</string>
+<string name="common_signin_button_text">సైన్ ఇన్ చేయండి</string>
+<string name="common_signin_button_text_long">Googleతో సైన్ ఇన్ చేయండి</string>
+</resources>

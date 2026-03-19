@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding='utf-8' standalone='no'?>
+<resources>
+<!-- blaze-out/arm64-v8a-opt/genfiles/java/com/google/android/gmscore/integ/client/base/res/values-tl/strings.xml -->
+<eat-comment/>
+<string name="common_google_play_services_enable_button" msgid="2523291102206661146">I-enable</string>
+<string name="common_google_play_services_enable_text" msgid="227660514972886228">Dapat naka-enable ang mga serbisyo ng Google Play para sa %1$s.</string>
+<string name="common_google_play_services_enable_title" msgid="5122002158466380389">I-enable ang mga serbisyo ng Google Play</string>
+<string name="common_google_play_services_install_button" msgid="7153882981874058840">I-install</string>
+<string name="common_google_play_services_install_text">I-install ang mga serbisyo ng Google Play para patuloy na magamit ang %1$s.</string>
+<string name="common_google_play_services_install_title" msgid="7215213145546190223">I-install ang serbisyo ng Google Play</string>
+<string name="common_google_play_services_notification_channel_name">Availability ng serbisyo ng Google Play</string>
+<string name="common_google_play_services_notification_ticker">Error sa Mga Serbisyo ng Google Play</string>
+<string name="common_google_play_services_signin_required_text" msgid="9053896323427875356">Hindi makakonekta ang %1$s sa mga serbisyo ng Google Play. Mag-sign in sa iyong Google account.</string>
+<string name="common_google_play_services_signin_required_title">Kailangnang mag-sign-in</string>
+<string name="common_google_play_services_try_again_text">Hindi makakonekta ang %1$s sa mga serbisyo ng Google Play. Pakisubukan ulit.</string>
+<string name="common_google_play_services_try_again_title">Pakisubukan ulit</string>
+<string name="common_google_play_services_unsupported_text">Hindi mapapatakbo ang %1$s dahil hindi sinusuportahan ng iyong device ang mga serbisyo ng Google Play. Gumamit ng sinusuportahang device.</string>
+<string name="common_google_play_services_unsupported_title">Hindi compatible ang device</string>
+<string name="common_google_play_services_update_button" msgid="6556509956452265614">I-update</string>
+<string name="common_google_play_services_update_text" msgid="9053896323427875356">I-update ang mga serbisyo ng Google Play para magamit ang %1$s.</string>
+<string name="common_google_play_services_update_title" msgid="6006316683626838685">I-update ang mga serbisyo ng Google Play</string>
+<string name="common_google_play_services_updating_client_title">Nag-a-update ang serbisyo ng Google Play</string>
+<string name="common_google_play_services_updating_text">Magiging available ang %1$s kapag nakumpleto na ang pag-update ng mga serbisyo ng Google Play.</string>
+<string name="common_google_play_services_wear_update_text">I-update ang mga serbisyo ng Google Play para magamit ang %1$s.</string>
+<string name="common_open_on_phone">Buksan sa telepono</string>
+<string name="common_signin_button_text">Mag-sign in</string>
+<string name="common_signin_button_text_long">Mag-sign in sa Google</string>
+</resources>

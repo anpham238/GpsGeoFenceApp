@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding='utf-8' standalone='no'?>
+<resources>
+<!-- blaze-out/arm64-v8a-opt/genfiles/java/com/google/android/gmscore/integ/client/base/res/values-sr/strings.xml -->
+<eat-comment/>
+<string name="common_google_play_services_enable_button" msgid="2523291102206661146">Омогући</string>
+<string name="common_google_play_services_enable_text" msgid="227660514972886228">Google Play услуге морају да буду омогућене за: %1$s.</string>
+<string name="common_google_play_services_enable_title" msgid="5122002158466380389">Омогућите Google Play услуге</string>
+<string name="common_google_play_services_install_button" msgid="7153882981874058840">Инсталирај</string>
+<string name="common_google_play_services_install_text">Инсталирајте Google Play услуге да бисте наставили да користите: %1$s.</string>
+<string name="common_google_play_services_install_title" msgid="7215213145546190223">Инсталирајте Google Play услуге</string>
+<string name="common_google_play_services_notification_channel_name">Доступност Google Play услуга</string>
+<string name="common_google_play_services_notification_ticker">Грешка Google Play услуга</string>
+<string name="common_google_play_services_signin_required_text" msgid="9053896323427875356">Повезивање апликације %1$s са Google Play услугама није успело. Пријавите се на Google налог.</string>
+<string name="common_google_play_services_signin_required_title">Треба да се пријавите</string>
+<string name="common_google_play_services_try_again_text">Повезивање апликације %1$s са Google Play услугама није успело. Пробајте поново.</string>
+<string name="common_google_play_services_try_again_title">Пробајте поново</string>
+<string name="common_google_play_services_unsupported_text">%1$s не може да се покрене јер уређај не подржава Google Play услуге. Користите подржани уређај.</string>
+<string name="common_google_play_services_unsupported_title">Уређај није компатибилан</string>
+<string name="common_google_play_services_update_button" msgid="6556509956452265614">Ажурирај</string>
+<string name="common_google_play_services_update_text" msgid="9053896323427875356">Ажурирајте Google Play услуге да бисте користили: %1$s.</string>
+<string name="common_google_play_services_update_title" msgid="6006316683626838685">Ажурирајте Google Play услуге</string>
+<string name="common_google_play_services_updating_client_title">Google Play услуге се ажурирају</string>
+<string name="common_google_play_services_updating_text">Апликација %1$s ће бити доступна када се заврши ажурирање Google Play услуга.</string>
+<string name="common_google_play_services_wear_update_text">Ажурирајте Google Play услуге да бисте користили: %1$s.</string>
+<string name="common_open_on_phone">Отвори на телефону</string>
+<string name="common_signin_button_text">Пријави ме</string>
+<string name="common_signin_button_text_long">Пријави ме на Google</string>
+</resources>

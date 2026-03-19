@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding='utf-8' standalone='no'?>
+<resources>
+<!-- blaze-out/arm64-v8a-opt/genfiles/java/com/google/android/gmscore/integ/client/base/res/values-bg/strings.xml -->
+<eat-comment/>
+<string name="common_google_play_services_enable_button" msgid="2523291102206661146">Активиране</string>
+<string name="common_google_play_services_enable_text" msgid="227660514972886228">Услугите за Google Play трябва да са активирани за %1$s.</string>
+<string name="common_google_play_services_enable_title" msgid="5122002158466380389">Активиране на услугите за Google Play</string>
+<string name="common_google_play_services_install_button" msgid="7153882981874058840">Инсталиране</string>
+<string name="common_google_play_services_install_text">Инсталирайте услугите за Google Play, за да продължите да използвате %1$s.</string>
+<string name="common_google_play_services_install_title" msgid="7215213145546190223">Инсталиране на услугите за Google Play</string>
+<string name="common_google_play_services_notification_channel_name">Наличност на услугите за Google Play</string>
+<string name="common_google_play_services_notification_ticker">Грешка в услугите за Google Play</string>
+<string name="common_google_play_services_signin_required_text" msgid="9053896323427875356">%1$s не успя да се свърже с услугите за Google Play. Моля, влезте в профила си в Google.</string>
+<string name="common_google_play_services_signin_required_title">Изисква се влизане в профил</string>
+<string name="common_google_play_services_try_again_text">%1$s не успя да се свърже с услугите за Google Play. Моля, опитайте отново.</string>
+<string name="common_google_play_services_try_again_title">Моля, опитайте отново</string>
+<string name="common_google_play_services_unsupported_text">%1$s не може да стартира, защото устройството ви не поддържа услугите за Google Play. Моля, използвайте поддържано устройство.</string>
+<string name="common_google_play_services_unsupported_title">Устройството не е съвместимо</string>
+<string name="common_google_play_services_update_button" msgid="6556509956452265614">Актуализиране</string>
+<string name="common_google_play_services_update_text" msgid="9053896323427875356">Актуализирайте услугите за Google Play, за да използвате %1$s.</string>
+<string name="common_google_play_services_update_title" msgid="6006316683626838685">Актуализиране на услугите за Google Play</string>
+<string name="common_google_play_services_updating_client_title">Услугите за Google Play се актуализират</string>
+<string name="common_google_play_services_updating_text">%1$s ще бъде налице, след като актуализирането на услугите за Google Play завърши.</string>
+<string name="common_google_play_services_wear_update_text">Актуализирайте услугите за Google Play, за да използвате %1$s.</string>
+<string name="common_open_on_phone">Отваряне на телефона</string>
+<string name="common_signin_button_text">Вход</string>
+<string name="common_signin_button_text_long">Вход с Google</string>
+</resources>

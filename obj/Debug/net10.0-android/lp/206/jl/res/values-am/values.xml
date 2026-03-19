@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding='utf-8' standalone='no'?>
+<resources>
+<!-- blaze-out/arm64-v8a-opt/genfiles/java/com/google/android/gmscore/integ/client/base/res/values-am/strings.xml -->
+<eat-comment/>
+<string name="common_google_play_services_enable_button" msgid="2523291102206661146">አንቃ</string>
+<string name="common_google_play_services_enable_text" msgid="227660514972886228">Google Play አገልግሎቶች ለ%1$s መንቃት አለበት።</string>
+<string name="common_google_play_services_enable_title" msgid="5122002158466380389">Google Play አገልግሎቶችን ያንቁ</string>
+<string name="common_google_play_services_install_button" msgid="7153882981874058840">ጫን</string>
+<string name="common_google_play_services_install_text">%1$sን መጠቀም ለመቀጠል የGoogle Play አገልግሎቶችን ይጫኑ።</string>
+<string name="common_google_play_services_install_title" msgid="7215213145546190223">የGoogle Play አገልግሎቶችን ይጫኑ</string>
+<string name="common_google_play_services_notification_channel_name">Google Play አገልግሎቶች ተገኝነት</string>
+<string name="common_google_play_services_notification_ticker">የGoogle Play አገልግሎቶች ስህተት</string>
+<string name="common_google_play_services_signin_required_text" msgid="9053896323427875356">%1$s ከGoogle Play አገልግሎቶች ጋር መገናኘት አልቻለም። ወደ የእርስዎ Google መለያ ይግቡ።</string>
+<string name="common_google_play_services_signin_required_title">በመለያ መግባት ያስፈልጋል</string>
+<string name="common_google_play_services_try_again_text">%1$s ከGoogle Play አገልግሎቶች ጋር መገናኘት አልቻለም። እባክዎ እንደገና ይሞክሩ።</string>
+<string name="common_google_play_services_try_again_title">እባክዎ እንደገና ይሞክሩ</string>
+<string name="common_google_play_services_unsupported_text">መሣሪያዎ Google Play አገልግሎቶችን ስለማይደግፍ %1$s ሊያሄድ አይችልም። እባክዎ የሚደገፍ መሣሪያ ይጠቀሙ።</string>
+<string name="common_google_play_services_unsupported_title">መሣሪያ ተኳዃኝ አይደለም</string>
+<string name="common_google_play_services_update_button" msgid="6556509956452265614">ያዘምኑ</string>
+<string name="common_google_play_services_update_text" msgid="9053896323427875356">%1$sን ለመጠቀም የGoogle Play አገልግሎቶችን ያዘምኑ።</string>
+<string name="common_google_play_services_update_title" msgid="6006316683626838685">Google Play አገልግሎቶችን ያዘምኑ</string>
+<string name="common_google_play_services_updating_client_title">የGoogle Play አገልግሎቶች፦ በማዘመን ላይ</string>
+<string name="common_google_play_services_updating_text">አንዴ የGoogle Play አገልግሎቶች ዝማኔው ከተጠናቀቀ በኋላ %1$s ይገኛል።</string>
+<string name="common_google_play_services_wear_update_text">%1$sን ለመጠቀም የGoogle Play አገልግሎቶችን ያዘምኑ።</string>
+<string name="common_open_on_phone">ስልክ ላይ ክፈት</string>
+<string name="common_signin_button_text">ግባ</string>
+<string name="common_signin_button_text_long">በGoogle ይግቡ</string>
+</resources>

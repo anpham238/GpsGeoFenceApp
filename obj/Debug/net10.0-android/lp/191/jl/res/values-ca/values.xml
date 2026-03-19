@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding='utf-8' standalone='no'?>
+<resources>
+<!-- blaze-out/arm64-v8a-opt/genfiles/java/com/google/android/gmscore/integ/client/base/res/values-ca/strings.xml -->
+<eat-comment/>
+<string name="common_google_play_services_enable_button" msgid="2523291102206661146">Activa</string>
+<string name="common_google_play_services_enable_text" msgid="227660514972886228">Serveis de Google Play s\'ha d\'activar per a %1$s.</string>
+<string name="common_google_play_services_enable_title" msgid="5122002158466380389">Activa Serveis de Google Play</string>
+<string name="common_google_play_services_install_button" msgid="7153882981874058840">Instal·la</string>
+<string name="common_google_play_services_install_text">Instal·la Serveis de Google Play per continuar utilitzant %1$s.</string>
+<string name="common_google_play_services_install_title" msgid="7215213145546190223">Instal·la Serveis de Google Play</string>
+<string name="common_google_play_services_notification_channel_name">Disponibilitat de serveis de Google Play</string>
+<string name="common_google_play_services_notification_ticker">Error de Serveis de Google Play</string>
+<string name="common_google_play_services_signin_required_text" msgid="9053896323427875356">%1$s no s\'ha pogut connectar a Serveis de Google Play. Cal iniciar la sessió al teu Compte de Google.</string>
+<string name="common_google_play_services_signin_required_title">Cal iniciar la sessió</string>
+<string name="common_google_play_services_try_again_text">%1$s no s\'ha pogut connectar a Serveis de Google Play. Torna-ho a provar.</string>
+<string name="common_google_play_services_try_again_title">Torna-ho a provar</string>
+<string name="common_google_play_services_unsupported_text">%1$s no es pot executar perquè el teu dispositiu no admet Serveis de Google Play. Utilitza un dispositiu compatible.</string>
+<string name="common_google_play_services_unsupported_title">El dispositiu no és compatible</string>
+<string name="common_google_play_services_update_button" msgid="6556509956452265614">Actualitza</string>
+<string name="common_google_play_services_update_text" msgid="9053896323427875356">Actualitza Serveis de Google Play per utilitzar %1$s.</string>
+<string name="common_google_play_services_update_title" msgid="6006316683626838685">Actualitza Serveis de Google Play</string>
+<string name="common_google_play_services_updating_client_title">Serveis de Google Play s\'està actualitzant</string>
+<string name="common_google_play_services_updating_text">%1$s estarà disponible un cop s\'hagi completat l\'actualització de Serveis de Google Play.</string>
+<string name="common_google_play_services_wear_update_text">Actualitza Serveis de Google Play per utilitzar %1$s.</string>
+<string name="common_open_on_phone">Obre al telèfon</string>
+<string name="common_signin_button_text">Inicia sessió</string>
+<string name="common_signin_button_text_long">Inicia la sessió amb Google</string>
+</resources>

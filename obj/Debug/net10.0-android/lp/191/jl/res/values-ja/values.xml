@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding='utf-8' standalone='no'?>
+<resources>
+<!-- blaze-out/arm64-v8a-opt/genfiles/java/com/google/android/gmscore/integ/client/base/res/values-ja/strings.xml -->
+<eat-comment/>
+<string name="common_google_play_services_enable_button" msgid="2523291102206661146">有効にする</string>
+<string name="common_google_play_services_enable_text" msgid="227660514972886228">%1$s を使用するには、Google Play 開発者サービスを有効にする必要があります。</string>
+<string name="common_google_play_services_enable_title" msgid="5122002158466380389">Google Play開発者サービスの有効化</string>
+<string name="common_google_play_services_install_button" msgid="7153882981874058840">インストール</string>
+<string name="common_google_play_services_install_text">%1$s の使用を継続するには、Google Play 開発者サービスをインストールしてください。</string>
+<string name="common_google_play_services_install_title" msgid="7215213145546190223">Google Play 開発者サービスのインストール</string>
+<string name="common_google_play_services_notification_channel_name">Google Play 開発者サービスの利用</string>
+<string name="common_google_play_services_notification_ticker">Google Play開発者サービスのエラー</string>
+<string name="common_google_play_services_signin_required_text" msgid="9053896323427875356">%1$s は Google Play 開発者サービスに接続できませんでした。Google アカウントにログインしてください。</string>
+<string name="common_google_play_services_signin_required_title">ログインが必要です</string>
+<string name="common_google_play_services_try_again_text">%1$s は Google Play 開発者サービスに接続できませんでした。もう一度お試しください。</string>
+<string name="common_google_play_services_try_again_title">もう一度お試しください</string>
+<string name="common_google_play_services_unsupported_text">お使いのデバイスは Google Play 開発者サービスに対応していないため、%1$s を実行できません。対応するデバイスを使用してください。</string>
+<string name="common_google_play_services_unsupported_title">このデバイスは対応していません</string>
+<string name="common_google_play_services_update_button" msgid="6556509956452265614">更新</string>
+<string name="common_google_play_services_update_text" msgid="9053896323427875356">%1$s を使用するには、Google Play 開発者サービスを更新してください。</string>
+<string name="common_google_play_services_update_title" msgid="6006316683626838685">Google Play開発者サービスの更新</string>
+<string name="common_google_play_services_updating_client_title">Google Play 開発者サービスを更新中</string>
+<string name="common_google_play_services_updating_text">Google Play 開発者サービスの更新が完了すると、%1$s を利用できるようになります。</string>
+<string name="common_google_play_services_wear_update_text">%1$s を使用するには、Google Play 開発者サービスを更新してください。</string>
+<string name="common_open_on_phone">スマートフォンで開く</string>
+<string name="common_signin_button_text">ログイン</string>
+<string name="common_signin_button_text_long">Googleにログイン</string>
+</resources>

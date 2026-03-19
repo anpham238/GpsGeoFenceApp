@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding='utf-8' standalone='no'?>
+<resources>
+<!-- blaze-out/arm64-v8a-opt/genfiles/java/com/google/android/gmscore/integ/client/base/res/values-vi/strings.xml -->
+<eat-comment/>
+<string name="common_google_play_services_enable_button" msgid="2523291102206661146">Bật</string>
+<string name="common_google_play_services_enable_text" msgid="227660514972886228">Bạn phải bật Dịch vụ Google Play cho %1$s.</string>
+<string name="common_google_play_services_enable_title" msgid="5122002158466380389">Bật dịch vụ của Google Play</string>
+<string name="common_google_play_services_install_button" msgid="7153882981874058840">Cài đặt</string>
+<string name="common_google_play_services_install_text">Hãy cài đặt Dịch vụ Google Play để tiếp tục dùng %1$s.</string>
+<string name="common_google_play_services_install_title" msgid="7215213145546190223">Cài đặt Dịch vụ Google Play</string>
+<string name="common_google_play_services_notification_channel_name">Phạm vi cung cấp Dịch vụ Google Play</string>
+<string name="common_google_play_services_notification_ticker">Lỗi dịch vụ của Google Play</string>
+<string name="common_google_play_services_signin_required_text" msgid="9053896323427875356">%1$s không kết nối được với Dịch vụ Google Play. Hãy đăng nhập vào Tài khoản Google của bạn.</string>
+<string name="common_google_play_services_signin_required_title">Yêu cầu đăng nhập</string>
+<string name="common_google_play_services_try_again_text">%1$s không kết nối được với Dịch vụ Google Play. Hãy thử lại.</string>
+<string name="common_google_play_services_try_again_title">Hãy thử lại</string>
+<string name="common_google_play_services_unsupported_text">%1$s không chạy được vì thiết bị của bạn không hỗ trợ Dịch vụ Google Play. Vui lòng sử dụng một thiết bị được hỗ trợ.</string>
+<string name="common_google_play_services_unsupported_title">Thiết bị không tương thích</string>
+<string name="common_google_play_services_update_button" msgid="6556509956452265614">Cập nhật</string>
+<string name="common_google_play_services_update_text" msgid="9053896323427875356">Hãy cập nhật Dịch vụ Google Play để dùng %1$s.</string>
+<string name="common_google_play_services_update_title" msgid="6006316683626838685">Cập nhật dịch vụ của Google Play</string>
+<string name="common_google_play_services_updating_client_title">Dịch vụ Google Play đang cập nhật</string>
+<string name="common_google_play_services_updating_text">Bạn có thể dùng %1$s sau khi Dịch vụ Google Play cập nhật xong.</string>
+<string name="common_google_play_services_wear_update_text">Hãy cập nhật Dịch vụ Google Play để dùng %1$s.</string>
+<string name="common_open_on_phone">Mở trên điện thoại</string>
+<string name="common_signin_button_text">Đăng nhập</string>
+<string name="common_signin_button_text_long">Đăng nhập bằng Google</string>
+</resources>

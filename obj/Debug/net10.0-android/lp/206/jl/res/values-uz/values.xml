@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding='utf-8' standalone='no'?>
+<resources>
+<!-- blaze-out/arm64-v8a-opt/genfiles/java/com/google/android/gmscore/integ/client/base/res/values-uz/strings.xml -->
+<eat-comment/>
+<string name="common_google_play_services_enable_button" msgid="2523291102206661146">Yoqish</string>
+<string name="common_google_play_services_enable_text" msgid="227660514972886228">%1$s ishlatish uchun Google Play xizmatlarini yoqish zarur.</string>
+<string name="common_google_play_services_enable_title" msgid="5122002158466380389">Google Play xizmatlarini yoqish</string>
+<string name="common_google_play_services_install_button" msgid="7153882981874058840">O‘rnatish</string>
+<string name="common_google_play_services_install_text">%1$s ishlatishda davom etish uchun Google Play xizmatlarini oʻrnating.</string>
+<string name="common_google_play_services_install_title" msgid="7215213145546190223">Google Play xizmatlarini oʻrnating</string>
+<string name="common_google_play_services_notification_channel_name">Google Play xizmatlarining mavjudligi</string>
+<string name="common_google_play_services_notification_ticker">Google Play xizmatlari xatosi</string>
+<string name="common_google_play_services_signin_required_text" msgid="9053896323427875356">%1$s ilovasi Google Play xizmatlariga ulanmadi. Google hisobingizga kiring.</string>
+<string name="common_google_play_services_signin_required_title">Hisobga kirish zarur</string>
+<string name="common_google_play_services_try_again_text">%1$s ilovasi Google Play xizmatlariga ulanmadi. Qayta urining.</string>
+<string name="common_google_play_services_try_again_title">Qayta urining</string>
+<string name="common_google_play_services_unsupported_text">%1$s ishga tushmaydi, chunki qurilmangizda Google Play xizmatlari dastaklanmaydi. Mos qurilmadan foydalaning.</string>
+<string name="common_google_play_services_unsupported_title">Qurilma mos emas</string>
+<string name="common_google_play_services_update_button" msgid="6556509956452265614">Yangilash</string>
+<string name="common_google_play_services_update_text" msgid="9053896323427875356">%1$s ishlatish uchun Google Play xizmatlarini yangilang.</string>
+<string name="common_google_play_services_update_title" msgid="6006316683626838685">Google Play xizmatlarini yangilash</string>
+<string name="common_google_play_services_updating_client_title">Google Play xizmatlari yangilanmoqda</string>
+<string name="common_google_play_services_updating_text">Google Play xizmatlari yangilanganidan keyin %1$s ilovasidan foydalanish mumkin.</string>
+<string name="common_google_play_services_wear_update_text">%1$s ishlatish uchun Google Play xizmatlarini yangilang.</string>
+<string name="common_open_on_phone">Telefonda ochish</string>
+<string name="common_signin_button_text">Kirish</string>
+<string name="common_signin_button_text_long">Google orqali kirish</string>
+</resources>

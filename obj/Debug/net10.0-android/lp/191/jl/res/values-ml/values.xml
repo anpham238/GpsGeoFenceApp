@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding='utf-8' standalone='no'?>
+<resources>
+<!-- blaze-out/arm64-v8a-opt/genfiles/java/com/google/android/gmscore/integ/client/base/res/values-ml/strings.xml -->
+<eat-comment/>
+<string name="common_google_play_services_enable_button" msgid="2523291102206661146">പ്രവർത്തനക്ഷമമാക്കുക</string>
+<string name="common_google_play_services_enable_text" msgid="227660514972886228">%1$s എന്നതിന് Google Play സേവനങ്ങൾ പ്രവർത്തനക്ഷമമാക്കണം.</string>
+<string name="common_google_play_services_enable_title" msgid="5122002158466380389">Google Play സേവനങ്ങൾ പ്രവർത്തനക്ഷമമാക്കുക</string>
+<string name="common_google_play_services_install_button" msgid="7153882981874058840">ഇന്‍സ്റ്റാള്‍ ചെയ്യുക</string>
+<string name="common_google_play_services_install_text">%1$s ഉപയോഗിക്കുന്നത് തുടരാൻ Google Play സേവനങ്ങൾ ഇൻസ്റ്റാൾ ചെയ്യുക.</string>
+<string name="common_google_play_services_install_title" msgid="7215213145546190223">Google Play സേവനങ്ങൾ ഇൻസ്റ്റാൾ ചെയ്യുക</string>
+<string name="common_google_play_services_notification_channel_name">Google Play സേവന ലഭ്യത</string>
+<string name="common_google_play_services_notification_ticker">Google Play സേവനങ്ങളിലെ പിശക്</string>
+<string name="common_google_play_services_signin_required_text" msgid="9053896323427875356">Google Play സേവനങ്ങളിലേക്ക് %1$s എന്നതിന് കണക്റ്റ് ചെയ്യാനായില്ല. നിങ്ങളുടെ Google Account-ൽ സൈൻ ഇൻ ചെയ്യുക.</string>
+<string name="common_google_play_services_signin_required_title">സൈൻ-ഇൻ ചെയ്യേണ്ടതുണ്ട്</string>
+<string name="common_google_play_services_try_again_text">Google Play സേവനങ്ങളിലേക്ക് %1$s എന്നതിന് കണക്റ്റ് ചെയ്യാനായില്ല. വീണ്ടും ശ്രമിക്കുക.</string>
+<string name="common_google_play_services_try_again_title">വീണ്ടും ശ്രമിക്കുക</string>
+<string name="common_google_play_services_unsupported_text">നിങ്ങളുടെ ഉപകരണം Google Play സേവനങ്ങൾ പിന്തുണയ്ക്കാത്തതിനാൽ %1$s റൺ ചെയ്യാനാകില്ല. പിന്തുണയുള്ള ഉപകരണം ഉപയോഗിക്കുക.</string>
+<string name="common_google_play_services_unsupported_title">ഉപകരണം അനുയോജ്യമല്ല</string>
+<string name="common_google_play_services_update_button" msgid="6556509956452265614">അപ്‌ഡേറ്റുചെയ്യുക</string>
+<string name="common_google_play_services_update_text" msgid="9053896323427875356">%1$s ഉപയോഗിക്കാൻ Google Play സേവനങ്ങൾ അപ്ഡേറ്റ് ചെയ്യുക.</string>
+<string name="common_google_play_services_update_title" msgid="6006316683626838685">Google Play സേവനങ്ങൾ അപ്‌ഡേറ്റുചെയ്യുക</string>
+<string name="common_google_play_services_updating_client_title">Google Play സേവനം അപ്ഡേറ്റ് ചെയ്യുന്നു</string>
+<string name="common_google_play_services_updating_text">Google Play സേവനങ്ങൾ അപ്ഡേറ്റ് പൂർത്തിയായാൽ %1$s ലഭ്യമാകും.</string>
+<string name="common_google_play_services_wear_update_text">%1$s ഉപയോഗിക്കാൻ Google Play സേവനങ്ങൾ അപ്ഡേറ്റ് ചെയ്യുക.</string>
+<string name="common_open_on_phone">ഫോണിൽ തുറക്കുക</string>
+<string name="common_signin_button_text">സൈൻ ഇൻ ചെയ്യുക</string>
+<string name="common_signin_button_text_long">Google ഉപയോഗിച്ച് സൈൻ ഇൻ ചെയ്യുക</string>
+</resources>

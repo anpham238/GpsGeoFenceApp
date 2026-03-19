@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding='utf-8' standalone='no'?>
+<resources>
+<!-- blaze-out/arm64-v8a-opt/genfiles/java/com/google/android/gmscore/integ/client/base/res/values-si/strings.xml -->
+<eat-comment/>
+<string name="common_google_play_services_enable_button" msgid="2523291102206661146">සබල කරන්න</string>
+<string name="common_google_play_services_enable_text" msgid="227660514972886228">%1$s සඳහා Google Play සේවා සබල කළ යුතු යි.</string>
+<string name="common_google_play_services_enable_title" msgid="5122002158466380389">Google Play සේවා සබල කරන්න</string>
+<string name="common_google_play_services_install_button" msgid="7153882981874058840">ස්ථාපනය කරන්න</string>
+<string name="common_google_play_services_install_text">%1$s දිගටම භාවිතා කිරීමට Google Play සේවා ස්ථාපනය කරන්න.</string>
+<string name="common_google_play_services_install_title" msgid="7215213145546190223">Google Play සේවා ස්ථාපනය කරන්න</string>
+<string name="common_google_play_services_notification_channel_name">Google Play සේවාවල ලබා ගත හැකි බව</string>
+<string name="common_google_play_services_notification_ticker">Google Play සේවා දෝෂය</string>
+<string name="common_google_play_services_signin_required_text" msgid="9053896323427875356">%1$s හට Google Play සේවා වෙත සම්බන්ධ වීමට නොහැකි විය. ඔබේ Google ගිණුමට පුරන්න.</string>
+<string name="common_google_play_services_signin_required_title">පිරීම අවශ්‍යයි</string>
+<string name="common_google_play_services_try_again_text">%1$s හට Google Play සේවා වෙත සම්බන්ධ වීමට නොහැකි විය. නැවත උත්සාහ කරන්න.</string>
+<string name="common_google_play_services_try_again_title">නැවත උත්සාහ කරන්න</string>
+<string name="common_google_play_services_unsupported_text">ඔබේ උපාංගය Google Play සේවා සඳහා සහය නොදක්වන නිසා %1$s ධාවනය කළ නොහැක. සහය දක්වන උපාංගයක් භාවිතා කරන්න.</string>
+<string name="common_google_play_services_unsupported_title">උපාංගය නොගැළපේ</string>
+<string name="common_google_play_services_update_button" msgid="6556509956452265614">යාවත්කාලීන කරන්න</string>
+<string name="common_google_play_services_update_text" msgid="9053896323427875356">%1$s භාවිත කිරීමට Google Play සේවා යාවත්කාලීන කරන්න.</string>
+<string name="common_google_play_services_update_title" msgid="6006316683626838685">Google Play සේවා යාවත්කාලීන කරන්න</string>
+<string name="common_google_play_services_updating_client_title">Google Play සේවා යාවත්කාලීන කිරීම</string>
+<string name="common_google_play_services_updating_text">Google Play සේවා යාවත්කාලීනය සම්පූර්ණ වූ පසු %1$s ලබා ගත හැකි වනු ඇත.</string>
+<string name="common_google_play_services_wear_update_text">%1$s භාවිත කිරීමට Google Play සේවා යාවත්කාලීන කරන්න.</string>
+<string name="common_open_on_phone">දුරකථනය තුළ විවෘත කරන්න</string>
+<string name="common_signin_button_text">පුරන්න</string>
+<string name="common_signin_button_text_long">Google සමගින් පුරන්න</string>
+</resources>

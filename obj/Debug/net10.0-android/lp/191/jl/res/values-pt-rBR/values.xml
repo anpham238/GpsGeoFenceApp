@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding='utf-8' standalone='no'?>
+<resources>
+<!-- blaze-out/arm64-v8a-opt/genfiles/java/com/google/android/gmscore/integ/client/base/res/values-pt-rBR/strings.xml -->
+<eat-comment/>
+<string name="common_google_play_services_enable_button" msgid="2523291102206661146">Ativar</string>
+<string name="common_google_play_services_enable_text" msgid="227660514972886228">O Google Play Services precisa estar ativado para o app %1$s.</string>
+<string name="common_google_play_services_enable_title" msgid="5122002158466380389">Ativar o Google Play Services</string>
+<string name="common_google_play_services_install_button" msgid="7153882981874058840">Instalar</string>
+<string name="common_google_play_services_install_text">Instale o Google Play Services para continuar usando o app %1$s.</string>
+<string name="common_google_play_services_install_title" msgid="7215213145546190223">Instalar Google Play Services</string>
+<string name="common_google_play_services_notification_channel_name">Disponibilidade do Google Play Services</string>
+<string name="common_google_play_services_notification_ticker">Erro do Google Play Services</string>
+<string name="common_google_play_services_signin_required_text" msgid="9053896323427875356">O app %1$s não conseguiu se conectar ao Google Play Services. Faça login na sua Conta do Google.</string>
+<string name="common_google_play_services_signin_required_title">Login necessário</string>
+<string name="common_google_play_services_try_again_text">O app %1$s não conseguiu se conectar ao Google Play Services. Tente de novo.</string>
+<string name="common_google_play_services_try_again_title">Tente de novo</string>
+<string name="common_google_play_services_unsupported_text">O app %1$s não pode ser executado, porque seu dispositivo não é compatível com o Google Play Services. Use um aparelho compatível.</string>
+<string name="common_google_play_services_unsupported_title">Dispositivo incompatível</string>
+<string name="common_google_play_services_update_button" msgid="6556509956452265614">Atualizar</string>
+<string name="common_google_play_services_update_text" msgid="9053896323427875356">Atualize o Google Play Services para usar o app %1$s.</string>
+<string name="common_google_play_services_update_title" msgid="6006316683626838685">Atualizar o Google Play Services</string>
+<string name="common_google_play_services_updating_client_title">Google Play Services: atualizando</string>
+<string name="common_google_play_services_updating_text">O app %1$s vai ficar disponível quando a atualização do Google Play Services for concluída.</string>
+<string name="common_google_play_services_wear_update_text">Atualize o Google Play Services para usar o app %1$s.</string>
+<string name="common_open_on_phone">Abrir no smartphone</string>
+<string name="common_signin_button_text">Fazer login</string>
+<string name="common_signin_button_text_long">Fazer Login com o Google</string>
+</resources>

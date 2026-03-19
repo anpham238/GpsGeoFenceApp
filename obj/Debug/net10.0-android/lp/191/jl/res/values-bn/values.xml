@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding='utf-8' standalone='no'?>
+<resources>
+<!-- blaze-out/arm64-v8a-opt/genfiles/java/com/google/android/gmscore/integ/client/base/res/values-bn/strings.xml -->
+<eat-comment/>
+<string name="common_google_play_services_enable_button" msgid="2523291102206661146">সক্ষম করুন</string>
+<string name="common_google_play_services_enable_text" msgid="227660514972886228">%1$s-এর জন্য Google Play পরিষেবা অবশ্যই চালু করতে হবে।</string>
+<string name="common_google_play_services_enable_title" msgid="5122002158466380389">Google Play পরিষেবা সক্ষম করুন</string>
+<string name="common_google_play_services_install_button" msgid="7153882981874058840">ইনস্টল করুন</string>
+<string name="common_google_play_services_install_text">%1$s ব্যবহার করা চালিয়ে যেতে Google Play পরিষেবা ইনস্টল করুন।</string>
+<string name="common_google_play_services_install_title" msgid="7215213145546190223">Google Play পরিষেবা ইনস্টল করুন</string>
+<string name="common_google_play_services_notification_channel_name">Google Play পরিষেবার উপলভ্যতা</string>
+<string name="common_google_play_services_notification_ticker">Google Play পরিষেবার ত্রুটি</string>
+<string name="common_google_play_services_signin_required_text" msgid="9053896323427875356">Google Play পরিষেবার সাথে %1$s কানেক্ট করতে পারেনি। আপনার Google অ্যাকাউন্টে সাইন-ইন করুন।</string>
+<string name="common_google_play_services_signin_required_title">সাইন-ইন আবশ্যক</string>
+<string name="common_google_play_services_try_again_text">Google Play পরিষেবার সাথে %1$s কানেক্ট করতে পারেনি। আবার চেষ্টা করুন।</string>
+<string name="common_google_play_services_try_again_title">আবার চেষ্টা করুন</string>
+<string name="common_google_play_services_unsupported_text">%1$s রান করানো যাচ্ছে না কারণ আপনার ডিভাইসে Google Play পরিষেবা কাজ করে না। কাজ করে এমন ডিভাইস ব্যবহার করুন।</string>
+<string name="common_google_play_services_unsupported_title">ডিভাইস মানানসই নয়</string>
+<string name="common_google_play_services_update_button" msgid="6556509956452265614">আপডেট করুন</string>
+<string name="common_google_play_services_update_text" msgid="9053896323427875356">%1$s ব্যবহার করতে Google Play পরিষেবা আপডেট করুন।</string>
+<string name="common_google_play_services_update_title" msgid="6006316683626838685">Google Play পরিষেবা আপডেট করুন</string>
+<string name="common_google_play_services_updating_client_title">Google Play পরিষেবা আপডেট করা হচ্ছে</string>
+<string name="common_google_play_services_updating_text">Google Play পরিষেবা আপডেট করা সম্পূর্ণ হয়ে গেলে %1$s উপলভ্য হবে।</string>
+<string name="common_google_play_services_wear_update_text">%1$s ব্যবহার করতে Google Play পরিষেবা আপডেট করুন।</string>
+<string name="common_open_on_phone">ফোনে খুলুন</string>
+<string name="common_signin_button_text">সাইন-ইন করুন</string>
+<string name="common_signin_button_text_long">Google এর মাধ্যমে সাইন-ইন করুন</string>
+</resources>

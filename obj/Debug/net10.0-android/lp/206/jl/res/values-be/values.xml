@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding='utf-8' standalone='no'?>
+<resources>
+<!-- blaze-out/arm64-v8a-opt/genfiles/java/com/google/android/gmscore/integ/client/base/res/values-be/strings.xml -->
+<eat-comment/>
+<string name="common_google_play_services_enable_button" msgid="2523291102206661146">Уключыць</string>
+<string name="common_google_play_services_enable_text" msgid="227660514972886228">Каб карыстацца праграмай \"%1$s\", трэба ўключыць сэрвісы Google Play.</string>
+<string name="common_google_play_services_enable_title" msgid="5122002158466380389">Уключыць службы Google Play</string>
+<string name="common_google_play_services_install_button" msgid="7153882981874058840">Усталяваць</string>
+<string name="common_google_play_services_install_text">Каб працягваць карыстацца праграмай \"%1$s\", усталюйце сэрвісы Google Play.</string>
+<string name="common_google_play_services_install_title" msgid="7215213145546190223">Усталюйце сэрвісы Google Play</string>
+<string name="common_google_play_services_notification_channel_name">Даступнасць сэрвісаў Google Play</string>
+<string name="common_google_play_services_notification_ticker">Памылка службаў Google Play</string>
+<string name="common_google_play_services_signin_required_text" msgid="9053896323427875356">Праграме \"%1$s\" не ўдалося падключыцца да сэрвісаў Google Play. Увайдзіце ва ўліковы запіс Google.</string>
+<string name="common_google_play_services_signin_required_title">Патрабуецца ўваход</string>
+<string name="common_google_play_services_try_again_text">Праграме \"%1$s\" не ўдалося падключыцца да сэрвісаў Google Play. Паўтарыце спробу.</string>
+<string name="common_google_play_services_try_again_title">Паўтарыце спробу</string>
+<string name="common_google_play_services_unsupported_text">Праграма \"%1$s\" не запускаецца, бо сэрвісы Google Play не падтрымліваюцца на вашай прыладзе. Выкарыстоўвайце сумяшчальную прыладу.</string>
+<string name="common_google_play_services_unsupported_title">Несумяшчальнасць з прыладай</string>
+<string name="common_google_play_services_update_button" msgid="6556509956452265614">Абнавіць</string>
+<string name="common_google_play_services_update_text" msgid="9053896323427875356">Каб карыстацца праграмай \"%1$s\", абнавіце сэрвісы Google Play.</string>
+<string name="common_google_play_services_update_title" msgid="6006316683626838685">Абнаўленне службаў Google Play</string>
+<string name="common_google_play_services_updating_client_title">Сэрвісы Google Play абнаўляюцца</string>
+<string name="common_google_play_services_updating_text">Вы зможаце карыстацца праграмай \"%1$s\" пасля завяршэння абнаўлення сэрвісаў Google Play.</string>
+<string name="common_google_play_services_wear_update_text">Каб карыстацца праграмай \"%1$s\", абнавіце сэрвісы Google Play.</string>
+<string name="common_open_on_phone">Адкрыць на тэлефоне</string>
+<string name="common_signin_button_text">Увайсцi</string>
+<string name="common_signin_button_text_long">Увайсці праз Google</string>
+</resources>

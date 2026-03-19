@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding='utf-8' standalone='no'?>
+<resources>
+<!-- blaze-out/arm64-v8a-opt/genfiles/java/com/google/android/gmscore/integ/client/base/res/values-az/strings.xml -->
+<eat-comment/>
+<string name="common_google_play_services_enable_button" msgid="2523291102206661146">Aktiv edin</string>
+<string name="common_google_play_services_enable_text" msgid="227660514972886228">%1$s üçün Google Play xidmətləri aktivləşdirilməlidir.</string>
+<string name="common_google_play_services_enable_title" msgid="5122002158466380389">Google Play xidmətlərini aktiv edin</string>
+<string name="common_google_play_services_install_button" msgid="7153882981874058840">Quraşdırın</string>
+<string name="common_google_play_services_install_text">%1$s tətbiqindən istifadə etməyə davam etmək üçün Google Play xidmətlərini quraşdırın.</string>
+<string name="common_google_play_services_install_title" msgid="7215213145546190223">Google Play xidmətlərini quraşdırın</string>
+<string name="common_google_play_services_notification_channel_name">Google Play xidmətlərinin əlçatanlığı</string>
+<string name="common_google_play_services_notification_ticker">Google Play xidmətləri xətası</string>
+<string name="common_google_play_services_signin_required_text" msgid="9053896323427875356">%1$s Google Play xidmətlərinə qoşula bilmədi. Google hesabınıza daxil olun.</string>
+<string name="common_google_play_services_signin_required_title">Hesaba daxil olmaq tələb olunur</string>
+<string name="common_google_play_services_try_again_text">%1$s Google Play xidmətlərinə qoşula bilmədi. Yenidən cəhd edin.</string>
+<string name="common_google_play_services_try_again_title">Yenidən cəhd edin</string>
+<string name="common_google_play_services_unsupported_text">Cihazınız Google Play xidmətlərini dəstəkləmədiyinə görə %1$s icra edilmir. Dəstəklənən cihazdan istifadə edin.</string>
+<string name="common_google_play_services_unsupported_title">Cihaz uyğun deyil</string>
+<string name="common_google_play_services_update_button" msgid="6556509956452265614">Güncəlləyin</string>
+<string name="common_google_play_services_update_text" msgid="9053896323427875356">%1$s tətbiqindən istifadə etmək üçün Google Play xidmətlərini güncəlləyin.</string>
+<string name="common_google_play_services_update_title" msgid="6006316683626838685">Google Play xidmətlərini güncəlləşdirin</string>
+<string name="common_google_play_services_updating_client_title">Google Play xidmətləri güncəllənir</string>
+<string name="common_google_play_services_updating_text">Google Play xidmətlərinin güncəllənməsi tamamlandıqdan sonra %1$s əlçatan olacaq.</string>
+<string name="common_google_play_services_wear_update_text">%1$s tətbiqindən istifadə etmək üçün Google Play xidmətlərini güncəlləyin.</string>
+<string name="common_open_on_phone">Telefonda açın</string>
+<string name="common_signin_button_text">Daxil olun</string>
+<string name="common_signin_button_text_long">Google ilə daxil olun</string>
+</resources>

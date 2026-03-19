@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding='utf-8' standalone='no'?>
+<resources>
+<!-- blaze-out/arm64-v8a-opt/genfiles/java/com/google/android/gmscore/integ/client/base/res/values-mr/strings.xml -->
+<eat-comment/>
+<string name="common_google_play_services_enable_button" msgid="2523291102206661146">सुरू करा</string>
+<string name="common_google_play_services_enable_text" msgid="227660514972886228">%1$s साठी Google Play सेवा सुरू केलेल्या असणे आवश्यक आहे.</string>
+<string name="common_google_play_services_enable_title" msgid="5122002158466380389">Google Play सेवा सुरू करा</string>
+<string name="common_google_play_services_install_button" msgid="7153882981874058840">स्‍थापित करा</string>
+<string name="common_google_play_services_install_text">%1$s वापरणे पुढे सुरू ठेवण्यासाठी Google Play सेवा इंस्टॉल करा.</string>
+<string name="common_google_play_services_install_title" msgid="7215213145546190223">Google Play सेवा इंस्टॉल करा</string>
+<string name="common_google_play_services_notification_channel_name">Google Play सेवा उपलब्धता</string>
+<string name="common_google_play_services_notification_ticker">Google Play सेवा एरर</string>
+<string name="common_google_play_services_signin_required_text" msgid="9053896323427875356">%1$s ला Google Play सेवांशी कनेक्ट करता आले नाही. कृपया तुमच्या Google खात्यामध्ये साइन इन करा.</string>
+<string name="common_google_play_services_signin_required_title">साइन-इन करणे आवश्यक आहे</string>
+<string name="common_google_play_services_try_again_text">%1$s ला Google Play सेवांशी कनेक्ट करता आले नाही. कृपया पुन्हा प्रयत्न करा.</string>
+<string name="common_google_play_services_try_again_title">कृपया पुन्हा प्रयत्न करा</string>
+<string name="common_google_play_services_unsupported_text">तुमचे डिव्हाइस Google Play सेवांना सपोर्ट करत नसल्यामुळे %1$s रन होऊ शकत नाही. कृपया सपोर्ट असलेले डिव्हाइस वापरा.</string>
+<string name="common_google_play_services_unsupported_title">डिव्हाइस कंपॅटिबल नाही</string>
+<string name="common_google_play_services_update_button" msgid="6556509956452265614">अपडेट करा</string>
+<string name="common_google_play_services_update_text" msgid="9053896323427875356">%1$s वापरण्यासाठी Google Play सेवा अपडेट करा.</string>
+<string name="common_google_play_services_update_title" msgid="6006316683626838685">Google Play सेवा अपडेट करा</string>
+<string name="common_google_play_services_updating_client_title">Google Play सेवा अपडेट होत आहेत</string>
+<string name="common_google_play_services_updating_text">Google Play सेवा अपडेट पूर्ण झाल्यावर %1$s उपलब्ध होईल.</string>
+<string name="common_google_play_services_wear_update_text">%1$s वापरण्यासाठी Google Play सेवा अपडेट करा.</string>
+<string name="common_open_on_phone">फोनवर उघडा</string>
+<string name="common_signin_button_text">साइन इन करा</string>
+<string name="common_signin_button_text_long">Google सह साइन इन करा</string>
+</resources>

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding='utf-8' standalone='no'?>
+<resources>
+<!-- blaze-out/arm64-v8a-opt/genfiles/java/com/google/android/gmscore/integ/client/base/res/values-lt/strings.xml -->
+<eat-comment/>
+<string name="common_google_play_services_enable_button" msgid="2523291102206661146">Įgalinti</string>
+<string name="common_google_play_services_enable_text" msgid="227660514972886228">„Google Play“ paslaugos turi būti įgalintos, kad būtų galima naudoti „%1$s“.</string>
+<string name="common_google_play_services_enable_title" msgid="5122002158466380389">Įgalinkite „Google Play“ paslaugas</string>
+<string name="common_google_play_services_install_button" msgid="7153882981874058840">Įdiegti</string>
+<string name="common_google_play_services_install_text">Įdiekite „Google Play“ paslaugas, kad galėtumėte toliau naudoti „%1$s“.</string>
+<string name="common_google_play_services_install_title" msgid="7215213145546190223">Įdiekite „Google Play“ paslaugas</string>
+<string name="common_google_play_services_notification_channel_name">„Google Play“ paslaugų pasiekiamumas</string>
+<string name="common_google_play_services_notification_ticker">„Google Play“ paslaugų klaida</string>
+<string name="common_google_play_services_signin_required_text" msgid="9053896323427875356">„%1$s“ nepavyko prisijungti prie „Google Play“ paslaugų. Prisijunkite prie „Google“ paskyros.</string>
+<string name="common_google_play_services_signin_required_title">Būtina prisijungti</string>
+<string name="common_google_play_services_try_again_text">„%1$s“ nepavyko prisijungti prie „Google Play“ paslaugų. Bandykite dar kartą.</string>
+<string name="common_google_play_services_try_again_title">Bandykite dar kartą</string>
+<string name="common_google_play_services_unsupported_text">„%1$s“ negalima paleisti, nes jūsų įrenginys nepalaiko „Google Play“ paslaugų. Naudokite palaikomą įrenginį.</string>
+<string name="common_google_play_services_unsupported_title">Įrenginys nesuderinamas</string>
+<string name="common_google_play_services_update_button" msgid="6556509956452265614">Atnaujinti</string>
+<string name="common_google_play_services_update_text" msgid="9053896323427875356">Atnaujinkite „Google Play“ paslaugas, kad galėtumėte naudoti „%1$s“.</string>
+<string name="common_google_play_services_update_title" msgid="6006316683626838685">Atnaujinkite „Google Play“ paslaugas</string>
+<string name="common_google_play_services_updating_client_title">„Google Play“ paslaugos atnaujinamos</string>
+<string name="common_google_play_services_updating_text">„%1$s“ bus pasiekiama, kai bus baigtas „Google Play“ paslaugų atnaujinimas.</string>
+<string name="common_google_play_services_wear_update_text">Atnaujinkite „Google Play“ paslaugas, kad galėtumėte naudoti „%1$s“.</string>
+<string name="common_open_on_phone">Atidaryti telefone</string>
+<string name="common_signin_button_text">Prisijungti</string>
+<string name="common_signin_button_text_long">Prisijungti naudojant „Google“</string>
+</resources>

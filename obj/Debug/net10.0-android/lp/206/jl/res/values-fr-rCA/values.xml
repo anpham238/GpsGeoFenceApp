@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding='utf-8' standalone='no'?>
+<resources>
+<!-- blaze-out/arm64-v8a-opt/genfiles/java/com/google/android/gmscore/integ/client/base/res/values-fr-rCA/strings.xml -->
+<eat-comment/>
+<string name="common_google_play_services_enable_button" msgid="2523291102206661146">Activer</string>
+<string name="common_google_play_services_enable_text" msgid="227660514972886228">Les services Google Play doivent être activés pour %1$s.</string>
+<string name="common_google_play_services_enable_title" msgid="5122002158466380389">Activer les services Google Play</string>
+<string name="common_google_play_services_install_button" msgid="7153882981874058840">Installer</string>
+<string name="common_google_play_services_install_text">Installez les services Google Play pour continuer à utiliser %1$s.</string>
+<string name="common_google_play_services_install_title" msgid="7215213145546190223">Installer les services Google Play</string>
+<string name="common_google_play_services_notification_channel_name">Disponibilité des services Google Play</string>
+<string name="common_google_play_services_notification_ticker">Erreur liée aux services Google Play</string>
+<string name="common_google_play_services_signin_required_text" msgid="9053896323427875356">%1$s n\'a pas pu se connecter aux services Google Play. Veuillez vous connecter à votre compte Google.</string>
+<string name="common_google_play_services_signin_required_title">Connexion obligatoire</string>
+<string name="common_google_play_services_try_again_text">%1$s n\'a pas pu se connecter aux services Google Play. Veuillez réessayer.</string>
+<string name="common_google_play_services_try_again_title">Veuillez réessayer</string>
+<string name="common_google_play_services_unsupported_text">%1$s ne peut pas s\'exécuter parce que votre appareil ne prend pas en charge les services Google Play. Veuillez utiliser un appareil pris en charge.</string>
+<string name="common_google_play_services_unsupported_title">Appareil non compatible</string>
+<string name="common_google_play_services_update_button" msgid="6556509956452265614">Mettre à jour</string>
+<string name="common_google_play_services_update_text" msgid="9053896323427875356">Mettez à jour les services Google Play pour utiliser %1$s.</string>
+<string name="common_google_play_services_update_title" msgid="6006316683626838685">Mettre à jour les services Google Play</string>
+<string name="common_google_play_services_updating_client_title">Mise à jour des services Google Play en cours…</string>
+<string name="common_google_play_services_updating_text">%1$s sera accessible une fois la mise à jour des services Google Play terminée.</string>
+<string name="common_google_play_services_wear_update_text">Mettez à jour les services Google Play pour utiliser %1$s.</string>
+<string name="common_open_on_phone">Ouvrir sur le téléphone</string>
+<string name="common_signin_button_text">Se connecter</string>
+<string name="common_signin_button_text_long">Se connecter avec Google</string>
+</resources>
