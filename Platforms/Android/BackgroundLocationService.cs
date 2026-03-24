@@ -31,19 +31,25 @@ public sealed class BackgroundLocationService : Service
         CreateNotificationChannel();
     }
 
+
     public override StartCommandResult OnStartCommand(Intent? intent, StartCommandFlags flags, int startId)
     {
-        // Sử dụng ID thông báo > 0
-        StartForeground(1001, CreateNotification());
+        StartForeground(1, CreateNotification());
 
-        _locationService?.StartTracking((lat, lng) =>
+        if (_locationService is null)
         {
-            System.Diagnostics.Debug.WriteLine($"[BG] {lat}, {lng}");
+            System.Diagnostics.Debug.WriteLine("[BG] ILocationService is null, skip tracking");
+            return StartCommandResult.Sticky;
+        }
+
+        _locationService.StartTracking((lat, lng) =>
+        {
+        System.Diagnostics.Debug.WriteLine($"[BG] {lat}, {lng}");
+
         });
 
         return StartCommandResult.Sticky;
     }
-
     private void CreateNotificationChannel()
     {
         // Sử dụng 'as' thay vì ép kiểu cứng để tránh lỗi văng app
@@ -65,6 +71,7 @@ public sealed class BackgroundLocationService : Service
 
     private Notification CreateNotification()
     {
+
         var builder = new NotificationCompat.Builder(this, ChannelId)
             .SetContentTitle("GPS Tracking")
             .SetContentText("Đang theo dõi vị trí")

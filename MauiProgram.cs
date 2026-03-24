@@ -1,6 +1,7 @@
 ﻿using Microsoft.Maui.Controls.Maps;
 using MauiApp1.Pages;
 using MauiApp1.Services;
+using MauiApp1.Data;
 
 namespace MauiApp1;
 
@@ -16,6 +17,7 @@ public static class MauiProgram
 #if ANDROID
         builder.Services.AddSingleton<ILocationService, AndroidLocationService>();
         builder.Services.AddSingleton<IGeofenceService, AndroidGeofenceService>();
+        builder.Services.AddSingleton<PoiDbService>();
 #else
 builder.Services.AddSingleton<ILocationService, NoopLocationService>();
 builder.Services.AddSingleton<IGeofenceService, NoopGeofenceService>();

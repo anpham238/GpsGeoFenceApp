@@ -32,12 +32,14 @@ public sealed class AndroidGeofenceService : IGeofenceService
         intent.SetAction("com.google.android.location.GEOFENCE_TRANSITION");
 
         var flags = PendingIntentFlags.UpdateCurrent;
-        if (OperatingSystem.IsAndroidVersionAtLeast(31)) flags |= PendingIntentFlags.Mutable; // Android 12+
-        else if (OperatingSystem.IsAndroidVersionAtLeast(23)) flags |= PendingIntentFlags.Immutable;
+        if (OperatingSystem.IsAndroidVersionAtLeast(31))
+            flags |= PendingIntentFlags.Mutable;    // Android 12+
+        else if (OperatingSystem.IsAndroidVersionAtLeast(23))
+            flags |= PendingIntentFlags.Immutable;
 
-        return PendingIntent.GetBroadcast(_ctx, 0, intent, flags);
+        var pi = PendingIntent.GetBroadcast(_ctx, 0, intent, flags);
+        return pi ?? throw new InvalidOperationException("PendingIntent not created");
     }
-
     public async Task RegisterAsync(IEnumerable<Poi> pois, bool initialTriggerOnEnter = true)
     {
         _poiLookup = pois.ToDictionary(p => p.Id, p => p);
