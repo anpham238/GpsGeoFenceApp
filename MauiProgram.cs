@@ -17,7 +17,7 @@ public static class MauiProgram
 #if ANDROID
         builder.Services.AddSingleton<ILocationService, AndroidLocationService>();
         builder.Services.AddSingleton<IGeofenceService, AndroidGeofenceService>();
-        builder.Services.AddSingleton<PoiDbService>();
+        builder.Services.AddSingleton<PoiDatabase>();
 #else
 builder.Services.AddSingleton<ILocationService, NoopLocationService>();
 builder.Services.AddSingleton<IGeofenceService, NoopGeofenceService>();

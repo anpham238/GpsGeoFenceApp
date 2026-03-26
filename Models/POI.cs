@@ -21,4 +21,6 @@ public class Poi
     public bool IsActive { get; set; } = true;
     public string? ImageUrl { get; set; }
     public string? AudioUrl { get; set; }
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

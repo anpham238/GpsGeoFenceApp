@@ -1,6 +1,6 @@
-﻿using MauiApp1.Models;
+﻿using MauiApp1.Data;
+using MauiApp1.Models;
 using MauiApp1.Services;
-using MauiApp1.Data;                     // 🔧 dùng PoiDbService
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Controls.Maps;
 using Microsoft.Maui.Devices.Sensors;
@@ -12,95 +12,72 @@ public partial class MapPage : ContentPage
 {
     private readonly IGeofenceService _geofence;
     private readonly ILocationService _location;
-    private readonly PoiDbService _poiDbService;   // 🔧 DB service để test kết nối (hoặc load POI)
+    private readonly PoiDatabase _db;
 
     private readonly List<Poi> _pois = new();
     private CancellationTokenSource? _cts;
-    private Location? _lastLocation;
 
-    // Tọa độ TPHCM - hiển thị ngay lập tức khi mở app
+    // POI hien dang hien thi tren banner
+    private Poi? _nearestPoi;
+
+    // Vi tri mac dinh TPHCM hien thi ngay khi mo app
     private static readonly Location _hcmCenter = new(10.776889, 106.700806);
 
-    // 🔧 Thêm PoiDbService vào constructor (DI)
-    public MapPage(IGeofenceService geofence, ILocationService location, PoiDbService poiDbService)
+    // ════════════════════════════════════════════════════════
+    // KHOI TAO
+    // ════════════════════════════════════════════════════════
+    public MapPage(IGeofenceService geofence, ILocationService location, PoiDatabase db)
     {
         InitializeComponent();
 
         _geofence = geofence ?? throw new ArgumentNullException(nameof(geofence));
         _location = location ?? throw new ArgumentNullException(nameof(location));
-        _poiDbService = poiDbService ?? throw new ArgumentNullException(nameof(poiDbService)); // 🔧
+        _db = db ?? throw new ArgumentNullException(nameof(db));
 
+        // Nut dieu khien
         BtnStart.Clicked += (_, _) => StartUiLoop();
         BtnStop.Clicked += (_, _) => StopUiLoop();
+        BtnRefresh.Clicked += async (_, _) => await ReloadPoisAsync();
+        BtnOpenMap.Clicked += (_, _) => OpenMapLink(_nearestPoi);
 
-        SeedPoisAndPins();
-
+        // Geofence (ENTER / DWELL / EXIT) -> TTS + cap nhat banner
         _geofence.OnPoiEvent += async (poi, type) =>
-            await MainThread.InvokeOnMainThreadAsync(() =>
-                DisplayAlertAsync("Geofence", $"{type}: {poi.Name}", "OK"));
-    }
-
-    // ── Seed POI ─────────────────────────────────────────────────────────
-    void SeedPoisAndPins()
-    {
-        _pois.Add(new Poi
         {
-            Id = "poi_hcm",
-            Name = "TP.HCM",
-            Description = "Trung tam",
-            Latitude = 10.776889,
-            Longitude = 106.700806,
-            RadiusMeters = 150,
-            NearRadiusMeters = 300,
-            DebounceSeconds = 3,
-            CooldownSeconds = 30
-        });
-
-        _pois.Add(new Poi
-        {
-            Id = "poi_ntmk",
-            Name = "NTMK Park",
-            Description = "Cong vien",
-            Latitude = 10.787,
-            Longitude = 106.700,
-            RadiusMeters = 120,
-            NearRadiusMeters = 240,
-            DebounceSeconds = 3,
-            CooldownSeconds = 30
-        });
-
-        foreach (var p in _pois)
-        {
-            MyMap.Pins.Add(new Pin
+            if (type == "EXIT")
             {
-                Label = $"{p.Name} ({p.RadiusMeters}m)",
-                Address = p.Description,
-                Location = new Location(p.Latitude, p.Longitude)
-            });
-        }
+                await MainThread.InvokeOnMainThreadAsync(() => HideBanner());
+                return;
+            }
+            // Hien banner + doc TTS
+            await MainThread.InvokeOnMainThreadAsync(() =>
+                ShowBanner(poi, $"Vao vung {type}"));
+            await PlayTtsAsync(poi);
+        };
     }
 
-    // ── Lifecycle ────────────────────────────────────────────────────────
+    // ════════════════════════════════════════════════════════
+    // LIFECYCLE
+    // ════════════════════════════════════════════════════════
     protected override async void OnAppearing()
     {
         base.OnAppearing();
 
-        // B1: Hiện bản đồ TPHCM NGAY LẬP TỨC - không cần chờ GPS
+        // 1. Hien ban do TPHCM ngay lap tuc (khong can cho GPS)
         MyMap.MoveToRegion(
             MapSpan.FromCenterAndRadius(_hcmCenter, Distance.FromKilometers(3)));
 
-        // 🔧 B2: TEST kết nối Azure SQL (đoạn bạn hỏi “đặt ở đâu”)
-        var ok = await _poiDbService.TestConnectionAsync();
-        await DisplayAlertAsync("Azure SQL", ok ? "Kết nối OK" : "Kết nối lỗi", "Đóng");
+        // 2. Xin quyen GPS
+        var when = await Permissions.RequestAsync<Permissions.LocationWhenInUse>();
+        if (when != PermissionStatus.Granted) return;
+        _ = await Permissions.RequestAsync<Permissions.LocationAlways>();
 
-        // 🔧 B3: Xin quyền Location đúng chuẩn Android 11+
-        var hasPerm = await EnsureLocationPermissionsAsync();
-        if (!hasPerm) return;
+        // 3. Load POI tu SQLite -> hien len ban do
+        await ReloadPoisAsync();
 
-        // B4: Cập nhật về vị trí thực (async, không block UI)
+        // 4. Cap nhat ban do ve vi tri GPS thuc (chay nen)
         _ = Task.Run(UpdateToRealLocationAsync);
 
-        // B5: Đăng ký Geofence và bật GPS loop
+        // 5. Dang ky Geofence + bat GPS loop
         await _geofence.RegisterAsync(_pois);
         StartUiLoop();
     }
@@ -111,40 +88,70 @@ public partial class MapPage : ContentPage
         base.OnDisappearing();
     }
 
-    // ── Quy trình xin quyền Location đúng Android 11+ ────────────────────
-    // Tránh xin 2 quyền cùng lúc (sẽ bị hệ thống bỏ qua); trên Android 11+,
-    // background phải xin RIÊNG hoặc hướng người dùng mở Settings.
-    private async Task<bool> EnsureLocationPermissionsAsync()
+    // ════════════════════════════════════════════════════════
+    // DATABASE -> BAN DO
+    // ════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Doc POI tu SQLite va hien len ban do.
+    /// SQLite tu dong seed 7 diem TPHCM lan dau tien.
+    /// </summary>
+    private async Task ReloadPoisAsync()
     {
-        // Foreground trước
-        var when = await Permissions.RequestAsync<Permissions.LocationWhenInUse>();
-        if (when != PermissionStatus.Granted) return false;
-
-        if (DeviceInfo.Platform == DevicePlatform.Android && OperatingSystem.IsAndroidVersionAtLeast(30))
+        try
         {
-            var always = await Permissions.CheckStatusAsync<Permissions.LocationAlways>();
-            if (always != PermissionStatus.Granted)
+            var pois = await _db.GetActivePoisAsync();
+
+            await MainThread.InvokeOnMainThreadAsync(() =>
             {
-                var open = await DisplayAlertAsync(
-                    "Quyền nền",
-                    "Để nhận geofence khi app ở nền, cần bật 'Allow all the time' trong Cài đặt.",
-                    "Mở cài đặt", "Để sau");
+                _pois.Clear();
+                MyMap.Pins.Clear();
 
-                if (open) AppInfo.ShowSettingsUI();
-                return false;
-            }
+                foreach (var p in pois)
+                {
+                    _pois.Add(p);
+
+                    var pin = new Pin
+                    {
+                        Label = p.Name,
+                        Address = p.Description,
+                        Location = new Location(p.Latitude, p.Longitude),
+                        Type = PinType.Place
+                    };
+
+                    // Nhan vao pin -> hien banner + hoi mo Google Maps
+                    pin.MarkerClicked += async (_, e) =>
+                    {
+                        e.HideInfoWindow = false;
+                        ShowBanner(p, "Da chon");
+
+                        if (!string.IsNullOrWhiteSpace(p.MapLink))
+                        {
+                            bool mo = await DisplayAlertAsync(
+                                p.Name,
+                                p.Description,
+                                "Mo Google Maps", "Dong");
+                            if (mo) await Launcher.OpenAsync(new Uri(p.MapLink));
+                        }
+                    };
+
+                    MyMap.Pins.Add(pin);
+                }
+
+                System.Diagnostics.Debug.WriteLine(
+                    $"[Map] Hien {_pois.Count} POI tren ban do");
+            });
         }
-        else
+        catch (Exception ex)
         {
-            // Android 10 hoặc iOS: có thể xin trực tiếp
-            var always = await Permissions.RequestAsync<Permissions.LocationAlways>();
-            if (always != PermissionStatus.Granted) return false;
+            System.Diagnostics.Debug.WriteLine($"[Map] Reload loi: {ex.Message}");
         }
-
-        return true;
     }
 
-    // ── Cập nhật bản đồ về vị trí GPS thực ───────────────────────────────
+    // ════════════════════════════════════════════════════════
+    // GPS - VI TRI THUC
+    // ════════════════════════════════════════════════════════
+
     private async Task UpdateToRealLocationAsync()
     {
         try
@@ -152,51 +159,45 @@ public partial class MapPage : ContentPage
             var req = new GeolocationRequest(
                 GeolocationAccuracy.Best,
                 TimeSpan.FromSeconds(10));
-
             var loc = await Geolocation.GetLocationAsync(req);
 
             if (loc != null)
             {
-                _lastLocation = loc;
-
                 await MainThread.InvokeOnMainThreadAsync(() =>
-                {
                     MyMap.MoveToRegion(
-                        MapSpan.FromCenterAndRadius(loc, Distance.FromKilometers(1)));
-                });
+                        MapSpan.FromCenterAndRadius(loc, Distance.FromKilometers(1))));
 
                 System.Diagnostics.Debug.WriteLine(
-                    $"[GPS] Vi tri thuc: {loc.Latitude:F6}, {loc.Longitude:F6} " +
-                    $"(acc: {loc.Accuracy:F0}m)");
+                    $"[GPS] {loc.Latitude:F6}, {loc.Longitude:F6} acc={loc.Accuracy:F0}m");
             }
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[GPS] Khong lay duoc vi tri: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"[GPS] {ex.Message}");
         }
     }
 
-    // ── GPS Loop chính ───────────────────────────────────────────────────
-    void StartUiLoop()
+    // ════════════════════════════════════════════════════════
+    // GPS LOOP - NEAR DETECTION + CAMERA FOLLOW
+    // ════════════════════════════════════════════════════════
+
+    private void StartUiLoop()
     {
         _cts?.Cancel();
         _cts = new CancellationTokenSource();
         _ = TrackLoopAsync(_cts.Token);
-
         _location.StartTracking((lat, lng) =>
-        {
-            _lastLocation = new Location(lat, lng);
-        });
+            System.Diagnostics.Debug.WriteLine($"[Fused] {lat:F5},{lng:F5}"));
     }
 
-    void StopUiLoop()
+    private void StopUiLoop()
     {
         _cts?.Cancel();
         _cts = null;
         _location.StopTracking();
     }
 
-    async Task TrackLoopAsync(CancellationToken token)
+    private async Task TrackLoopAsync(CancellationToken token)
     {
         var req = new GeolocationRequest(
             GeolocationAccuracy.Medium,
@@ -209,30 +210,36 @@ public partial class MapPage : ContentPage
                 var loc = await Geolocation.GetLocationAsync(req, token);
                 if (loc == null) { await Task.Delay(5000, token); continue; }
 
-                _lastLocation = loc;
-
-                // Camera follow theo user
+                // Camera follow user
                 await MainThread.InvokeOnMainThreadAsync(() =>
                     MyMap.MoveToRegion(
                         MapSpan.FromCenterAndRadius(loc, Distance.FromMeters(300))));
 
-                // Kiểm tra NEAR
-                foreach (var poi in _pois)
+                // Kiem tra NEAR cho tung POI
+                foreach (var poi in _pois.ToList())
                 {
                     var dist = Location.CalculateDistance(
                         new Location(poi.Latitude, poi.Longitude),
-                        loc,
-                        DistanceUnits.Kilometers) * 1000.0;
+                        loc, DistanceUnits.Kilometers) * 1000.0;
 
+                    // Vung NEAR: giua NearRadius va RadiusMeters
                     if (dist <= poi.NearRadiusMeters && dist > poi.RadiusMeters)
                     {
                         if (GeofenceEventGate.ShouldAccept(poi.Id, "NEAR",
                                 poi.DebounceSeconds, poi.CooldownSeconds))
                         {
+                            // Hien banner "Den gan"
                             await MainThread.InvokeOnMainThreadAsync(() =>
-                                DisplayAlertAsync("Near POI",
-                                    $"Den gan: {poi.Name} (~{dist:F0} m)", "OK"));
+                                ShowBanner(poi, $"Den gan (~{dist:F0}m)"));
+
+                            // Phat TTS
+                            await PlayTtsAsync(poi);
                         }
+                    }
+                    // Ra khoi tat ca vung -> an banner
+                    else if (dist > poi.NearRadiusMeters && _nearestPoi?.Id == poi.Id)
+                    {
+                        await MainThread.InvokeOnMainThreadAsync(() => HideBanner());
                     }
                 }
             }
@@ -242,6 +249,84 @@ public partial class MapPage : ContentPage
             }
 
             try { await Task.Delay(5000, token); } catch { }
+        }
+    }
+
+    // ════════════════════════════════════════════════════════
+    // NARRATION - TTS
+    // ════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Phat thuyet minh POI:
+    /// - Co AudioUrl -> phat file audio (mp3/wav)
+    /// - Khong co    -> doc TTS bang TextToSpeech built-in
+    /// </summary>
+    private async Task PlayTtsAsync(Poi poi)
+    {
+        try
+        {
+            // Neu co file audio (Azure Blob / URL truc tiep)
+            if (!string.IsNullOrWhiteSpace(poi.AudioUrl))
+            {
+                System.Diagnostics.Debug.WriteLine($"[Audio] URL: {poi.AudioUrl}");
+                // TODO: goi AudioPlayerService.PlayAsync(poi.AudioUrl) khi san sang
+                return;
+            }
+
+            // TTS fallback
+            var text = !string.IsNullOrWhiteSpace(poi.NarrationText)
+                ? poi.NarrationText
+                : $"Ban dang den {poi.Name}. {poi.Description}";
+
+            System.Diagnostics.Debug.WriteLine($"[TTS] Doc: {text[..Math.Min(40, text.Length)]}...");
+
+            await TextToSpeech.Default.SpeakAsync(text, new SpeechOptions
+            {
+                Volume = 1.0f,
+                Pitch = 1.0f
+            });
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[TTS] Loi: {ex.Message}");
+        }
+    }
+
+    // ════════════════════════════════════════════════════════
+    // BANNER UI
+    // ════════════════════════════════════════════════════════
+
+    private void ShowBanner(Poi poi, string status)
+    {
+        _nearestPoi = poi;
+        LblPoiName.Text = $"{poi.Name}";
+        LblPoiDist.Text = status;
+        BtnOpenMap.IsVisible = !string.IsNullOrWhiteSpace(poi.MapLink);
+        PoiBanner.IsVisible = true;
+    }
+
+    private void HideBanner()
+    {
+        _nearestPoi = null;
+        PoiBanner.IsVisible = false;
+    }
+
+    // ════════════════════════════════════════════════════════
+    // MO GOOGLE MAPS
+    // ════════════════════════════════════════════════════════
+
+    private async void OpenMapLink(Poi? poi)
+    {
+        if (poi == null) return;
+
+        var url = !string.IsNullOrWhiteSpace(poi.MapLink)
+            ? poi.MapLink
+            : $"https://maps.google.com/?q={poi.Latitude},{poi.Longitude}";
+
+        try { await Launcher.OpenAsync(new Uri(url)); }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[Map] Mo link loi: {ex.Message}");
         }
     }
 }

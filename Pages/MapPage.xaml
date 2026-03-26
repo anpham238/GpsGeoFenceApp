@@ -5,17 +5,81 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:maps="clr-namespace:Microsoft.Maui.Controls.Maps;assembly=Microsoft.Maui.Controls.Maps"
     Title="Bản đồ &amp; POI">
-    <!-- ✅ &amp; thay vì & -->
 
-    <!-- Dùng Grid để tránh cảnh báo FillAndExpand -->
-    <Grid RowDefinitions="Auto,*" ColumnDefinitions="*">
-        <HorizontalStackLayout Grid.Row="0" Padding="10" Spacing="12">
-            <Button x:Name="BtnStart" Text="Bắt đầu" />
-            <Button x:Name="BtnStop"  Text="Dừng" />
+    <Grid RowDefinitions="Auto,Auto,*" ColumnDefinitions="*">
+
+        <!-- Thanh công cụ trên cùng -->
+        <HorizontalStackLayout Grid.Row="0" Padding="10,8" Spacing="10">
+            <Button x:Name="BtnStart"
+                    Text="Bắt đầu"
+                    BackgroundColor="#4CAF50"
+                    TextColor="White"
+                    CornerRadius="8"
+                    Padding="16,8" />
+            <Button x:Name="BtnStop"
+                    Text="Dừng"
+                    BackgroundColor="#F44336"
+                    TextColor="White"
+                    CornerRadius="8"
+                    Padding="16,8" />
+            <Button x:Name="BtnRefresh"
+                    Text="Tải lại"
+                    BackgroundColor="#2196F3"
+                    TextColor="White"
+                    CornerRadius="8"
+                    Padding="16,8" />
         </HorizontalStackLayout>
+
+        <!-- Banner POI: Frame -> Border (để hết obsolete) -->
+        <Border x:Name="PoiBanner"
+                Grid.Row="1"
+                Margin="10,0,10,4"
+                Padding="10,6"
+                Background="#E3F2FD"
+                Stroke="#2196F3"
+                IsVisible="False">
+            <Border.StrokeShape>
+                <RoundRectangle CornerRadius="8" />
+            </Border.StrokeShape>
+            <!-- (Tuỳ chọn) shadow tương đương HasShadow -->
+            <!--
+            <Border.Shadow>
+                <Shadow Opacity="0.35" Radius="8" Offset="0,2" />
+            </Border.Shadow>
+            -->
+
+            <Grid ColumnDefinitions="*,Auto">
+                <StackLayout Grid.Column="0" Spacing="2">
+                    <Label x:Name="LblPoiName"
+                           Text=""
+                           FontSize="14"
+                           FontAttributes="Bold"
+                           TextColor="#0D47A1" />
+                    <Label x:Name="LblPoiDist"
+                           Text=""
+                           FontSize="12"
+                           TextColor="#1565C0" />
+                </StackLayout>
+
+                <Button x:Name="BtnOpenMap"
+                        Grid.Column="1"
+                        Text="Bản đồ"
+                        FontSize="12"
+                        BackgroundColor="#2196F3"
+                        TextColor="White"
+                        CornerRadius="6"
+                        Padding="10,4"
+                        VerticalOptions="Center" />
+            </Grid>
+        </Border>
+
+        <!-- Bản đồ chính -->
         <maps:Map x:Name="MyMap"
-                  Grid.Row="1"
+                  Grid.Row="2"
                   MapType="Street"
-                  IsShowingUser="True"/>
+                  IsShowingUser="False"    
+            IsScrollEnabled="True"
+                  IsZoomEnabled="True" />
+
     </Grid>
 </ContentPage>
