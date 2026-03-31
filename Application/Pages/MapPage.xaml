@@ -29,9 +29,12 @@
                 Background="#E3F2FD"
                 Stroke="#1976D2"
                 IsVisible="False">
-            <Border.StrokeShape><RoundRectangle CornerRadius="10"/></Border.StrokeShape>
+            <Border.StrokeShape>
+                <RoundRectangle CornerRadius="10"/>
+            </Border.StrokeShape>
+
             <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
-                <!-- Ten + trang thai -->
+                <!-- Tên + trạng thái -->
                 <Label x:Name="LblPoiName"
                        Grid.Row="0" Grid.Column="0"
                        FontSize="15" FontAttributes="Bold"
@@ -39,7 +42,8 @@
                 <Label x:Name="LblPoiDist"
                        Grid.Row="1" Grid.Column="0"
                        FontSize="12" TextColor="#1565C0"/>
-                <!-- Nut hanh dong -->
+
+                <!-- Cụm nút hành động (Chi tiết + Bản đồ) -->
                 <VerticalStackLayout Grid.Row="0" Grid.Column="1"
                                      Grid.RowSpan="2"
                                      Spacing="4" VerticalOptions="Center">
@@ -48,12 +52,13 @@
                             FontSize="12"
                             BackgroundColor="#1976D2" TextColor="White"
                             CornerRadius="6" Padding="10,4"/>
+
+                    <!-- ➕ Nút mở bản đồ (đã thêm lại) -->
                     <Button x:Name="BtnOpenMap"
-                            Text="Maps"
+                            Text="Bản đồ"
                             FontSize="12"
-                            BackgroundColor="#43A047" TextColor="White"
-                            CornerRadius="6" Padding="10,4"
-                            IsVisible="False"/>
+                            BackgroundColor="#2196F3" TextColor="White"
+                            CornerRadius="6" Padding="10,4"/>
                 </VerticalStackLayout>
             </Grid>
         </Border>
@@ -73,7 +78,10 @@
                 Background="White"
                 Stroke="#E0E0E0"
                 IsVisible="False">
-            <Border.StrokeShape><RoundRectangle CornerRadius="14,14,0,0"/></Border.StrokeShape>
+            <Border.StrokeShape>
+                <RoundRectangle CornerRadius="14,14,0,0"/>
+            </Border.StrokeShape>
+
             <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto">
 
                 <!-- Tên POI -->
@@ -94,19 +102,19 @@
                        FontSize="14" TextColor="#444"
                        Margin="0,6,0,0"/>
 
-                <!-- Toa do -->
+                <!-- Tọa độ -->
                 <Label x:Name="DetailCoord"
                        Grid.Row="2" Grid.ColumnSpan="2"
                        FontSize="12" TextColor="#888"
                        Margin="0,4,0,0"/>
 
-                <!-- Ban kinh -->
+                <!-- Bán kính -->
                 <Label x:Name="DetailRadius"
                        Grid.Row="3" Grid.ColumnSpan="2"
                        FontSize="12" TextColor="#888"
                        Margin="0,2,0,0"/>
 
-                <!-- Nut mo maps -->
+                <!-- Nút mở Google Maps trong panel chi tiết -->
                 <Button x:Name="BtnDetailOpenMap"
                         Grid.Row="4" Grid.ColumnSpan="2"
                         Text="🗺 Mở Google Maps"

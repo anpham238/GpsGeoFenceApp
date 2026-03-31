@@ -1,9 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
+		<!-- Chi build Android. Bo Windows de tranh loi MAUIX2000 MauiWinUIApplication -->
 		<TargetFrameworks>net10.0-android</TargetFrameworks>
-		<TargetFrameworks Condition="!$([MSBuild]::IsOSPlatform('linux'))">$(TargetFrameworks);net10.0-ios;net10.0-maccatalyst</TargetFrameworks>
-		<TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net10.0-windows10.0.19041.0</TargetFrameworks>
+		<TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('osx'))">$(TargetFrameworks);net10.0-ios;net10.0-maccatalyst</TargetFrameworks>
 
 		<OutputType>Exe</OutputType>
 		<RootNamespace>MauiApp1</RootNamespace>
@@ -51,6 +51,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="AutoMapper" Version="16.1.1" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.5" />
 		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
 	</ItemGroup>
@@ -58,7 +59,7 @@
 	<ItemGroup>
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />
 		<PackageReference Include="CommunityToolkit.Maui" Version="12.3.0" />
-		<PackageReference Include="Microsoft.Data.Sqlite.Core" Version="9.0.4" />
+		<PackageReference Include="Microsoft.Data.Sqlite.Core" Version="10.0.5" />
 		<PackageReference Include="Microsoft.Maui.Controls.Maps" Version="10.0.50" />
 		<PackageReference Include="Microsoft.Maui.Maps" Version="10.0.50" />
 		<PackageReference Include="SQLitePCLRaw.bundle_green" Version="2.1.10" />
@@ -82,5 +83,12 @@
 
 	<ItemGroup>
 	  <Folder Include="Platforms\Shared\Services\" />
+	</ItemGroup>
+
+	<!-- Exclude Windows platform files -->
+	<ItemGroup>
+		<Compile Remove="Platforms\Windows\**" />
+		<MauiXaml Remove="Platforms\Windows\**" />
+		<None Include="Platforms\Windows\**" />
 	</ItemGroup>
 </Project>
