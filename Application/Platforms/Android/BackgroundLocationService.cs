@@ -52,23 +52,17 @@ public sealed class BackgroundLocationService : Service
     }
     private void CreateNotificationChannel()
     {
-        // Sử dụng 'as' thay vì ép kiểu cứng để tránh lỗi văng app
-        var mgr = GetSystemService(NotificationService) as NotificationManager;
-        if (mgr == null) return;
+        var mgr = (NotificationManager?)GetSystemService(NotificationService);
+        if (mgr is null) return;
 
-        if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
+        if (Build.VERSION.SdkInt >= BuildVersionCodes.O &&
+            mgr.GetNotificationChannel(ChannelId) is null)
         {
-            if (mgr.GetNotificationChannel(ChannelId) == null)
-            {
-                var channel = new NotificationChannel(ChannelId, "GPS Tracking", NotificationImportance.Low)
-                {
-                    Description = "Đang theo dõi vị trí"
-                };
-                mgr.CreateNotificationChannel(channel);
-            }
+            var ch = new NotificationChannel(ChannelId, "GPS Tracking", NotificationImportance.Low)
+            { Description = "Đang theo dõi vị trí" };
+            mgr.CreateNotificationChannel(ch);
         }
     }
-
     private Notification CreateNotification()
     {
 

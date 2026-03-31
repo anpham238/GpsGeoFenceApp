@@ -12,7 +12,6 @@ public sealed record Announcement(
     DateTime CreatedAtUtc,
     string? PreferredLanguage = null // "vi-VN", "en-US", ...
 );
-
 public sealed class NarrationManager
 {
     private readonly IAudioPlayer _player;
@@ -48,7 +47,6 @@ public sealed class NarrationManager
             _isPlaying = true;
             _startedAtUtc = DateTime.UtcNow;
         }
-
         try
         {
             // 1) Thử audio URL trước
@@ -61,7 +59,6 @@ public sealed class NarrationManager
                     return;
                 }
             }
-
             // 2) Fallback TTS (đa ngôn ngữ)
             var text = !string.IsNullOrWhiteSpace(ann.Poi.NarrationText)
                 ? ann.Poi.NarrationText!
@@ -76,7 +73,6 @@ public sealed class NarrationManager
                     string.Equals(l.Language, ann.PreferredLanguage, StringComparison.OrdinalIgnoreCase));
                 if (match != null) opts.Locale = match;
             }
-
             await TextToSpeech.Default.SpeakAsync(text, opts);
         }
         finally
