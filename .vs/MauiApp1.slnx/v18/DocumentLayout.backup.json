@@ -1,0 +1,197 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\lhnhan\\source\\repos\\GpsGeoFenceApp\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{046B9634-E645-0B60-C3EC-B93245F8AD4B}|MauiApp1.csproj|c:\\users\\lhnhan\\source\\repos\\gpsgeofenceapp\\pages\\mappage.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{046B9634-E645-0B60-C3EC-B93245F8AD4B}|MauiApp1.csproj|solutionrelative:pages\\mappage.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{046B9634-E645-0B60-C3EC-B93245F8AD4B}|MauiApp1.csproj|c:\\users\\lhnhan\\source\\repos\\gpsgeofenceapp\\pages\\mappage.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{046B9634-E645-0B60-C3EC-B93245F8AD4B}|MauiApp1.csproj|solutionrelative:pages\\mappage.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{046B9634-E645-0B60-C3EC-B93245F8AD4B}|MauiApp1.csproj|c:\\users\\lhnhan\\source\\repos\\gpsgeofenceapp\\mauiprogram.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{046B9634-E645-0B60-C3EC-B93245F8AD4B}|MauiApp1.csproj|solutionrelative:mauiprogram.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{046B9634-E645-0B60-C3EC-B93245F8AD4B}|MauiApp1.csproj|c:\\users\\lhnhan\\source\\repos\\gpsgeofenceapp\\services\\narration\\narrationmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{046B9634-E645-0B60-C3EC-B93245F8AD4B}|MauiApp1.csproj|solutionrelative:services\\narration\\narrationmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{046B9634-E645-0B60-C3EC-B93245F8AD4B}|MauiApp1.csproj|c:\\users\\lhnhan\\source\\repos\\gpsgeofenceapp\\services\\audio\\audiocache.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{046B9634-E645-0B60-C3EC-B93245F8AD4B}|MauiApp1.csproj|solutionrelative:services\\audio\\audiocache.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{046B9634-E645-0B60-C3EC-B93245F8AD4B}|MauiApp1.csproj|c:\\users\\lhnhan\\source\\repos\\gpsgeofenceapp\\services\\audio\\noopaudioplayer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{046B9634-E645-0B60-C3EC-B93245F8AD4B}|MauiApp1.csproj|solutionrelative:services\\audio\\noopaudioplayer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{046B9634-E645-0B60-C3EC-B93245F8AD4B}|MauiApp1.csproj|c:\\users\\lhnhan\\source\\repos\\gpsgeofenceapp\\services\\audio\\androidaudioplayer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{046B9634-E645-0B60-C3EC-B93245F8AD4B}|MauiApp1.csproj|solutionrelative:services\\audio\\androidaudioplayer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{046B9634-E645-0B60-C3EC-B93245F8AD4B}|MauiApp1.csproj|c:\\users\\lhnhan\\source\\repos\\gpsgeofenceapp\\services\\audio\\iaudioplayer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{046B9634-E645-0B60-C3EC-B93245F8AD4B}|MauiApp1.csproj|solutionrelative:services\\audio\\iaudioplayer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{046B9634-E645-0B60-C3EC-B93245F8AD4B}|MauiApp1.csproj|c:\\users\\lhnhan\\source\\repos\\gpsgeofenceapp\\services\\narration\\inarrationmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{046B9634-E645-0B60-C3EC-B93245F8AD4B}|MauiApp1.csproj|solutionrelative:services\\narration\\inarrationmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{046B9634-E645-0B60-C3EC-B93245F8AD4B}|MauiApp1.csproj|c:\\users\\lhnhan\\source\\repos\\gpsgeofenceapp\\models\\poi.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{046B9634-E645-0B60-C3EC-B93245F8AD4B}|MauiApp1.csproj|solutionrelative:models\\poi.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{046B9634-E645-0B60-C3EC-B93245F8AD4B}|MauiApp1.csproj|c:\\users\\lhnhan\\source\\repos\\gpsgeofenceapp\\data\\poidatabase .cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{046B9634-E645-0B60-C3EC-B93245F8AD4B}|MauiApp1.csproj|solutionrelative:data\\poidatabase .cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 10,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "AudioCache.cs",
+              "DocumentMoniker": "C:\\Users\\lhnhan\\source\\repos\\GpsGeoFenceApp\\Services\\Audio\\AudioCache.cs",
+              "RelativeDocumentMoniker": "Services\\Audio\\AudioCache.cs",
+              "ToolTip": "C:\\Users\\lhnhan\\source\\repos\\GpsGeoFenceApp\\Services\\Audio\\AudioCache.cs",
+              "RelativeToolTip": "Services\\Audio\\AudioCache.cs",
+              "ViewState": "AgIAACIAAAAAAAAAAAAkwC8AAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-03-26T09:16:46.592Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "NoopAudioPlayer.cs",
+              "DocumentMoniker": "C:\\Users\\lhnhan\\source\\repos\\GpsGeoFenceApp\\Services\\Audio\\NoopAudioPlayer.cs",
+              "RelativeDocumentMoniker": "Services\\Audio\\NoopAudioPlayer.cs",
+              "ToolTip": "C:\\Users\\lhnhan\\source\\repos\\GpsGeoFenceApp\\Services\\Audio\\NoopAudioPlayer.cs",
+              "RelativeToolTip": "Services\\Audio\\NoopAudioPlayer.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-03-26T09:16:00.539Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "AndroidAudioPlayer.cs",
+              "DocumentMoniker": "C:\\Users\\lhnhan\\source\\repos\\GpsGeoFenceApp\\Services\\Audio\\AndroidAudioPlayer.cs",
+              "RelativeDocumentMoniker": "Services\\Audio\\AndroidAudioPlayer.cs",
+              "ToolTip": "C:\\Users\\lhnhan\\source\\repos\\GpsGeoFenceApp\\Services\\Audio\\AndroidAudioPlayer.cs",
+              "RelativeToolTip": "Services\\Audio\\AndroidAudioPlayer.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAB4AAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-03-26T09:15:27.057Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "IAudioPlayer.cs",
+              "DocumentMoniker": "C:\\Users\\lhnhan\\source\\repos\\GpsGeoFenceApp\\Services\\Audio\\IAudioPlayer.cs",
+              "RelativeDocumentMoniker": "Services\\Audio\\IAudioPlayer.cs",
+              "ToolTip": "C:\\Users\\lhnhan\\source\\repos\\GpsGeoFenceApp\\Services\\Audio\\IAudioPlayer.cs",
+              "RelativeToolTip": "Services\\Audio\\IAudioPlayer.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-03-26T09:14:15.252Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "NarrationManager.cs",
+              "DocumentMoniker": "C:\\Users\\lhnhan\\source\\repos\\GpsGeoFenceApp\\Services\\Narration\\NarrationManager.cs",
+              "RelativeDocumentMoniker": "Services\\Narration\\NarrationManager.cs",
+              "ToolTip": "C:\\Users\\lhnhan\\source\\repos\\GpsGeoFenceApp\\Services\\Narration\\NarrationManager.cs",
+              "RelativeToolTip": "Services\\Narration\\NarrationManager.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAFcAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-03-26T09:08:52.427Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 8,
+              "Title": "INarrationManager.cs",
+              "DocumentMoniker": "C:\\Users\\lhnhan\\source\\repos\\GpsGeoFenceApp\\Services\\Narration\\INarrationManager.cs",
+              "RelativeDocumentMoniker": "Services\\Narration\\INarrationManager.cs",
+              "ToolTip": "C:\\Users\\lhnhan\\source\\repos\\GpsGeoFenceApp\\Services\\Narration\\INarrationManager.cs",
+              "RelativeToolTip": "Services\\Narration\\INarrationManager.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-03-26T09:08:45.469Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 10,
+              "Title": "PoiDatabase .cs",
+              "DocumentMoniker": "C:\\Users\\lhnhan\\source\\repos\\GpsGeoFenceApp\\Data\\PoiDatabase .cs",
+              "RelativeDocumentMoniker": "Data\\PoiDatabase .cs",
+              "ToolTip": "C:\\Users\\lhnhan\\source\\repos\\GpsGeoFenceApp\\Data\\PoiDatabase .cs",
+              "RelativeToolTip": "Data\\PoiDatabase .cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABAAAAAFAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-03-26T08:57:24.584Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 9,
+              "Title": "POI.cs",
+              "DocumentMoniker": "C:\\Users\\lhnhan\\source\\repos\\GpsGeoFenceApp\\Models\\POI.cs",
+              "RelativeDocumentMoniker": "Models\\POI.cs",
+              "ToolTip": "C:\\Users\\lhnhan\\source\\repos\\GpsGeoFenceApp\\Models\\POI.cs",
+              "RelativeToolTip": "Models\\POI.cs",
+              "ViewState": "AgIAAAcAAAAAAAAAAAA5wBgAAAAQAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-03-26T08:55:47.054Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "MapPage.xaml",
+              "DocumentMoniker": "C:\\Users\\lhnhan\\source\\repos\\GpsGeoFenceApp\\Pages\\MapPage.xaml",
+              "RelativeDocumentMoniker": "Pages\\MapPage.xaml",
+              "ToolTip": "C:\\Users\\lhnhan\\source\\repos\\GpsGeoFenceApp\\Pages\\MapPage.xaml",
+              "RelativeToolTip": "Pages\\MapPage.xaml",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAEAAAAAnAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-03-26T06:44:34.709Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "MauiProgram.cs",
+              "DocumentMoniker": "C:\\Users\\lhnhan\\source\\repos\\GpsGeoFenceApp\\MauiProgram.cs",
+              "RelativeDocumentMoniker": "MauiProgram.cs",
+              "ToolTip": "C:\\Users\\lhnhan\\source\\repos\\GpsGeoFenceApp\\MauiProgram.cs",
+              "RelativeToolTip": "MauiProgram.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAACwAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-03-26T06:43:52.966Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "MapPage.xaml.cs",
+              "DocumentMoniker": "C:\\Users\\lhnhan\\source\\repos\\GpsGeoFenceApp\\Pages\\MapPage.xaml.cs",
+              "RelativeDocumentMoniker": "Pages\\MapPage.xaml.cs",
+              "ToolTip": "C:\\Users\\lhnhan\\source\\repos\\GpsGeoFenceApp\\Pages\\MapPage.xaml.cs",
+              "RelativeToolTip": "Pages\\MapPage.xaml.cs",
+              "ViewState": "AgIAADcAAAAAAAAAAAAQwJoAAAARAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-03-26T06:42:57.262Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
