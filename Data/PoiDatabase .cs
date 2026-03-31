@@ -13,11 +13,6 @@ public class PoiDatabase
 {
     private bool _initialized;
     private readonly SemaphoreSlim _lock = new(1, 1);
-
-    // ════════════════════════════════════════════════════════════════════
-    // KHOI TAO
-    // ════════════════════════════════════════════════════════════════════
-
     public async Task InitAsync()
     {
         if (_initialized) return;
@@ -63,11 +58,6 @@ public class PoiDatabase
         }
         finally { _lock.Release(); }
     }
-
-    // ════════════════════════════════════════════════════════════════════
-    // SEED DU LIEU MAU (7 diem du lich TPHCM)
-    // ════════════════════════════════════════════════════════════════════
-
     private async Task SeedIfEmptyAsync(SqliteConnection conn)
     {
         var countCmd = conn.CreateCommand();
@@ -131,11 +121,6 @@ public class PoiDatabase
         }
         Debug.WriteLine($"[SQLite] Seed {pois.Length} POI xong.");
     }
-
-    // ════════════════════════════════════════════════════════════════════
-    // READ
-    // ════════════════════════════════════════════════════════════════════
-
     public async Task<List<Poi>> GetActivePoisAsync()
     {
         await InitAsync();
@@ -171,11 +156,6 @@ public class PoiDatabase
         catch (Exception ex) { Debug.WriteLine($"[SQLite] GetById loi: {ex.Message}"); }
         return null;
     }
-
-    // ════════════════════════════════════════════════════════════════════
-    // UPSERT (Insert hoac Update)
-    // ════════════════════════════════════════════════════════════════════
-
     public async Task<bool> SaveAsync(Poi p)
     {
         await InitAsync();
@@ -211,11 +191,6 @@ public class PoiDatabase
         }
         catch (Exception ex) { Debug.WriteLine($"[SQLite] Save loi: {ex.Message}"); return false; }
     }
-
-    // ════════════════════════════════════════════════════════════════════
-    // DELETE (xoa mem)
-    // ════════════════════════════════════════════════════════════════════
-
     public async Task<bool> DeleteAsync(string id)
     {
         await InitAsync();
@@ -233,11 +208,6 @@ public class PoiDatabase
         }
         catch (Exception ex) { Debug.WriteLine($"[SQLite] Delete loi: {ex.Message}"); return false; }
     }
-
-    // ════════════════════════════════════════════════════════════════════
-    // HELPERS
-    // ════════════════════════════════════════════════════════════════════
-
     private static Poi Read(SqliteDataReader r)
     {
         string? S(string col) { int i = r.GetOrdinal(col); return r.IsDBNull(i) ? null : r.GetString(i); }
@@ -260,8 +230,7 @@ public class PoiDatabase
             Priority = r.GetInt32(r.GetOrdinal("Priority")),
         };
     }
-
-    private static void Bind(SqliteCommand cmd, Poi p)
+   private static void Bind(SqliteCommand cmd, Poi p)
     {
         var now = DateTime.UtcNow.ToString("o");
         cmd.Parameters.AddWithValue("$id", p.Id);
