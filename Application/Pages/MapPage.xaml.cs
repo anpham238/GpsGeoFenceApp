@@ -1,18 +1,20 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using MauiApp1.Data;
-using MauiApp1.Models;
+﻿using MauiApp1.Models;
 using MauiApp1.Services;
 using MauiApp1.Services.Narration;
+using MauiApp1.Data;
 using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Controls.Maps;
 using Microsoft.Maui.Devices;
 using Microsoft.Maui.Devices.Sensors;
 using Microsoft.Maui.Maps;
+using Syncfusion.Maui.Toolkit.BottomSheet;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+
 namespace MauiApp1.Pages
 {
     public partial class MapPage : ContentPage
@@ -21,17 +23,23 @@ namespace MauiApp1.Pages
         private readonly ILocationService _location;
         private readonly PoiDatabase _db;
         private readonly NarrationManager _narration;
+
         private readonly List<Poi> _pois = new();
         private readonly Dictionary<string, Pin> _pinMap = new();
+
         private CancellationTokenSource? _cts;
         private Poi? _nearestPoi;
         private Location? _userLocation;
 
         private static readonly Location _hcmCenter = new(10.776889, 106.700806);
 
-        // ════════════════════════════════════════════════════════
-        // KHOI TAO
-        // ════════════════════════════════════════════════════════
+        // ===== Bottom sheet state =====
+        double _sheetCollapsedOffset = -1;
+        readonly double _sheetExpandedOffset = 0;
+        double _sheetStartPanY = 0;
+        bool _sheetReady = false;
+        const double SheetPeekHeight = 140;
+
         public MapPage(IGeofenceService geofence,
                        ILocationService location,
                        PoiDatabase db,
@@ -44,15 +52,7 @@ namespace MauiApp1.Pages
             _db = db ?? throw new ArgumentNullException(nameof(db));
             _narration = narration ?? throw new ArgumentNullException(nameof(narration));
 
-            BtnStart.Clicked += (_, _) => StartTracking();
-            BtnStop.Clicked += (_, _) => StopTracking();
-            BtnRefresh.Clicked += async (_, _) => await ReloadPoisAsync();
-            BtnDetail.Clicked += (_, _) => ShowDetail(_nearestPoi);
-            BtnOpenMap.Clicked += async (_, _) => await OpenMapsAsync(_nearestPoi);
-            BtnDetailOpenMap.Clicked += async (_, _) => await OpenMapsAsync(_nearestPoi);
-            BtnCloseDetail.Clicked += (_, _) => HideDetail();
-
-            // Toolbar Reset về mốc HCM (hoặc tọa độ nhà bạn nếu thay _hcmCenter)
+            // (Tuỳ chọn) Toolbar Reset camera
             ToolbarItems.Add(new ToolbarItem
             {
                 Text = "Reset",
@@ -62,23 +62,26 @@ namespace MauiApp1.Pages
                         MapSpan.FromCenterAndRadius(_hcmCenter, Distance.FromKilometers(3))))
             });
 
-            // ── Geofence ENTER / NEAR / EXIT ────────────────────────────────
+            // Bottom sheet
+            BtnOpenInMaps.Clicked += async (_, _) => await OpenMapsAsync(_nearestPoi);
+            BottomSheet.SizeChanged += (_, __) => SetupBottomSheetOffsets();
+            this.SizeChanged += (_, __) => SetupBottomSheetOffsets();
+
+            // Geofence events
             _geofence.OnPoiEvent += async (poi, type) =>
             {
                 if (type == "EXIT")
                 {
-                    await MainThread.InvokeOnMainThreadAsync(() =>
-                    {
-                        ClearHighlight();
-                        HideBanner();
-                    });
+                    await MainThread.InvokeOnMainThreadAsync(ClearHighlight);
                     return;
                 }
 
                 await MainThread.InvokeOnMainThreadAsync(() =>
-                    HighlightPoi(poi, $"Vào vùng {type}"));
+                {
+                    HighlightPoi(poi, $"Vào vùng {type}");
+                    ShowDetail(poi);   // bật bottom sheet
+                });
 
-                // Dùng NarrationManager: ưu tiên AudioUrl (nếu có) → TTS fallback
                 await _narration.HandleAsync(new Announcement(
                     poi,
                     type == "ENTER" ? PoiEventType.Enter : PoiEventType.Near,
@@ -86,30 +89,20 @@ namespace MauiApp1.Pages
             };
         }
 
-        // ════════════════════════════════════════════════════════
-        // LIFECYCLE
-        // ════════════════════════════════════════════════════════
         protected override async void OnAppearing()
         {
             base.OnAppearing();
 
-            // 1) Hiển thị HCM ngay
             MyMap.MoveToRegion(
                 MapSpan.FromCenterAndRadius(_hcmCenter, Distance.FromKilometers(3)));
 
-            // 2) Xin quyền (Android 11+: tách bước, mở Settings nếu cần nền)
             if (!await EnsureLocationPermissionsAsync()) return;
-
-            // 2.1) Bật dot sau khi Granted (tránh xin trùng)
             await MainThread.InvokeOnMainThreadAsync(() => MyMap.IsShowingUser = true);
 
-            // 3) Load POI từ SQLite
             await ReloadPoisAsync();
 
-            // 4) Lấy vị trí thực (nền) – KHÔNG kéo camera để lướt map tự do
             _ = Task.Run(MoveToRealLocationAsync);
 
-            // 5) Đăng ký geofence + loop
             await _geofence.RegisterAsync(_pois);
             StartTracking();
         }
@@ -120,41 +113,29 @@ namespace MauiApp1.Pages
             base.OnDisappearing();
         }
 
-        // ════════════════════════════════════════════════════════
-        // QUYỀN LOCATION (Android 11+ tách bước)
-        // ════════════════════════════════════════════════════════
         private async Task<bool> EnsureLocationPermissionsAsync()
         {
-            // Foreground trước
             var when = await Permissions.RequestAsync<Permissions.LocationWhenInUse>();
             if (when != PermissionStatus.Granted) return false;
 
             if (DeviceInfo.Platform == DevicePlatform.Android && OperatingSystem.IsAndroidVersionAtLeast(30))
             {
-                // Android 11+: không xin kèm background; hướng người dùng bật trong Settings
-                var always = await Permissions.CheckStatusAsync<Permissions.LocationAlways>();
+                // Android 11+: nếu cần nền, hướng user vào Settings bật "Allow all the time"
+                // var always = await Permissions.CheckStatusAsync<Permissions.LocationAlways>();
+                // if (always != PermissionStatus.Granted) AppInfo.ShowSettingsUI();
             }
             else
             {
-                // Android 10 hoặc iOS: có thể xin trực tiếp
                 var always = await Permissions.RequestAsync<Permissions.LocationAlways>();
                 if (always != PermissionStatus.Granted) return false;
             }
             return true;
         }
 
-        // Helper để dọn cảnh báo obsolete (MapPage.DisplayAlertAsync mới)
-        private Task<bool> DisplayAlertAsync(string title, string message, string accept, string cancel = "Đóng")
-            => DisplayAlertAsync(title, message, accept, cancel);
-
-        // ════════════════════════════════════════════════════════
-        // LOAD POI TỪ SQLITE
-        // ════════════════════════════════════════════════════════
         private async Task ReloadPoisAsync()
         {
             try
             {
-                // DB trả ORDER BY Priority ASC
                 var pois = await _db.GetActivePoisAsync();
 
                 await MainThread.InvokeOnMainThreadAsync(() =>
@@ -175,7 +156,6 @@ namespace MauiApp1.Pages
                             Type = PinType.Place
                         };
 
-                        // TAP pin: highlight + chi tiết + phát thuyết minh
                         pin.MarkerClicked += async (_, e) =>
                         {
                             e.HideInfoWindow = false;
@@ -189,9 +169,6 @@ namespace MauiApp1.Pages
                         _pinMap[p.Id] = pin;
                         MyMap.Pins.Add(pin);
                     }
-
-                    System.Diagnostics.Debug.WriteLine(
-                        $"[Map] {_pois.Count} POI (pri {_pois.FirstOrDefault()?.Priority}→{_pois.LastOrDefault()?.Priority})");
                 });
             }
             catch (Exception ex)
@@ -200,23 +177,16 @@ namespace MauiApp1.Pages
             }
         }
 
-        // ════════════════════════════════════════════════════════
-        // VỊ TRÍ NGƯỜI DÙNG (lần định vị đầu – không kéo camera)
-        // ════════════════════════════════════════════════════════
         private async Task MoveToRealLocationAsync()
         {
             try
             {
-                var req = new GeolocationRequest(
-                    GeolocationAccuracy.Best, TimeSpan.FromSeconds(10));
+                var req = new GeolocationRequest(GeolocationAccuracy.Best, TimeSpan.FromSeconds(10));
                 var loc = await Geolocation.GetLocationAsync(req);
                 if (loc == null) return;
 
                 _userLocation = loc;
-
-                // KHÔNG MoveToRegion ở đây để tránh auto-follow
-                System.Diagnostics.Debug.WriteLine(
-                    $"[GPS] {loc.Latitude:F6}, {loc.Longitude:F6} acc={loc.Accuracy:F0}m");
+                System.Diagnostics.Debug.WriteLine($"[GPS] {loc.Latitude:F6}, {loc.Longitude:F6} acc={loc.Accuracy:F0}m");
             }
             catch (Exception ex)
             {
@@ -224,9 +194,6 @@ namespace MauiApp1.Pages
             }
         }
 
-        // ════════════════════════════════════════════════════════
-        // GPS LOOP – NEAR + ƯU TIÊN (KHÔNG kéo camera)
-        // ════════════════════════════════════════════════════════
         private void StartTracking()
         {
             _cts?.Cancel();
@@ -246,8 +213,7 @@ namespace MauiApp1.Pages
 
         private async Task TrackLoopAsync(CancellationToken token)
         {
-            var req = new GeolocationRequest(
-                GeolocationAccuracy.Medium, TimeSpan.FromSeconds(10));
+            var req = new GeolocationRequest(GeolocationAccuracy.Medium, TimeSpan.FromSeconds(10));
 
             while (!token.IsCancellationRequested)
             {
@@ -258,8 +224,6 @@ namespace MauiApp1.Pages
 
                     _userLocation = loc;
 
-                    // Tìm POI ưu tiên cao nhất trong vùng NEAR
-                    // _pois đã sort theo Priority ASC từ DB
                     Poi? nearest = null;
                     double nearestDist = double.MaxValue;
 
@@ -267,7 +231,7 @@ namespace MauiApp1.Pages
                     {
                         var dist = Location.CalculateDistance(
                             new Location(poi.Latitude, poi.Longitude),
-                            loc, DistanceUnits.Kilometers) * 1000.0; // km -> m
+                            loc, DistanceUnits.Kilometers) * 1000.0;
 
                         if (dist > poi.NearRadiusMeters) continue;
 
@@ -286,7 +250,10 @@ namespace MauiApp1.Pages
                     if (nearest != null)
                     {
                         await MainThread.InvokeOnMainThreadAsync(() =>
-                            HighlightPoi(nearest, $"Đến gần (~{nearestDist:F0}m) • Ưu tiên #{nearest.Priority}"));
+                        {
+                            HighlightPoi(nearest, $"Đến gần (~{nearestDist:F0}m) • Ưu tiên #{nearest.Priority}");
+                            ShowDetail(nearest);
+                        });
 
                         if (GeofenceEventGate.ShouldAccept(nearest.Id, "NEAR",
                                 nearest.DebounceSeconds, nearest.CooldownSeconds))
@@ -297,11 +264,7 @@ namespace MauiApp1.Pages
                     }
                     else
                     {
-                        await MainThread.InvokeOnMainThreadAsync(() =>
-                        {
-                            ClearHighlight();
-                            HideBanner();
-                        });
+                        await MainThread.InvokeOnMainThreadAsync(ClearHighlight);
                     }
                 }
                 catch (Exception ex) when (!token.IsCancellationRequested)
@@ -313,9 +276,6 @@ namespace MauiApp1.Pages
             }
         }
 
-        // ════════════════════════════════════════════════════════
-        // HIGHLIGHT
-        // ════════════════════════════════════════════════════════
         private void HighlightPoi(Poi poi, string status)
         {
             ClearHighlight();
@@ -323,8 +283,6 @@ namespace MauiApp1.Pages
 
             if (_pinMap.TryGetValue(poi.Id, out var pin))
                 pin.Label = $"★ {poi.Name}";
-
-            ShowBanner(poi, status);
         }
 
         private void ClearHighlight()
@@ -337,46 +295,33 @@ namespace MauiApp1.Pages
             _nearestPoi = null;
         }
 
-        // ════════════════════════════════════════════════════════
-        // BANNER & DETAIL
-        // ════════════════════════════════════════════════════════
-        private void ShowBanner(Poi poi, string status)
-        {
-            LblPoiName.Text = poi.Name;
-            LblPoiDist.Text = status;
-            BtnOpenMap.IsVisible = !string.IsNullOrWhiteSpace(poi.MapLink);
-            PoiBanner.IsVisible = true;
-        }
-
-        private void HideBanner() => PoiBanner.IsVisible = false;
-
+        // ===== Bottom Sheet =====
         private void ShowDetail(Poi? poi)
         {
             if (poi == null) return;
 
             DetailName.Text = poi.Name;
-            DetailDesc.Text = string.IsNullOrWhiteSpace(poi.Description)
-                                ? "(Không có mô tả)"
-                                : poi.Description;
+            DetailDesc.Text = string.IsNullOrWhiteSpace(poi.Description) ? "(Không có mô tả)" : poi.Description;
             DetailCoord.Text = $"📍 {poi.Latitude:F6}, {poi.Longitude:F6}";
+            DetailRadius.Text = $"🔵 Bán kính: {poi.RadiusMeters}m  |  Gần: {poi.NearRadiusMeters}m";
 
-            var audioMode = !string.IsNullOrWhiteSpace(poi.AudioUrl)
-                ? "🎵 File audio"
-                : "🗣 TTS";
-            DetailRadius.Text =
-                $"🔵 Bán kính: {poi.RadiusMeters}m  |  Gần: {poi.NearRadiusMeters}m  |  Ưu tiên: #{poi.Priority}\n{audioMode}";
+            if (!string.IsNullOrWhiteSpace(poi.ImageUrl))
+                DetailImage.Source = poi.ImageUrl;
+            else
+                DetailImage.Source = null;
 
-            BtnDetailOpenMap.IsVisible = !string.IsNullOrWhiteSpace(poi.MapLink);
-            DetailPanel.IsVisible = true;
+            var link = !string.IsNullOrWhiteSpace(poi.MapLink)
+                ? poi.MapLink
+                : $"https://maps.google.com/?q={poi.Latitude},{poi.Longitude}";
+            LblPoiLink.Text = link;
 
-            // Cho phép zoom đến khi người dùng xem chi tiết (tác vụ chủ động)
+            _ = ExpandSheetAsync();
+
             MyMap.MoveToRegion(
                 MapSpan.FromCenterAndRadius(
                     new Location(poi.Latitude, poi.Longitude),
                     Distance.FromMeters(400)));
         }
-
-        private void HideDetail() => DetailPanel.IsVisible = false;
 
         private async Task OpenMapsAsync(Poi? poi)
         {
@@ -385,9 +330,63 @@ namespace MauiApp1.Pages
                 ? poi.MapLink
                 : $"https://maps.google.com/?q={poi.Latitude},{poi.Longitude}";
             try { await Launcher.OpenAsync(new Uri(url)); }
-            catch (Exception ex)
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[Maps] {ex.Message}"); }
+        }
+
+        void SetupBottomSheetOffsets()
+        {
+            if (BottomSheet.Height <= 0 || this.Height <= 0) return;
+
+            _sheetCollapsedOffset = Math.Max(0, BottomSheet.Height - SheetPeekHeight);
+
+            if (!_sheetReady)
             {
-                System.Diagnostics.Debug.WriteLine($"[Maps] {ex.Message}");
+                BottomSheet.TranslationY = _sheetCollapsedOffset;
+                _sheetReady = true;
+            }
+        }
+
+        Task ExpandSheetAsync()
+            => BottomSheet.TranslateToAsync(0, _sheetExpandedOffset, 180, Easing.CubicOut);
+
+        Task CollapseSheetAsync()
+            => BottomSheet.TranslateToAsync(0, _sheetCollapsedOffset, 180, Easing.CubicOut);
+
+        void BottomSheet_TapHeader(object? sender, EventArgs e)
+        {
+            if (!_sheetReady) return;
+            var isCollapsed = Math.Abs(BottomSheet.TranslationY - _sheetCollapsedOffset) < 1;
+            var target = isCollapsed ? _sheetExpandedOffset : _sheetCollapsedOffset;
+            _ = BottomSheet.TranslateToAsync(0, target, 200, Easing.CubicOut);
+        }
+
+        void BottomSheet_PanUpdated(object? sender, PanUpdatedEventArgs e)
+        {
+            if (!_sheetReady) return;
+
+            switch (e.StatusType)
+            {
+                case GestureStatus.Started:
+                    _sheetStartPanY = BottomSheet.TranslationY;
+                    break;
+
+                case GestureStatus.Running:
+                    {
+                        var newY = _sheetStartPanY + e.TotalY;
+                        newY = Math.Max(_sheetExpandedOffset, Math.Min(newY, _sheetCollapsedOffset));
+                        BottomSheet.TranslationY = newY;
+                        break;
+                    }
+
+                case GestureStatus.Completed:
+                case GestureStatus.Canceled:
+                    {
+                        var half = (_sheetCollapsedOffset - _sheetExpandedOffset) / 2.0;
+                        var curr = BottomSheet.TranslationY - _sheetExpandedOffset;
+                        var target = (curr <= half) ? _sheetExpandedOffset : _sheetCollapsedOffset;
+                        _ = BottomSheet.TranslateToAsync(0, target, 180, Easing.CubicOut);
+                        break;
+                    }
             }
         }
     }

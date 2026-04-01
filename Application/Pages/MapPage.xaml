@@ -6,122 +6,88 @@
     xmlns:maps="clr-namespace:Microsoft.Maui.Controls.Maps;assembly=Microsoft.Maui.Controls.Maps"
     Title="Bản đồ &amp; POI">
 
-    <Grid RowDefinitions="Auto,Auto,*,Auto" ColumnDefinitions="*">
+    <!-- Chỉ còn Map + BottomSheet kéo từ dưới -->
+    <Grid RowDefinitions="*" ColumnDefinitions="*">
 
-        <!-- Thanh công cụ -->
-        <HorizontalStackLayout Grid.Row="0" Padding="10,8" Spacing="8">
-            <Button x:Name="BtnStart"   Text="▶ Bắt đầu"
-                    BackgroundColor="#4CAF50" TextColor="White"
-                    CornerRadius="8" Padding="12,7" FontSize="13"/>
-            <Button x:Name="BtnStop"    Text="■ Dừng"
-                    BackgroundColor="#F44336" TextColor="White"
-                    CornerRadius="8" Padding="12,7" FontSize="13"/>
-            <Button x:Name="BtnRefresh" Text="↺ Tải lại"
-                    BackgroundColor="#2196F3" TextColor="White"
-                    CornerRadius="8" Padding="12,7" FontSize="13"/>
-        </HorizontalStackLayout>
-
-        <!-- Banner POI gần nhất (highlight) -->
-        <Border x:Name="PoiBanner"
-                Grid.Row="1"
-                Margin="10,0,10,4"
-                Padding="12,8"
-                Background="#E3F2FD"
-                Stroke="#1976D2"
-                IsVisible="False">
-            <Border.StrokeShape>
-                <RoundRectangle CornerRadius="10"/>
-            </Border.StrokeShape>
-
-            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
-                <!-- Tên + trạng thái -->
-                <Label x:Name="LblPoiName"
-                       Grid.Row="0" Grid.Column="0"
-                       FontSize="15" FontAttributes="Bold"
-                       TextColor="#0D47A1"/>
-                <Label x:Name="LblPoiDist"
-                       Grid.Row="1" Grid.Column="0"
-                       FontSize="12" TextColor="#1565C0"/>
-
-                <!-- Cụm nút hành động (Chi tiết + Bản đồ) -->
-                <VerticalStackLayout Grid.Row="0" Grid.Column="1"
-                                     Grid.RowSpan="2"
-                                     Spacing="4" VerticalOptions="Center">
-                    <Button x:Name="BtnDetail"
-                            Text="Chi tiết"
-                            FontSize="12"
-                            BackgroundColor="#1976D2" TextColor="White"
-                            CornerRadius="6" Padding="10,4"/>
-
-                    <!-- ➕ Nút mở bản đồ (đã thêm lại) -->
-                    <Button x:Name="BtnOpenMap"
-                            Text="Bản đồ"
-                            FontSize="12"
-                            BackgroundColor="#2196F3" TextColor="White"
-                            CornerRadius="6" Padding="10,4"/>
-                </VerticalStackLayout>
-            </Grid>
-        </Border>
-
-        <!-- Bản đồ chính -->
+        <!-- Map -->
         <maps:Map x:Name="MyMap"
-                  Grid.Row="2"
                   MapType="Street"
                   IsShowingUser="False"
                   IsScrollEnabled="True"
-                  IsZoomEnabled="True"/>
+                  IsZoomEnabled="True" />
 
-        <!-- Panel chi tiết POI (trượt lên từ dưới) -->
-        <Border x:Name="DetailPanel"
-                Grid.Row="3"
-                Padding="16,12"
-                Background="White"
-                Stroke="#E0E0E0"
-                IsVisible="False">
-            <Border.StrokeShape>
-                <RoundRectangle CornerRadius="14,14,0,0"/>
-            </Border.StrokeShape>
+        <!-- Bottom Sheet -->
+        <Border x:Name="BottomSheet"
+                Padding="0"
+                Background="Transparent"
+                VerticalOptions="End"
+                ZIndex="10">
+            <Border Padding="16,10,16,16"
+                    Background="White"
+                    Stroke="#E0E0E0">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="16,16,0,0"/>
+                </Border.StrokeShape>
 
-            <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto">
+                <!-- Thanh kéo -> Thông tin -> Ảnh -> Link -> Nút GG Maps -->
+                <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto">
 
-                <!-- Tên POI -->
-                <Label x:Name="DetailName"
-                       Grid.Row="0" Grid.Column="0"
-                       FontSize="18" FontAttributes="Bold"
-                       TextColor="#0D47A1"/>
-                <Button x:Name="BtnCloseDetail"
-                        Grid.Row="0" Grid.Column="1"
-                        Text="✕" FontSize="16"
-                        BackgroundColor="Transparent"
-                        TextColor="#888"
-                        Padding="8,0"/>
+                    <!-- Thanh kéo -->
+                    <Grid Grid.Row="0" Grid.ColumnSpan="2" Padding="0,6,0,8">
+                        <BoxView HeightRequest="4" WidthRequest="48"
+                                 HorizontalOptions="Center"
+                                 BackgroundColor="#CCCCCC"
+                                 CornerRadius="2"/>
+                        <Grid.GestureRecognizers>
+                            <PanGestureRecognizer PanUpdated="BottomSheet_PanUpdated"/>
+                            <TapGestureRecognizer Tapped="BottomSheet_TapHeader"/>
+                        </Grid.GestureRecognizers>
+                    </Grid>
 
-                <!-- Mô tả -->
-                <Label x:Name="DetailDesc"
-                       Grid.Row="1" Grid.ColumnSpan="2"
-                       FontSize="14" TextColor="#444"
-                       Margin="0,6,0,0"/>
+                    <!-- Thông tin POI (trên cùng) -->
+                    <VerticalStackLayout Grid.Row="1" Grid.ColumnSpan="2" Spacing="2">
+                        <Label x:Name="DetailName"
+                               FontSize="18" FontAttributes="Bold"
+                               TextColor="#0D47A1"/>
+                        <Label x:Name="DetailDesc"
+                               FontSize="14" TextColor="#444" />
+                        <Label x:Name="DetailCoord"
+                               FontSize="12" TextColor="#888"/>
+                        <Label x:Name="DetailRadius"
+                               FontSize="12" TextColor="#888"/>
+                    </VerticalStackLayout>
 
-                <!-- Tọa độ -->
-                <Label x:Name="DetailCoord"
-                       Grid.Row="2" Grid.ColumnSpan="2"
-                       FontSize="12" TextColor="#888"
-                       Margin="0,4,0,0"/>
+                    <!-- Ảnh POI (giữa) -->
+                    <Border Grid.Row="2" Grid.ColumnSpan="2"
+                            Background="#00000000" Stroke="#00000000"
+                            Margin="0,8,0,8">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="10"/>
+                        </Border.StrokeShape>
+                        <Image x:Name="DetailImage"
+                               HeightRequest="180"
+                               Aspect="AspectFill"
+                               BackgroundColor="#EEE"/>
+                    </Border>
 
-                <!-- Bán kính -->
-                <Label x:Name="DetailRadius"
-                       Grid.Row="3" Grid.ColumnSpan="2"
-                       FontSize="12" TextColor="#888"
-                       Margin="0,2,0,0"/>
+                    <!-- Link -->
+                    <HorizontalStackLayout Grid.Row="3" Grid.ColumnSpan="2" Spacing="8">
+                        <Label Text="Link:" FontSize="12" TextColor="#666"/>
+                        <Label x:Name="LblPoiLink"
+                               FontSize="12" TextColor="#1976D2"
+                               LineBreakMode="TailTruncation" MaxLines="1"/>
+                    </HorizontalStackLayout>
 
-                <!-- Nút mở Google Maps trong panel chi tiết -->
-                <Button x:Name="BtnDetailOpenMap"
-                        Grid.Row="4" Grid.ColumnSpan="2"
-                        Text="🗺 Mở Google Maps"
-                        BackgroundColor="#1976D2" TextColor="White"
-                        CornerRadius="8" Margin="0,10,0,0"
-                        IsVisible="False"/>
-            </Grid>
+                    <!-- Nút mở Google Maps -->
+                    <Button x:Name="BtnOpenInMaps"
+                            Grid.Row="4" Grid.ColumnSpan="2"
+                            Text="🗺 Mở Google Maps"
+                            FontSize="13"
+                            Padding="12,8"
+                            BackgroundColor="#1976D2" TextColor="White"
+                            CornerRadius="8" Margin="0,12,0,0"/>
+                </Grid>
+            </Border>
         </Border>
 
     </Grid>
