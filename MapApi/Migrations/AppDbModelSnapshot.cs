@@ -33,6 +33,9 @@ namespace MapApi.Migrations
                     b.Property<int>("CooldownSeconds")
                         .HasColumnType("int");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<int>("DebounceSeconds")
                         .HasColumnType("int");
 
@@ -75,7 +78,7 @@ namespace MapApi.Migrations
 
                     b.HasIndex("IsActive", "Priority");
 
-                    b.ToTable("Pois");
+                    b.ToTable("Poi", (string)null);
                 });
 #pragma warning restore 612, 618
         }

@@ -1,0 +1,51 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+#if ANDROID
+using Android.Content;
+using Android.Gms.Location;
+using Android.OS;
+
+namespace MauiApp1.Platforms.Android.Services;
+public sealed class AndroidLocationService : ILocationService
+{
+    private IFusedLocationProviderClient? _client;
+    private LocationCallback? _callback;
+
+    public AndroidLocationService()
+    {
+        _client = LocationServices.GetFusedLocationProviderClient(global::Android.App.Application.Context);
+    }
+
+    public void StartTracking(Action<double, double> onLocation)
+    {
+        if (_client == null) return;
+
+        var request = new Android.Gms.Location.LocationRequest
+            .Builder(Priority.PriorityBalancedPowerAccuracy, 5000) // 5s – Balanced
+            .SetMinUpdateDistanceMeters(10)
+            .Build();
+
+        _callback = new CallbackImpl(onLocation);
+        _client.RequestLocationUpdates(request, _callback, Looper.MainLooper);
+    }
+
+    public void StopTracking()
+    {
+        if (_client != null && _callback != null)
+            _client.RemoveLocationUpdates(_callback);
+    }
+
+    private sealed class CallbackImpl : LocationCallback
+    {
+        private readonly Action<double, double> _onLocation;
+        public CallbackImpl(Action<double, double> onLocation) => _onLocation = onLocation;
+
+        public override void OnLocationResult(LocationResult? result)
+        {
+            var loc = result?.LastLocation;
+            if (loc != null) _onLocation(loc.Latitude, loc.Longitude);
+        }
+    }
+}
+#endif

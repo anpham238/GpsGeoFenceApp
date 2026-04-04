@@ -1,9 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-namespace MauiApp1.Services.Audio;
-public sealed class NoopAudioPlayer : IAudioPlayer
+﻿using System.Threading;
+using System.Threading.Tasks;
+
+namespace MauiApp1.Services.Audio
 {
-    public Task PlayFileAsync(string filePath, CancellationToken ct = default)
-        => Task.CompletedTask;
+    public sealed class NoopAudioPlayer : IAudioPlayer
+    {
+        public Task PlayFileAsync(string filePath, CancellationToken ct = default)
+            => Task.CompletedTask;
+
+        public void Stop()
+        {
+            // No-op
+        }
+    }
 }

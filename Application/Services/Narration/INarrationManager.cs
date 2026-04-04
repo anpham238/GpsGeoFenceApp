@@ -1,10 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Threading;
+using System.Threading.Tasks;
 
 namespace MauiApp1.Services.Narration
 {
-    internal interface INarrationManager
+    public interface INarrationManager
     {
+        Task HandleAsync(Announcement ann, CancellationToken ct = default);
+
+        /// <summary>Dừng phát (audio/TTS) hiện tại, nếu có.</summary>
+        void Stop();
     }
 }

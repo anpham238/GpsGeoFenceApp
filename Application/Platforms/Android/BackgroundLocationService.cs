@@ -27,7 +27,7 @@ public sealed class BackgroundLocationService : Service
         catch { _locationService = null; }
 
         // Nếu DI không có, khởi tạo thủ công (đảm bảo không bao giờ null sau dòng này)
-        _locationService ??= new MauiApp1.Services.AndroidLocationService();
+        _locationService ??= new MauiApp1.Platforms.Android.Services.AndroidLocationService();
         CreateNotificationChannel();
     }
 
