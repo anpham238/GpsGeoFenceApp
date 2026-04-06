@@ -17,6 +17,7 @@ public sealed class PoiDto
     public int? Priority { get; set; }
     public string? NarrationText { get; set; }
     public string? AudioUrl { get; set; }
+    public string? Language { get; set; }          
     public string? ImageUrl { get; set; }
     public string? MapLink { get; set; }
     public bool IsActive { get; set; } = true;

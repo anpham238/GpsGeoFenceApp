@@ -95,12 +95,20 @@ CREATE TABLE IF NOT EXISTS {TableName}(
   MapLink TEXT NULL,
   IsActive INTEGER NOT NULL,
   CreatedAt TEXT NOT NULL,
-  UpdatedAt TEXT NOT NULL
+  UpdatedAt TEXT NOT NULL,
+  Language TEXT NULL DEFAULT 'vi-VN'
 );
 
 CREATE INDEX IF NOT EXISTS IX_{TableName}_ActivePriority ON {TableName}(IsActive, Priority, Name);
 ";
         await cmd.ExecuteNonQueryAsync();
+        try
+        {
+            var alter = conn.CreateCommand();
+            alter.CommandText = "ALTER TABLE Pois ADD COLUMN Language TEXT NULL DEFAULT 'vi-VN';";
+            await alter.ExecuteNonQueryAsync();
+        }
+        catch { /* cột đã tồn tại → bỏ qua */ }
 
         _inited = true;
         System.Diagnostics.Debug.WriteLine($"[SQLite] Ready: {Constants.DatabasePath}"); // chỉ log đường dẫn [1](https://svsguedu-my.sharepoint.com/personal/3123411204_sv_sgu_edu_vn/Documents/Microsoft%20Copilot%20Chat%20Files/Constants.cs)
@@ -144,9 +152,10 @@ ORDER BY Priority, Name;
                 AudioUrl = r.IsDBNull(11) ? null : r.GetString(11),
                 ImageUrl = r.IsDBNull(12) ? null : r.GetString(12),
                 MapLink = r.IsDBNull(13) ? null : r.GetString(13),
-                IsActive = r.GetInt32(14) == 1,
-                CreatedAt = DateTime.Parse(r.GetString(15)),
-                UpdatedAt = DateTime.Parse(r.GetString(16)),
+                Language = r.IsDBNull(14) ? "vi-VN" : r.GetString(14), // ← thêm
+                IsActive = r.GetInt32(15) == 1,   // ← index tăng +1
+                CreatedAt = DateTime.Parse(r.GetString(16)),
+                UpdatedAt = DateTime.Parse(r.GetString(17)),
             });
         }
 

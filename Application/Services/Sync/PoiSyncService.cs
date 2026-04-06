@@ -57,7 +57,7 @@ public sealed class PoiSyncService
 
     public async Task SyncOnceAsync(CancellationToken ct = default)
     {
-        var remote = await _api.GetAllAsync(ct);
+        var remote = await _api.GetAllAsync(LanguageService.Current, ct);
         System.Diagnostics.Debug.WriteLine($"[PoiSync] Remote count = {remote.Count}");
 
         int saved = 0;
@@ -79,6 +79,7 @@ public sealed class PoiSyncService
                 AudioUrl = r.AudioUrl,
                 ImageUrl = r.ImageUrl,
                 MapLink = r.MapLink,
+                Language = r.Language ?? "vi-VN",
                 IsActive = r.IsActive,
                 UpdatedAt = r.UpdatedAt
             };

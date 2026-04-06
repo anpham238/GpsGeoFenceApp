@@ -6,7 +6,6 @@
     xmlns:maps="clr-namespace:Microsoft.Maui.Controls.Maps;assembly=Microsoft.Maui.Controls.Maps"
     Title="Bản đồ &amp; POI">
 
-    <!-- Chỉ còn Map + BottomSheet kéo từ dưới -->
     <Grid RowDefinitions="*" ColumnDefinitions="*">
 
         <!-- Map -->
@@ -15,6 +14,72 @@
                   IsShowingUser="False"
                   IsScrollEnabled="True"
                   IsZoomEnabled="True" />
+
+        <!-- Thanh chọn ngôn ngữ (góc trên phải) -->
+        <HorizontalStackLayout
+            x:Name="LangBar"
+            Grid.Row="0"
+            HorizontalOptions="End"
+            VerticalOptions="Start"
+            Margin="0,8,8,0"
+            Spacing="4"
+            ZIndex="5">
+
+            <!-- VI -->
+            <Border x:Name="BtnVi" Padding="8,4" Background="#1976D2" Stroke="#00000000">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="6" />
+                </Border.StrokeShape>
+                <Label Text="🇻🇳" FontSize="16" />
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnLangTapped" CommandParameter="vi-VN" />
+                </Border.GestureRecognizers>
+            </Border>
+
+            <!-- EN -->
+            <Border x:Name="BtnEn" Padding="8,4" Background="#333333" Stroke="#00000000">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="6" />
+                </Border.StrokeShape>
+                <Label Text="🇺🇸" FontSize="16" />
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnLangTapped" CommandParameter="en-US" />
+                </Border.GestureRecognizers>
+            </Border>
+
+            <!-- JA -->
+            <Border x:Name="BtnJa" Padding="8,4" Background="#333333" Stroke="#00000000">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="6" />
+                </Border.StrokeShape>
+                <Label Text="🇯🇵" FontSize="16" />
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnLangTapped" CommandParameter="ja-JP" />
+                </Border.GestureRecognizers>
+            </Border>
+
+            <!-- KO -->
+            <Border x:Name="BtnKo" Padding="8,4" Background="#333333" Stroke="#00000000">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="6" />
+                </Border.StrokeShape>
+                <Label Text="🇰🇷" FontSize="16" />
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnLangTapped" CommandParameter="ko-KR" />
+                </Border.GestureRecognizers>
+            </Border>
+
+            <!-- DE -->
+            <Border x:Name="BtnDe" Padding="8,4" Background="#333333" Stroke="#00000000">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="6" />
+                </Border.StrokeShape>
+                <Label Text="🇩🇪" FontSize="16" />
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnLangTapped" CommandParameter="de-DE" />
+                </Border.GestureRecognizers>
+            </Border>
+        </HorizontalStackLayout>
 
         <!-- Bottom Sheet -->
         <Border x:Name="BottomSheet"
@@ -29,7 +94,6 @@
                     <RoundRectangle CornerRadius="16,16,0,0"/>
                 </Border.StrokeShape>
 
-                <!-- Thanh kéo -> Thông tin -> Ảnh -> Link -> Nút GG Maps -->
                 <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto">
 
                     <!-- Thanh kéo -->
@@ -44,20 +108,15 @@
                         </Grid.GestureRecognizers>
                     </Grid>
 
-                    <!-- Thông tin POI (trên cùng) -->
+                    <!-- Thông tin POI -->
                     <VerticalStackLayout Grid.Row="1" Grid.ColumnSpan="2" Spacing="2">
-                        <Label x:Name="DetailName"
-                               FontSize="18" FontAttributes="Bold"
-                               TextColor="#0D47A1"/>
-                        <Label x:Name="DetailDesc"
-                               FontSize="14" TextColor="#444" />
-                        <Label x:Name="DetailCoord"
-                               FontSize="12" TextColor="#888"/>
-                        <Label x:Name="DetailRadius"
-                               FontSize="12" TextColor="#888"/>
+                        <Label x:Name="DetailName" FontSize="18" FontAttributes="Bold" TextColor="#0D47A1"/>
+                        <Label x:Name="DetailDesc" FontSize="14" TextColor="#444"/>
+                        <Label x:Name="DetailCoord" FontSize="12" TextColor="#888"/>
+                        <Label x:Name="DetailRadius" FontSize="12" TextColor="#888"/>
                     </VerticalStackLayout>
 
-                    <!-- Ảnh POI (giữa) -->
+                    <!-- Ảnh -->
                     <Border Grid.Row="2" Grid.ColumnSpan="2"
                             Background="#00000000" Stroke="#00000000"
                             Margin="0,8,0,8">

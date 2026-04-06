@@ -1,86 +1,45 @@
-using System.Text;
-using System.Text.RegularExpressions;
 using MapApi.Data;
 using MapApi.Models;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ── 1) Connection string ─────────────────────────────────────────────
+// 1) Connection string
 var cs = builder.Configuration.GetConnectionString("Default")
          ?? "Server=.\\SQLEXPRESS;Database=GpsApi;Trusted_Connection=True;"
           + "Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=True";
 
-// ── 2) EF Core + SQL Server ──────────────────────────────────────────
+// 2) EF Core
 builder.Services.AddDbContext<AppDb>(opt =>
     opt.UseSqlServer(cs, sql =>
     {
-        sql.EnableRetryOnFailure(
-            maxRetryCount: 3,
-            maxRetryDelay: TimeSpan.FromSeconds(5),
-            errorNumbersToAdd: null);
-        // Tuỳ chọn: tăng timeout nếu máy yếu / cold start
+        sql.EnableRetryOnFailure(3, TimeSpan.FromSeconds(5), null);
         sql.CommandTimeout(120);
     }));
 
-// ── 3) Swagger ───────────────────────────────────────────────────────
+// 3) Swagger
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(c =>
-    c.SwaggerDoc("v1", new() { Title = "SmartTourism API", Version = "v1" }));
+builder.Services.AddSwaggerGen();
 
-// ── 4) CORS ──────────────────────────────────────────────────────────
+// 4) CORS
 builder.Services.AddCors(opt =>
-    opt.AddDefaultPolicy(p => p
-        .AllowAnyHeader()
-        .AllowAnyMethod()
-        .AllowAnyOrigin()));
-
+    opt.AddDefaultPolicy(p => p.AllowAnyHeader().AllowAnyMethod().AllowAnyOrigin()));
 var app = builder.Build();
-
-// ── 5) DB init/migrate (dev) ─────────────────────────────────────────
-using (var scope = app.Services.CreateScope())
-{
-    var db = scope.ServiceProvider.GetRequiredService<AppDb>();
-    try
-    {
-        if (await db.Database.CanConnectAsync())
-        {
-            try
-            {
-                await db.Database.MigrateAsync();
-                Console.WriteLine("[DB] Migration OK.");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[DB] Migration warning: {ex.Message}");
-            }
-        }
-        else
-        {
-            Console.WriteLine("[DB] Cannot connect to SQL Server.");
-        }
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"[DB] Connection error: {ex.Message}");
-    }
-}
-
-// ── 6) Middleware ────────────────────────────────────────────────────
 app.UseCors();
-
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "SmartTourism v1"));
+    app.UseSwaggerUI();
 }
 
-// ═══════════════════════════════════════════════════════════
-// POI ENDPOINTS
-// ═══════════════════════════════════════════════════════════
-var pois = app.MapGroup("/api/v1/pois").WithTags("POIs");
+// Health (đổi sang /health để tránh trùng route "/")
+app.MapGet("/health", () => Results.Ok(new { ok = true, time = DateTime.UtcNow }));
 
-// GET /api/v1/pois
+// =======================
+// POI endpoints
+// =======================
+var pois = app.MapGroup("/api/v1/pois");
+
 pois.MapGet("/", async (AppDb db) =>
 {
     var items = await db.Pois
@@ -91,10 +50,8 @@ pois.MapGet("/", async (AppDb db) =>
         .ToListAsync();
 
     return Results.Ok(items);
-})
-.WithName("GetAllPois");
+});
 
-// GET /api/v1/pois/sync?since=...
 pois.MapGet("/sync", async (DateTime? since, AppDb db) =>
 {
     var q = db.Pois.AsNoTracking().AsQueryable();
@@ -107,18 +64,14 @@ pois.MapGet("/sync", async (DateTime? since, AppDb db) =>
         .ToListAsync();
 
     return Results.Ok(new { Items = items, ServerTime = DateTime.UtcNow });
-})
-.WithName("SyncPois");
+});
 
-// GET /api/v1/pois/{id}
 pois.MapGet("/{id}", async (string id, AppDb db) =>
 {
     var p = await db.Pois.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
     return p is null ? Results.NotFound() : Results.Ok(p);
-})
-.WithName("GetPoiById");
+});
 
-// POST /api/v1/pois
 pois.MapPost("/", async (Poi p, AppDb db) =>
 {
     if (string.IsNullOrWhiteSpace(p.Id))
@@ -129,10 +82,8 @@ pois.MapPost("/", async (Poi p, AppDb db) =>
     await db.SaveChangesAsync();
 
     return Results.Created($"/api/v1/pois/{p.Id}", p);
-})
-.WithName("CreatePoi");
+});
 
-// PUT /api/v1/pois/{id}
 pois.MapPut("/{id}", async (string id, Poi input, AppDb db) =>
 {
     var e = await db.Pois.FirstOrDefaultAsync(x => x.Id == id);
@@ -147,10 +98,7 @@ pois.MapPut("/{id}", async (string id, Poi input, AppDb db) =>
     e.DebounceSeconds = input.DebounceSeconds;
     e.CooldownSeconds = input.CooldownSeconds;
     e.Priority = input.Priority;
-
-    // ❌ BỎ Language: DB dbo.Pois không có cột Language theo script của bạn
-    // e.Language = input.Language;
-
+    e.Language = input.Language;
     e.NarrationText = input.NarrationText;
     e.AudioUrl = input.AudioUrl;
     e.ImageUrl = input.ImageUrl;
@@ -161,10 +109,8 @@ pois.MapPut("/{id}", async (string id, Poi input, AppDb db) =>
     await db.SaveChangesAsync();
 
     return Results.Ok(e);
-})
-.WithName("UpdatePoi");
+});
 
-// DELETE /api/v1/pois/{id} — soft delete
 pois.MapDelete("/{id}", async (string id, AppDb db) =>
 {
     var e = await db.Pois.FirstOrDefaultAsync(x => x.Id == id);
@@ -175,15 +121,13 @@ pois.MapDelete("/{id}", async (string id, AppDb db) =>
     await db.SaveChangesAsync();
 
     return Results.NoContent();
-})
-.WithName("DeletePoi");
+});
 
-// ═══════════════════════════════════════════════════════════
-// PLAYBACK LOG ENDPOINTS
-// ═══════════════════════════════════════════════════════════
-var logs = app.MapGroup("/api/v1/playback").WithTags("Playback");
+// =======================
+// Playback endpoints
+// =======================
+var logs = app.MapGroup("/api/v1/playback");
 
-// POST /api/v1/playback
 logs.MapPost("/", async (PlaybackLog log, AppDb db) =>
 {
     if (!await db.Pois.AnyAsync(p => p.Id == log.PoiId))
@@ -191,15 +135,12 @@ logs.MapPost("/", async (PlaybackLog log, AppDb db) =>
 
     log.Id = 0;
     log.PlayedAt = DateTime.UtcNow;
-
     db.PlaybackLogs.Add(log);
     await db.SaveChangesAsync();
 
     return Results.Ok(new { log.Id, log.PlayedAt });
-})
-.WithName("LogPlayback");
+});
 
-// GET /api/v1/playback/stats
 logs.MapGet("/stats", async (AppDb db) =>
 {
     var stats = await db.PlaybackLogs
@@ -216,49 +157,63 @@ logs.MapGet("/stats", async (AppDb db) =>
         .ToListAsync();
 
     return Results.Ok(stats);
-})
-.WithName("PlaybackStats");
-
-// GET /api/v1/pois/{id}/qr
-pois.MapGet("/{id}/qr", async (string id, AppDb db) =>
+});
+// GET /api/v1/pois/{id}/narration?lang=vi-VN&eventType=Enter
+pois.MapGet("/{id}/narration", async (string id, string? lang, string? eventType, AppDb db) =>
 {
+    // 1) validate
     var poi = await db.Pois.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id);
     if (poi is null) return Results.NotFound();
 
-    var content = $"smarttourism://poi/{id}";
+    var language = string.IsNullOrWhiteSpace(lang) ? "vi-VN" : lang.Trim();
+    var evt = ParseEventType(eventType); // byte
 
-    using var qrGenerator = new QRCoder.QRCodeGenerator();
-    var qrData = qrGenerator.CreateQrCode(content, QRCoder.QRCodeGenerator.ECCLevel.Q);
-    using var qrCode = new QRCoder.PngByteQRCode(qrData);
-    var pngBytes = qrCode.GetGraphic(6);
+    // 2) exact match (vi-VN)
+    var item = await db.PoiNarrations.AsNoTracking()
+        .Where(x => x.PoiId == id && x.EventType == evt && x.LanguageTag == language)
+        .Select(x => x.NarrationText)
+        .FirstOrDefaultAsync();
 
-    // sanitize filename (tránh ký tự lạ)
-    var safeName = SanitizeFileName(poi.Name);
-    return Results.File(pngBytes, "image/png", fileDownloadName: $"qr_{safeName}.png");
-})
-.WithName("GetPoiQr");
+    // 3) fallback by primary language (vi)
+    if (string.IsNullOrWhiteSpace(item) && language.Contains('-'))
+    {
+        var primary = language.Split('-')[0];
+        item = await db.PoiNarrations.AsNoTracking()
+            .Where(x => x.PoiId == id && x.EventType == evt && x.LanguageTag.StartsWith(primary))
+            .OrderBy(x => x.LanguageTag) // chọn ổn định
+            .Select(x => x.NarrationText)
+            .FirstOrDefaultAsync();
+    }
 
-// Health check
-app.MapGet("/", () => Results.Ok(new
+    // 4) fallback to vi-VN
+    if (string.IsNullOrWhiteSpace(item) && !string.Equals(language, "vi-VN", StringComparison.OrdinalIgnoreCase))
+    {
+        item = await db.PoiNarrations.AsNoTracking()
+            .Where(x => x.PoiId == id && x.EventType == evt && x.LanguageTag == "vi-VN")
+            .Select(x => x.NarrationText)
+            .FirstOrDefaultAsync();
+    }
+
+    // 5) fallback to Pois.NarrationText (bản chung) [1](https://svsguedu-my.sharepoint.com/personal/3123411204_sv_sgu_edu_vn/Documents/Microsoft%20Copilot%20Chat%20Files/GpsApp.sql)
+    item ??= poi.NarrationText;
+
+    return Results.Ok(new
+    {
+        PoiId = id,
+        EventType = evt,
+        Language = language,
+        NarrationText = item
+    });
+});
+static byte ParseEventType(string? s)
 {
-    ok = true,
-    time = DateTime.UtcNow,
-    version = "SmartTourism API v1"
-}))
-.WithTags("Health");
-
-app.Run();
-
-// Helpers
-static string SanitizeFileName(string? name)
-{
-    name ??= "poi";
-    var invalid = Path.GetInvalidFileNameChars();
-    var sb = new StringBuilder(name.Length);
-    foreach (var ch in name)
-        sb.Append(invalid.Contains(ch) ? '_' : ch);
-
-    // tránh tên rỗng
-    var s = sb.ToString().Trim();
-    return string.IsNullOrWhiteSpace(s) ? "poi" : s;
+    // Mình chốt mapping: Enter=0, Near=1, Tap=2 (phải thống nhất với dữ liệu trong PoiNarration) [1](https://svsguedu-my.sharepoint.com/personal/3123411204_sv_sgu_edu_vn/Documents/Microsoft%20Copilot%20Chat%20Files/GpsApp.sql)
+    return (s ?? "").Trim().ToLowerInvariant() switch
+    {
+        "enter" => 0,
+        "near" => 1,
+        "tap" => 2,
+        _ => 0
+    };
 }
+app.Run();

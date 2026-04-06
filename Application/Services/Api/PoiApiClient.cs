@@ -12,13 +12,15 @@ public sealed class PoiApiClient
         _http = http;
     }
 
-    public async Task<List<PoiDto>> GetAllAsync(CancellationToken ct = default)
+    public async Task<List<PoiDto>> GetAllAsync(
+    string? lang = null, CancellationToken ct = default)
     {
-        // MapApi endpoint: /api/v1/pois [3](https://communitytoolkit.github.io/Datasync/in-depth/client/)
-        var data = await _http.GetFromJsonAsync<List<PoiDto>>("/api/v1/pois", ct);
-        return data ?? new List<PoiDto>();
+        var url = string.IsNullOrEmpty(lang)
+            ? "/api/v1/pois"
+            : $"/api/v1/pois?lang={lang}";
+        var data = await _http.GetFromJsonAsync<List<PoiDto>>(url, ct);
+        return data ?? [];
     }
-
     // (Tuỳ chọn) Push nếu bạn cho sửa POI trên app:
     public async Task PutAsync(string id, PoiDto dto, CancellationToken ct = default)
     {

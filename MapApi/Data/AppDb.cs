@@ -6,62 +6,84 @@ namespace MapApi.Data;
 public sealed class AppDb(DbContextOptions<AppDb> options) : DbContext(options)
 {
     public DbSet<Poi> Pois => Set<Poi>();
+    public DbSet<PoiNarration> PoiNarrations => Set<PoiNarration>();
+    public DbSet<PoiMedia> PoiMedia => Set<PoiMedia>();
     public DbSet<PlaybackLog> PlaybackLogs => Set<PlaybackLog>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
-        // ── Poi ──────────────────────────────────────────────────────────
+        // ── Pois (dbo.Pois) ─────────────────────────────────────────────
         b.Entity<Poi>(e =>
         {
-            e.ToTable("Pois");               // khop ten bang trong SQL
+            e.ToTable("Pois");
             e.HasKey(x => x.Id);
-            e.Property(x => x.Id).HasMaxLength(100);
+
+            e.Property(x => x.Id).HasMaxLength(64);
             e.Property(x => x.Name).HasMaxLength(200).IsRequired();
             e.Property(x => x.Description).HasMaxLength(2000);
-            e.Property(x => x.Language).HasMaxLength(10);
-            e.Property(x => x.AudioUrl).HasMaxLength(500);
-            e.Property(x => x.ImageUrl).HasMaxLength(500);
-            e.Property(x => x.MapLink).HasMaxLength(500);
-            // RadiusMeters/NearRadiusMeters la float trong C# -> REAL trong SQL
-            e.HasIndex(x => new { x.IsActive, x.Priority })
-             .HasDatabaseName("IX_Pois_IsActive_Priority");
+            e.Property(x => x.MapLink).HasMaxLength(1000);
+            e.Property(x => x.NarrationText).HasMaxLength(4000);
+            e.Property(x => x.AudioUrl).HasMaxLength(1000);
+            e.Property(x => x.ImageUrl).HasMaxLength(1000);
+
+            // ❌ BỎ Language vì dbo.Pois không có cột Language [1](https://svsguedu-my.sharepoint.com/personal/3123411204_sv_sgu_edu_vn/Documents/Microsoft%20Copilot%20Chat%20Files/GpsApp.sql)[2](https://svsguedu-my.sharepoint.com/personal/3123411204_sv_sgu_edu_vn/Documents/Microsoft%20Copilot%20Chat%20Files/AppDb.cs)
+            // e.Ignore(x => x.Language);
+
+            // Index đúng theo script DB: IX_Pois_ActivePriority (IsActive, Priority, Name) [1](https://svsguedu-my.sharepoint.com/personal/3123411204_sv_sgu_edu_vn/Documents/Microsoft%20Copilot%20Chat%20Files/GpsApp.sql)
+            e.HasIndex(x => new { x.IsActive, x.Priority, x.Name })
+             .HasDatabaseName("IX_Pois_ActivePriority");
         });
 
-        // ── PlaybackLog ───────────────────────────────────────────────────
-        b.Entity<PlaybackLog>(e =>
+        // ── PoiNarration (dbo.PoiNarration) ────────────────────────────
+        b.Entity<PoiNarration>(e =>
         {
-            e.ToTable("PlaybackLogs");       // khop ten bang trong SQL
+            e.ToTable("PoiNarration");
             e.HasKey(x => x.Id);
-            e.Property(x => x.Id)
-             .UseIdentityColumn();           // BIGINT IDENTITY(1,1)
-            e.Property(x => x.DeviceId).HasMaxLength(100).IsRequired();
-            e.Property(x => x.PoiId).HasMaxLength(100).IsRequired();
-            e.Property(x => x.TriggerType).HasMaxLength(20).IsRequired();
-            e.Property(x => x.IsSuccess).HasDefaultValue(true);
 
-            e.HasOne(x => x.Poi)
+            e.Property(x => x.PoiId).HasMaxLength(64).IsRequired();
+            e.Property(x => x.LanguageTag).HasMaxLength(10).IsRequired();
+            e.Property(x => x.NarrationText).HasMaxLength(4000);
+
+            // FK dbo.PoiNarration -> dbo.Pois ON DELETE CASCADE trong script [1](https://svsguedu-my.sharepoint.com/personal/3123411204_sv_sgu_edu_vn/Documents/Microsoft%20Copilot%20Chat%20Files/GpsApp.sql)
+            e.HasOne<Poi>()
              .WithMany()
              .HasForeignKey(x => x.PoiId)
-             .OnDelete(DeleteBehavior.NoAction);  // khop SQL ON DELETE NO ACTION
+             .OnDelete(DeleteBehavior.Cascade);
 
-            e.HasIndex(x => x.PoiId)
-             .HasDatabaseName("IX_PlaybackLogs_PoiId");
-            e.HasIndex(x => x.PlayedAt)
-             .HasDatabaseName("IX_PlaybackLogs_PlayedAt");
+            // Unique index UX_PoiNarration_Key (PoiId, EventType, LanguageTag) [1](https://svsguedu-my.sharepoint.com/personal/3123411204_sv_sgu_edu_vn/Documents/Microsoft%20Copilot%20Chat%20Files/GpsApp.sql)
+            e.HasIndex(x => new { x.PoiId, x.EventType, x.LanguageTag })
+             .IsUnique()
+             .HasDatabaseName("UX_PoiNarration_Key");
         });
 
-        // ── Seed 7 diem TPHCM ────────────────────────────────────────────
-        // Chi seed qua EF neu KHONG chay SQL file truoc.
-        // Neu da chay SQL file -> du lieu da co, EF se bao loi duplicate.
-        // Giai phap: dung InsertOrIgnore (xem Program.cs) hoac comment out HasData.
-        b.Entity<Poi>().HasData(
-            new Poi { Id = "poi-hcm-001", Name = "Trung tâm TP.HCM", Description = "Trái tim kinh tế và văn hoá Việt Nam", Latitude = 10.776889, Longitude = 106.700806, RadiusMeters = 150, NearRadiusMeters = 300, Language = "vi-VN", NarrationText = "Chào mừng đến Thành phố Hồ Chí Minh, trái tim kinh tế năng động của Việt Nam.", MapLink = "https://maps.google.com/?q=10.776889,106.700806", Priority = 1, UpdatedAt = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
-            new Poi { Id = "poi-benthanh-001", Name = "Chợ Bến Thành", Description = "Biểu tượng lịch sử hơn 100 năm của Sài Gòn", Latitude = 10.772450, Longitude = 106.698060, RadiusMeters = 100, NearRadiusMeters = 200, Language = "vi-VN", NarrationText = "Bạn đang đến Chợ Bến Thành, biểu tượng văn hoá lịch sử trên 100 năm của Sài Gòn.", MapLink = "https://maps.google.com/?q=10.77245,106.69806", Priority = 2, UpdatedAt = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
-            new Poi { Id = "poi-notredame-001", Name = "Nhà thờ Đức Bà", Description = "Kiến trúc Gothic xây từ 1863", Latitude = 10.779930, Longitude = 106.699330, RadiusMeters = 80, NearRadiusMeters = 160, Language = "vi-VN", NarrationText = "Trước mặt bạn là Nhà thờ Đức Bà Sài Gòn, công trình Gothic ấn tượng xây dựng từ năm 1863.", MapLink = "https://maps.google.com/?q=10.77993,106.69933", Priority = 3, UpdatedAt = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
-            new Poi { Id = "poi-postoffice-001", Name = "Bưu điện Trung tâm Sài Gòn", Description = "Biệt thự Pháp đẹp nhất TP, xây 1886", Latitude = 10.779760, Longitude = 106.699600, RadiusMeters = 80, NearRadiusMeters = 160, Language = "vi-VN", NarrationText = "Đây là Bưu điện Trung tâm Sài Gòn, biệt thự Pháp tuyệt đẹp được xây dựng năm 1886.", MapLink = "https://maps.google.com/?q=10.77976,106.6996", Priority = 4, UpdatedAt = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
-            new Poi { Id = "poi-park304-001", Name = "Công viên 30/4", Description = "Công viên lịch sử trước Dinh Độc Lập", Latitude = 10.777600, Longitude = 106.695400, RadiusMeters = 100, NearRadiusMeters = 200, Language = "vi-VN", NarrationText = "Bạn đang ở Công viên 30 tháng 4. Phía sau là Dinh Độc Lập, di tích lịch sử quan trọng.", MapLink = "https://maps.google.com/?q=10.7776,106.6954", Priority = 5, UpdatedAt = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
-            new Poi { Id = "poi-reunif-001", Name = "Dinh Độc Lập", Description = "Nơi ghi dấu sự kiện lịch sử quan trọng", Latitude = 10.776900, Longitude = 106.695400, RadiusMeters = 100, NearRadiusMeters = 200, Language = "vi-VN", NarrationText = "Đây là Dinh Độc Lập, chứng nhân lịch sử của đất nước. Hiện là bảo tàng tham quan.", MapLink = "https://maps.google.com/?q=10.7769,106.6954", Priority = 6, UpdatedAt = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
-            new Poi { Id = "poi-ntmk-001", Name = "Công viên NTMK", Description = "Công viên xanh mát giữa lòng thành phố", Latitude = 10.787000, Longitude = 106.700000, RadiusMeters = 120, NearRadiusMeters = 240, Language = "vi-VN", NarrationText = "Bạn đang đến công viên Nguyễn Thị Minh Khai, điểm xanh yên bình giữa lòng thành phố.", MapLink = "https://maps.google.com/?q=10.787,106.700", Priority = 7, UpdatedAt = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc) }
-        );
+        // ── PoiMedia (dbo.PoiMedia) ────────────────────────────────────
+        b.Entity<PoiMedia>(e =>
+        {
+            e.ToTable("PoiMedia");
+            e.HasKey(x => x.Id);
+
+            e.Property(x => x.PoiId).HasMaxLength(64).IsRequired();
+            e.Property(x => x.LanguageTag).HasMaxLength(10);
+            e.Property(x => x.Url).HasMaxLength(1000).IsRequired();
+            e.Property(x => x.MimeType).HasMaxLength(50);
+
+            e.HasOne<Poi>()
+             .WithMany()
+             .HasForeignKey(x => x.PoiId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            // Index IX_PoiMedia_PoiType (PoiId, MediaType, IsPrimary, SortOrder) [1](https://svsguedu-my.sharepoint.com/personal/3123411204_sv_sgu_edu_vn/Documents/Microsoft%20Copilot%20Chat%20Files/GpsApp.sql)
+            e.HasIndex(x => new { x.PoiId, x.MediaType, x.IsPrimary, x.SortOrder })
+             .HasDatabaseName("IX_PoiMedia_PoiType");
+        });
+
+        // ── PlaybackLog (dbo.PoiPlaybackLog) ───────────────────────────
+        b.Entity<PlaybackLog>(e =>
+        {
+            e.ToTable("PoiPlaybackLog"); // ✅ đúng tên bảng trong script [1](https://svsguedu-my.sharepoint.com/personal/3123411204_sv_sgu_edu_vn/Documents/Microsoft%20Copilot%20Chat%20Files/GpsApp.sql)
+            e.HasKey(x => x.Id);
+            e.Property(x => x.PoiId).HasMaxLength(64).IsRequired();
+            e.Property(x => x.DeviceId).HasMaxLength(64);
+        });
     }
 }

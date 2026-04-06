@@ -16,6 +16,7 @@ public class Poi
     public int? Priority { get; set; }
     public string? NarrationText { get; set; }
     public string? MapLink { get; set; }
+    public string? Language { get; set; } = "vi-VN";  // ngôn ngữ TTS mặc định
     public bool IsActive { get; set; } = true;
     public string? ImageUrl { get; set; }
     public string? AudioUrl { get; set; }
