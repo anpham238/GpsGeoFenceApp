@@ -65,7 +65,6 @@ public sealed class BackgroundLocationService : Service
     }
     private Notification CreateNotification()
     {
-
         var builder = new NotificationCompat.Builder(this, ChannelId)
             .SetContentTitle("GPS Tracking")
             .SetContentText("Đang theo dõi vị trí")

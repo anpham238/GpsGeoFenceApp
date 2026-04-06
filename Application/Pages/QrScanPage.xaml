@@ -1,0 +1,32 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="MauiApp1.Pages.QrScanPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:zxing="clr-namespace:ZXing.Net.Maui.Controls;assembly=ZXing.Net.MAUI.Controls"
+    Title="Quét QR">
+
+    <Grid RowDefinitions="Auto,* ,Auto" Padding="12">
+
+        <Label x:Name="LblStatus"
+               Grid.Row="0"
+               Text="Đang khởi động camera..."
+               FontSize="16"
+               HorizontalOptions="Center"
+               Margin="0,0,0,8" />
+
+        <zxing:CameraBarcodeReaderView
+            x:Name="BarcodeReader"
+            Grid.Row="1"
+            BarcodesDetected="OnBarcodesDetected"
+            IsDetecting="False" />
+
+        <Button
+            Grid.Row="2"
+            Text="Đóng"
+            Clicked="OnCloseClicked"
+            HorizontalOptions="Center"
+            Margin="0,8,0,0" />
+
+    </Grid>
+</ContentPage>

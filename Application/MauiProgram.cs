@@ -9,6 +9,7 @@ using MauiApp1.Services.Api;
 using MauiApp1.Services.Audio;
 using MauiApp1.Services.Narration;
 using MauiApp1.Services.Sync;
+using ZXing.Net.Maui.Controls;
 namespace MauiApp1;
 
 public static class MauiProgram
@@ -21,6 +22,7 @@ public static class MauiProgram
             .UseMauiApp<App>()
             .UseMauiMaps()
             .UseMauiCommunityToolkit()
+            .UseBarcodeReader()   // ← thêm dòng này
             .ConfigureFonts(fonts =>
             {
                 // ✅ Đăng ký alias font (nếu XAML dùng OpenSansRegular)
@@ -76,7 +78,7 @@ public static class MauiProgram
 
         // ── Pages ─────────────────────────────────────────────────────
         builder.Services.AddSingleton<MapPage>();
-
+        builder.Services.AddTransient<QrScanPage>();
         var app = builder.Build();
 
         // Init + AutoSync

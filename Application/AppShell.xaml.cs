@@ -9,6 +9,7 @@ namespace MauiApp1
         public AppShell()
         {
             InitializeComponent();
+            Routing.RegisterRoute("qrscan", typeof(Pages.QrScanPage));
         }
         public static async Task DisplaySnackbarAsync(string message)
         {

@@ -70,7 +70,13 @@ public partial class MapPage : ContentPage
             Command = new Command(() => MyMap.MoveToRegion(
                 MapSpan.FromCenterAndRadius(_hcmCenter, Distance.FromKilometers(3))))
         });
-
+        ToolbarItems.Add(new ToolbarItem
+        {
+            Text = "QR",
+            Order = ToolbarItemOrder.Primary,
+            Command = new Command(async () =>
+                await Shell.Current.GoToAsync("qrscan"))
+        });
         ToolbarItems.Add(new ToolbarItem
         {
             Text = "Sync",
@@ -461,4 +467,5 @@ public partial class MapPage : ContentPage
                 break;
         }
     }
+
 }
