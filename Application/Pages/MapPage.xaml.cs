@@ -1,13 +1,17 @@
-﻿using MauiApp1.Models;
+﻿using MauiApp1.Data;
+using MauiApp1.Models;
 using MauiApp1.Services;
+using MauiApp1.Services.Api;
 using MauiApp1.Services.Narration;
-using MauiApp1.Data;
+using MauiApp1.Services.Sync;
+
 using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Controls.Maps;
 using Microsoft.Maui.Devices;
 using Microsoft.Maui.Devices.Sensors;
 using Microsoft.Maui.Maps;
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -22,7 +26,8 @@ public partial class MapPage : ContentPage
     private readonly ILocationService _location;
     private readonly PoiDatabase _db;
     private readonly NarrationManager _narration;
-    private readonly ApiService _api;          // goi API + log playback
+    private readonly PoiSyncService _poiSync;            // offline-first sync
+    private readonly PlaybackApiClient _playback;       
 
     private readonly List<Poi> _pois = new();
     private readonly Dictionary<string, Pin> _pinMap = new();
@@ -40,11 +45,13 @@ public partial class MapPage : ContentPage
     bool _sheetReady = false;
     const double SheetPeekHeight = 140;
 
-    public MapPage(IGeofenceService geofence,
-                   ILocationService location,
-                   PoiDatabase db,
-                   NarrationManager narration,
-                   ApiService api)
+    public MapPage(
+        IGeofenceService geofence,
+        ILocationService location,
+        PoiDatabase db,
+        NarrationManager narration,
+        PoiSyncService poiSync,
+        PlaybackApiClient playback)   // ✅ thêm param inject
     {
         InitializeComponent();
 
@@ -52,9 +59,10 @@ public partial class MapPage : ContentPage
         _location = location ?? throw new ArgumentNullException(nameof(location));
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _narration = narration ?? throw new ArgumentNullException(nameof(narration));
-        _api = api ?? throw new ArgumentNullException(nameof(api));
+        _poiSync = poiSync ?? throw new ArgumentNullException(nameof(poiSync));
+        _playback = playback ?? throw new ArgumentNullException(nameof(playback)); // ✅ gán field
 
-        // Toolbar: Reset camera + Sync lai POI
+        // Toolbar: Reset camera + Sync POI
         ToolbarItems.Add(new ToolbarItem
         {
             Text = "Reset",
@@ -62,14 +70,16 @@ public partial class MapPage : ContentPage
             Command = new Command(() => MyMap.MoveToRegion(
                 MapSpan.FromCenterAndRadius(_hcmCenter, Distance.FromKilometers(3))))
         });
+
         ToolbarItems.Add(new ToolbarItem
         {
             Text = "Sync",
             Order = ToolbarItemOrder.Secondary,
             Command = new Command(async () =>
             {
-                await _api.SyncPoisAsync();
+                await _poiSync.SyncOnceAsync();
                 await ReloadPoisAsync();
+                await _geofence.RegisterAsync(_pois); // cập nhật geofence theo POI mới
             })
         });
 
@@ -78,7 +88,7 @@ public partial class MapPage : ContentPage
         BottomSheet.SizeChanged += (_, _) => SetupBottomSheetOffsets();
         this.SizeChanged += (_, _) => SetupBottomSheetOffsets();
 
-        // Geofence ENTER / DWELL / EXIT
+        // Geofence ENTER / NEAR / EXIT
         _geofence.OnPoiEvent += async (poi, type) =>
         {
             if (type == "EXIT")
@@ -86,6 +96,7 @@ public partial class MapPage : ContentPage
                 await MainThread.InvokeOnMainThreadAsync(ClearHighlight);
                 return;
             }
+
             await MainThread.InvokeOnMainThreadAsync(() =>
             {
                 HighlightPoi(poi, $"Vào vùng {type}");
@@ -94,11 +105,12 @@ public partial class MapPage : ContentPage
 
             var evType = type == "ENTER" ? PoiEventType.Enter : PoiEventType.Near;
             var started = DateTime.UtcNow;
+
             await _narration.HandleAsync(new Announcement(poi, evType, started));
 
-            // Log len API (fire-and-forget)
+            // ✅ Log playback (fire-and-forget, không crash nếu offline vì client tự try/catch)
             var dur = (int)(DateTime.UtcNow - started).TotalSeconds;
-            _ = _api.LogPlaybackAsync(poi.Id, type, dur > 0 ? dur : null);
+            _ = _playback.LogAsync(poi.Id, type, dur > 0 ? dur : null);
         };
     }
 
@@ -115,16 +127,21 @@ public partial class MapPage : ContentPage
         if (!await EnsureLocationPermissionsAsync()) return;
         await MainThread.InvokeOnMainThreadAsync(() => MyMap.IsShowingUser = true);
 
-        // Load POI (tu SQLite da sync truoc do)
+        // Load POI (từ SQLite - offline-first)
         await ReloadPoisAsync();
 
-        // Di chuyen ve vi tri thuc GPS
+        // Di chuyển về vị trí GPS thực
         _ = Task.Run(MoveToRealLocationAsync);
-
-        await _geofence.RegisterAsync(_pois);
+        if (_pois.Count > 0)
+        {
+            await _geofence.RegisterAsync(_pois);
+        }
+        else
+        {
+            System.Diagnostics.Debug.WriteLine("[Geofence] Skip register: no POIs.");
+        }
         StartTracking();
     }
-
     protected override void OnDisappearing()
     {
         StopTracking();
@@ -140,23 +157,17 @@ public partial class MapPage : ContentPage
             && OperatingSystem.IsAndroidVersionAtLeast(30))
         {
             var always = await Permissions.CheckStatusAsync<Permissions.LocationAlways>();
-            if (always != PermissionStatus.Granted)
-            {
-                bool go = await DisplayAlertAsync("Quyền nền",
-                    "Để nhận geofence khi app ở nền, bật 'Allow all the time' trong Cài đặt.",
-                    "Mở cài đặt", "Để sau");
-                if (go) AppInfo.ShowSettingsUI();
-            }
         }
         else
         {
             await Permissions.RequestAsync<Permissions.LocationAlways>();
         }
+
         return true;
     }
 
     // ════════════════════════════════════════════════════════════════
-    // LOAD POI TU SQLITE
+    // LOAD POI TỪ SQLITE
     // ════════════════════════════════════════════════════════════════
     private async Task ReloadPoisAsync()
     {
@@ -185,16 +196,16 @@ public partial class MapPage : ContentPage
                     pin.MarkerClicked += async (_, e) =>
                     {
                         e.HideInfoWindow = false;
+
                         HighlightPoi(p, "Đã chọn");
                         ShowDetail(p);
 
                         var started = DateTime.UtcNow;
-                        await _narration.HandleAsync(
-                            new Announcement(p, PoiEventType.Tap, started));
+                        await _narration.HandleAsync(new Announcement(p, PoiEventType.Tap, started));
 
-                        // Log TAP len API
+                        // ✅ Log TAP
                         var dur = (int)(DateTime.UtcNow - started).TotalSeconds;
-                        _ = _api.LogPlaybackAsync(p.Id, "TAP", dur > 0 ? dur : null);
+                        _ = _playback.LogAsync(p.Id, "TAP", dur > 0 ? dur : null);
                     };
 
                     _pinMap[p.Id] = pin;
@@ -209,20 +220,22 @@ public partial class MapPage : ContentPage
     }
 
     // ════════════════════════════════════════════════════════════════
-    // GPS – VI TRI NGUOI DUNG
+    // GPS – VỊ TRÍ NGƯỜI DÙNG
     // ════════════════════════════════════════════════════════════════
     private async Task MoveToRealLocationAsync()
     {
         try
         {
-            var req = new GeolocationRequest(GeolocationAccuracy.Best,
-                                             TimeSpan.FromSeconds(10));
+            var req = new GeolocationRequest(GeolocationAccuracy.Best, TimeSpan.FromSeconds(10));
             var loc = await Geolocation.GetLocationAsync(req);
             if (loc == null) return;
+
             _userLocation = loc;
+
             await MainThread.InvokeOnMainThreadAsync(() =>
                 MyMap.MoveToRegion(
                     MapSpan.FromCenterAndRadius(loc, Distance.FromKilometers(1))));
+
             System.Diagnostics.Debug.WriteLine(
                 $"[GPS] {loc.Latitude:F6}, {loc.Longitude:F6} acc={loc.Accuracy:F0}m");
         }
@@ -239,7 +252,9 @@ public partial class MapPage : ContentPage
     {
         _cts?.Cancel();
         _cts = new CancellationTokenSource();
+
         _ = TrackLoopAsync(_cts.Token);
+
         _location.StartTracking((lat, lng) =>
             _userLocation = new Location(lat, lng));
     }
@@ -253,8 +268,8 @@ public partial class MapPage : ContentPage
 
     private async Task TrackLoopAsync(CancellationToken token)
     {
-        var req = new GeolocationRequest(GeolocationAccuracy.Medium,
-                                         TimeSpan.FromSeconds(10));
+        var req = new GeolocationRequest(GeolocationAccuracy.Medium, TimeSpan.FromSeconds(10));
+
         while (!token.IsCancellationRequested)
         {
             try
@@ -264,12 +279,11 @@ public partial class MapPage : ContentPage
 
                 _userLocation = loc;
 
-                // ── Camera follow user (FIX: bo comment) ─────────────
-                await MainThread.InvokeOnMainThreadAsync(() =>
-                    MyMap.MoveToRegion(
-                        MapSpan.FromCenterAndRadius(loc, Distance.FromMeters(350))));
+                //await MainThread.InvokeOnMainThreadAsync(() =>
+                //    MyMap.MoveToRegion(
+                //        MapSpan.FromCenterAndRadius(loc, Distance.FromMeters(350))));
 
-                // ── Tim POI uu tien cao nhat trong vung NEAR ──────────
+                // ── Tìm POI ưu tiên cao nhất trong vùng NEAR ────────────
                 Poi? nearest = null;
                 double nearestDist = double.MaxValue;
 
@@ -309,9 +323,9 @@ public partial class MapPage : ContentPage
                         await _narration.HandleAsync(
                             new Announcement(nearest, PoiEventType.Near, started));
 
-                        // Log NEAR len API
+                        // ✅ Log NEAR (gate đã chống spam)
                         var dur = (int)(DateTime.UtcNow - started).TotalSeconds;
-                        _ = _api.LogPlaybackAsync(nearest.Id, "NEAR", dur > 0 ? dur : null);
+                        _ = _playback.LogAsync(nearest.Id, "NEAR", dur > 0 ? dur : null);
                     }
                 }
                 else
@@ -335,6 +349,7 @@ public partial class MapPage : ContentPage
     {
         ClearHighlight();
         _nearestPoi = poi;
+
         if (_pinMap.TryGetValue(poi.Id, out var pin))
             pin.Label = $"★ {poi.Name}";
     }
@@ -342,8 +357,10 @@ public partial class MapPage : ContentPage
     private void ClearHighlight()
     {
         if (_nearestPoi == null) return;
+
         if (_pinMap.TryGetValue(_nearestPoi.Id, out var pin))
             pin.Label = _nearestPoi.Name;
+
         _nearestPoi = null;
     }
 
@@ -356,19 +373,18 @@ public partial class MapPage : ContentPage
 
         DetailName.Text = poi.Name;
         DetailDesc.Text = string.IsNullOrWhiteSpace(poi.Description)
-                                ? "(Không có mô tả)"
-                                : poi.Description;
-        DetailCoord.Text = $"📍 {poi.Latitude:F6}, {poi.Longitude:F6}";
-        DetailRadius.Text = $"🔵 Bán kính: {poi.RadiusMeters}m  |  Gần: {poi.NearRadiusMeters}m";
+            ? "(Không có mô tả)"
+            : poi.Description;
 
-        if (!string.IsNullOrWhiteSpace(poi.ImageUrl))
-            DetailImage.Source = poi.ImageUrl;
-        else
-            DetailImage.Source = null;
+        DetailCoord.Text = $"📍 {poi.Latitude:F6}, {poi.Longitude:F6}";
+        DetailRadius.Text = $"🔵 Bán kính: {poi.RadiusMeters}m | Gần: {poi.NearRadiusMeters}m";
+
+        DetailImage.Source = !string.IsNullOrWhiteSpace(poi.ImageUrl) ? poi.ImageUrl : null;
 
         var link = !string.IsNullOrWhiteSpace(poi.MapLink)
             ? poi.MapLink
             : $"https://maps.google.com/?q={poi.Latitude},{poi.Longitude}";
+
         LblPoiLink.Text = link;
 
         _ = ExpandSheetAsync();
@@ -381,18 +397,21 @@ public partial class MapPage : ContentPage
     private async Task OpenMapsAsync(Poi? poi)
     {
         if (poi == null) return;
+
         var url = !string.IsNullOrWhiteSpace(poi.MapLink)
             ? poi.MapLink
             : $"https://maps.google.com/?q={poi.Latitude},{poi.Longitude}";
+
         try { await Launcher.OpenAsync(new Uri(url)); }
-        catch (Exception ex)
-        { System.Diagnostics.Debug.WriteLine($"[Maps] {ex.Message}"); }
+        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[Maps] {ex.Message}"); }
     }
 
     void SetupBottomSheetOffsets()
     {
         if (BottomSheet.Height <= 0 || this.Height <= 0) return;
+
         _sheetCollapsedOffset = Math.Max(0, BottomSheet.Height - SheetPeekHeight);
+
         if (!_sheetReady)
         {
             BottomSheet.TranslationY = _sheetCollapsedOffset;
@@ -402,28 +421,36 @@ public partial class MapPage : ContentPage
 
     Task ExpandSheetAsync() =>
         BottomSheet.TranslateToAsync(0, _sheetExpandedOffset, 180, Easing.CubicOut);
+
     Task CollapseSheetAsync() =>
         BottomSheet.TranslateToAsync(0, _sheetCollapsedOffset, 180, Easing.CubicOut);
 
     void BottomSheet_TapHeader(object? sender, EventArgs e)
     {
         if (!_sheetReady) return;
+
         var isCollapsed = Math.Abs(BottomSheet.TranslationY - _sheetCollapsedOffset) < 1;
         _ = BottomSheet.TranslateToAsync(0,
-            isCollapsed ? _sheetExpandedOffset : _sheetCollapsedOffset, 200, Easing.CubicOut);
+            isCollapsed ? _sheetExpandedOffset : _sheetCollapsedOffset,
+            200, Easing.CubicOut);
     }
 
     void BottomSheet_PanUpdated(object? sender, PanUpdatedEventArgs e)
     {
         if (!_sheetReady) return;
+
         switch (e.StatusType)
         {
             case GestureStatus.Started:
-                _sheetStartPanY = BottomSheet.TranslationY; break;
+                _sheetStartPanY = BottomSheet.TranslationY;
+                break;
+
             case GestureStatus.Running:
                 var newY = Math.Clamp(_sheetStartPanY + e.TotalY,
-                                      _sheetExpandedOffset, _sheetCollapsedOffset);
-                BottomSheet.TranslationY = newY; break;
+                    _sheetExpandedOffset, _sheetCollapsedOffset);
+                BottomSheet.TranslationY = newY;
+                break;
+
             case GestureStatus.Completed:
             case GestureStatus.Canceled:
                 var half = (_sheetCollapsedOffset - _sheetExpandedOffset) / 2.0;

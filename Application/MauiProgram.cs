@@ -1,13 +1,14 @@
 ﻿using CommunityToolkit.Maui;
+using Microsoft.Extensions.Logging;
+using Microsoft.Maui.Controls.Maps;
 using MauiApp1.Data;
 using MauiApp1.Pages;
 using MauiApp1.Platforms.Android.Services;
 using MauiApp1.Services;
+using MauiApp1.Services.Api;
 using MauiApp1.Services.Audio;
 using MauiApp1.Services.Narration;
-using Microsoft.Extensions.Logging;
-using Microsoft.Maui.Controls.Maps;
-
+using MauiApp1.Services.Sync;
 namespace MauiApp1;
 
 public static class MauiProgram
@@ -19,9 +20,18 @@ public static class MauiProgram
         builder
             .UseMauiApp<App>()
             .UseMauiMaps()
-            .UseMauiCommunityToolkit();
+            .UseMauiCommunityToolkit()
+            .ConfigureFonts(fonts =>
+            {
+                // ✅ Đăng ký alias font (nếu XAML dùng OpenSansRegular)
+                fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
+                fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
+            });
+#if DEBUG
+        builder.Logging.AddDebug();
+#endif
 
-        // ── GPS & Geofence ────────────────────────────────────────────────
+        // ── GPS & Geofence ────────────────────────────────────────────
 #if ANDROID
         builder.Services.AddSingleton<ILocationService, AndroidLocationService>();
         builder.Services.AddSingleton<IGeofenceService, AndroidGeofenceService>();
@@ -32,31 +42,62 @@ public static class MauiProgram
         builder.Services.AddSingleton<IAudioPlayer, NoopAudioPlayer>();
 #endif
 
-        // ── Audio & Narration ─────────────────────────────────────────────
+        // ── Audio & Narration ─────────────────────────────────────────
         builder.Services.AddSingleton<AudioCache>();
         builder.Services.AddSingleton<NarrationManager>();
 
-        // ── Database + API Sync ───────────────────────────────────────────
+        // ── Local DB (SQLite) ─────────────────────────────────────────
         builder.Services.AddSingleton<PoiDatabase>();
-        builder.Services.AddSingleton<ApiService>();   // goi API, sync SQLite
+        builder.Services.AddSingleton<SyncMetadataRepository>();
 
-        // ── Pages ─────────────────────────────────────────────────────────
+        // ── API clients ───────────────────────────────────────────────
+        builder.Services.AddHttpClient<PoiApiClient>(http =>
+        {
+#if ANDROID
+            http.BaseAddress = new Uri("http://10.0.2.2:5150");
+#else
+            http.BaseAddress = new Uri("http://localhost:5150");
+#endif
+            http.Timeout = TimeSpan.FromSeconds(30);
+        });
+
+        builder.Services.AddHttpClient<PlaybackApiClient>(http =>
+        {
+#if ANDROID
+            http.BaseAddress = new Uri("http://10.0.2.2:5150");
+#else
+            http.BaseAddress = new Uri("http://localhost:5150");
+#endif
+            http.Timeout = TimeSpan.FromSeconds(30);
+        });
+
+        // ── Sync engine ───────────────────────────────────────────────
+        builder.Services.AddSingleton<PoiSyncService>();
+
+        // ── Pages ─────────────────────────────────────────────────────
         builder.Services.AddSingleton<MapPage>();
-        builder.Logging.AddDebug();
 
-        // Khoi tao SQLite va sync POI tu API (khong block startup)
         var app = builder.Build();
 
-        // 1) Init SQLite (tao bang, seed local neu trong)
-        app.Services.GetRequiredService<PoiDatabase>()
-            .InitAsync()
-            .GetAwaiter().GetResult();
-
-        // 2) Sync POI tu SQL Server (chay nen, khong can cho)
+        // Init + AutoSync
         _ = Task.Run(async () =>
         {
-            var api = app.Services.GetRequiredService<ApiService>();
-            await api.SyncPoisAsync();
+            try
+            {
+                var db = app.Services.GetRequiredService<PoiDatabase>();
+                await db.InitAsync();
+
+                // đợi nhẹ cho MapApi kịp chạy (dev)
+                await Task.Delay(1500);
+
+                var sync = app.Services.GetRequiredService<PoiSyncService>();
+                await sync.SyncOnceAsync();
+                sync.StartAutoSync(TimeSpan.FromMinutes(2));
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[Startup] Init/Sync error: {ex}");
+            }
         });
 
         return app;

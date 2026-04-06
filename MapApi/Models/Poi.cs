@@ -14,8 +14,8 @@ public class Poi
     public double Longitude { get; set; }
 
     // float trong C# = REAL trong SQL Server (4 byte)
-    public float RadiusMeters { get; set; } = 120;
-    public float NearRadiusMeters { get; set; } = 220;
+    public int RadiusMeters { get; set; } = 120;
+    public int NearRadiusMeters { get; set; } = 220;
 
     public int DebounceSeconds { get; set; } = 3;
     public int CooldownSeconds { get; set; } = 30;
