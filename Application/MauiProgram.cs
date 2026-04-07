@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Maui;
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.Controls.Maps;
+
 using MauiApp1.Data;
 using MauiApp1.Pages;
 using MauiApp1.Platforms.Android.Services;
@@ -9,7 +10,9 @@ using MauiApp1.Services.Api;
 using MauiApp1.Services.Audio;
 using MauiApp1.Services.Narration;
 using MauiApp1.Services.Sync;
+
 using ZXing.Net.Maui.Controls;
+
 namespace MauiApp1;
 
 public static class MauiProgram
@@ -22,13 +25,13 @@ public static class MauiProgram
             .UseMauiApp<App>()
             .UseMauiMaps()
             .UseMauiCommunityToolkit()
-            .UseBarcodeReader()   // ← thêm dòng này
+            .UseBarcodeReader()
             .ConfigureFonts(fonts =>
             {
-                // ✅ Đăng ký alias font (nếu XAML dùng OpenSansRegular)
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
                 fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
             });
+
 #if DEBUG
         builder.Logging.AddDebug();
 #endif
@@ -51,8 +54,9 @@ public static class MauiProgram
         // ── Local DB (SQLite) ─────────────────────────────────────────
         builder.Services.AddSingleton<PoiDatabase>();
         builder.Services.AddSingleton<SyncMetadataRepository>();
+        builder.Services.AddSingleton<PoiNarrationCache>();
 
-        // ── API clients ───────────────────────────────────────────────
+        // ── API clients (emulator: 10.0.2.2) ─────────────────────────
         builder.Services.AddHttpClient<PoiApiClient>(http =>
         {
 #if ANDROID
@@ -73,12 +77,23 @@ public static class MauiProgram
             http.Timeout = TimeSpan.FromSeconds(30);
         });
 
+        builder.Services.AddHttpClient<PoiNarrationApiClient>(http =>
+        {
+#if ANDROID
+            http.BaseAddress = new Uri("http://10.0.2.2:5150");
+#else
+            http.BaseAddress = new Uri("http://localhost:5150");
+#endif
+            http.Timeout = TimeSpan.FromSeconds(30);
+        });
+
         // ── Sync engine ───────────────────────────────────────────────
         builder.Services.AddSingleton<PoiSyncService>();
 
         // ── Pages ─────────────────────────────────────────────────────
         builder.Services.AddSingleton<MapPage>();
         builder.Services.AddTransient<QrScanPage>();
+
         var app = builder.Build();
 
         // Init + AutoSync
@@ -89,7 +104,6 @@ public static class MauiProgram
                 var db = app.Services.GetRequiredService<PoiDatabase>();
                 await db.InitAsync();
 
-                // đợi nhẹ cho MapApi kịp chạy (dev)
                 await Task.Delay(1500);
 
                 var sync = app.Services.GetRequiredService<PoiSyncService>();

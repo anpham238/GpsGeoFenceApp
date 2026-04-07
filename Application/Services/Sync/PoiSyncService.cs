@@ -39,7 +39,7 @@ public sealed class PoiSyncService
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[PoiSync] {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"[PoiSync] {ex}");
                 }
 
                 try { await Task.Delay(interval, ct); } catch { }
@@ -57,7 +57,8 @@ public sealed class PoiSyncService
 
     public async Task SyncOnceAsync(CancellationToken ct = default)
     {
-        var remote = await _api.GetAllAsync(LanguageService.Current, ct);
+        // ✅ Không lọc theo LanguageService.Current nữa để không bị mất POI khi đổi ngôn ngữ
+        var remote = await _api.GetAllAsync(lang: null, ct: ct);
         System.Diagnostics.Debug.WriteLine($"[PoiSync] Remote count = {remote.Count}");
 
         int saved = 0;

@@ -2,46 +2,60 @@
 using MauiApp1.Services;
 using MauiApp1.Services.Audio;
 using Microsoft.Maui.Media;
-using System;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
+using System.Text.RegularExpressions;
+
 namespace MauiApp1.Services.Narration;
+
 public enum PoiEventType { Enter, Near, Tap }
+
 public sealed record Announcement(
     Poi Poi,
     PoiEventType EventType,
     DateTime CreatedAtUtc,
     string? PreferredLanguage = null)
 {
+    // Ưu tiên: PreferredLanguage -> LanguageService.Current -> vi-VN
     public string ResolvedLanguage =>
         PreferredLanguage
-        ?? (TryGetCurrentLanguage() ?? "vi-VN");
+        ?? TryGetCurrentLanguage()
+        ?? "vi-VN";
+
     private static string? TryGetCurrentLanguage()
     {
         try { return LanguageService.Current; }
         catch { return null; }
     }
 }
+
 public sealed class NarrationManager
 {
     private readonly IAudioPlayer _player;
     private readonly AudioCache _cache;
+
     private readonly object _gate = new();
     private CancellationTokenSource? _currentCts;
+
     public NarrationManager(IAudioPlayer player, AudioCache cache)
     {
         _player = player ?? throw new ArgumentNullException(nameof(player));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
     }
-    public async Task HandleAsync(Announcement ann, CancellationToken ct = default)
+
+    /// <summary>
+    /// Đọc thuyết minh:
+    /// 1) Nếu có AudioUrl: tải cache -> phát file
+    /// 2) Nếu không: TTS theo ngôn ngữ (locale) + pause theo câu
+    /// </summary>
+    public async Task HandleAsync(Announcement ann, string? overrideText = null, CancellationToken ct = default)
     {
         Stop();
+
         _currentCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         var token = _currentCts.Token;
+
         try
         {
-            // 1) Audio URL -> cache -> play
+            // 1) Ưu tiên phát audio file nếu có
             if (!string.IsNullOrWhiteSpace(ann.Poi.AudioUrl))
             {
                 var localPath = await _cache.GetOrAddFromUrlAsync(ann.Poi.AudioUrl!, token);
@@ -52,56 +66,65 @@ public sealed class NarrationManager
                 }
             }
 
-            // 2) Fallback TTS
-            var text = !string.IsNullOrWhiteSpace(ann.Poi.NarrationText)
-                ? ann.Poi.NarrationText!
-                : ComposeFallbackText(ann);
-
-            var options = new SpeechOptions { Volume = 1.0f, Pitch = 1.0f };
+            // 2) TTS fallback (đọc text đã dịch nếu có)
+            var text = !string.IsNullOrWhiteSpace(overrideText)
+                ? overrideText!
+                : (!string.IsNullOrWhiteSpace(ann.Poi.NarrationText)
+                    ? ann.Poi.NarrationText!
+                    : ComposeFallbackText(ann));
 
             var lang = ann.ResolvedLanguage;
-            if (!string.IsNullOrWhiteSpace(lang))
+
+            // MAUI cho phép lấy locale và set SpeechOptions.Locale khi SpeakAsync [2](https://help.syncfusion.com/maui/maps/getting-started)[3](https://www.tutorialspoint.com/android/android_location_based_services.htm)
+            var options = new SpeechOptions
             {
-                var locales = await TextToSpeech.Default.GetLocalesAsync();
-                var match = locales.FirstOrDefault(l =>
-                    string.Equals(l.Language, lang, StringComparison.OrdinalIgnoreCase));
+                Volume = 1.0f,
+                Pitch = 1.0f
+            };
 
-                match ??= locales.FirstOrDefault(l =>
-                    l.Language.StartsWith(lang.Split('-')[0], StringComparison.OrdinalIgnoreCase));
+            var locale = await FindLocaleAsync(lang, token);
+            if (locale is not null)
+                options.Locale = locale;
 
-                if (match != null)
-                    options.Locale = match;
+            // đọc theo câu để tạo pause tự nhiên (cách thực tế nhất)
+            foreach (var part in SplitToParts(text))
+            {
+                token.ThrowIfCancellationRequested();
+                await TextToSpeech.Default.SpeakAsync(part, options, token);
+                await Task.Delay(500, token); // pause giữa câu
             }
-
-            await TextToSpeech.Default.SpeakAsync(text, options, token);
         }
         catch (OperationCanceledException)
         {
-            // ignore
+            // Stop() hoặc token cancel => ignore
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[Narration] Error: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"[Narration] Error: {ex}");
         }
         finally
         {
             Stop();
         }
     }
+
     public void Stop()
     {
         lock (_gate)
         {
             try { _currentCts?.Cancel(); } catch { }
             try { _player.Stop(); } catch { }
+
             _currentCts?.Dispose();
             _currentCts = null;
         }
     }
+
     private static string ComposeFallbackText(Announcement ann)
     {
         var name = ann.Poi.Name?.Trim() ?? "";
         var desc = string.IsNullOrWhiteSpace(ann.Poi.Description) ? "" : ann.Poi.Description!.Trim();
+
         return ann.EventType switch
         {
             PoiEventType.Enter => string.IsNullOrWhiteSpace(desc)
@@ -115,7 +138,53 @@ public sealed class NarrationManager
             PoiEventType.Tap => string.IsNullOrWhiteSpace(desc)
                 ? $"{name}."
                 : $"{name}. {desc}",
+
             _ => name
         };
+    }
+
+    private static IEnumerable<string> SplitToParts(string text)
+    {
+        // Ưu tiên xuống dòng
+        var lines = text
+            .Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(x => x.Trim())
+            .Where(x => x.Length > 0)
+            .ToList();
+
+        if (lines.Count > 1)
+            return lines;
+
+        // Nếu 1 dòng: tách theo dấu câu để tạo pause
+        var parts = Regex.Split(text, @"(?<=[\.!\?。！？])\s+")
+            .Select(x => x.Trim())
+            .Where(x => x.Length > 0)
+            .ToList();
+
+        return parts.Count > 0 ? parts : new[] { text };
+    }
+
+    private static async Task<Locale?> FindLocaleAsync(string lang, CancellationToken ct)
+    {
+        try
+        {
+            var locales = await TextToSpeech.Default.GetLocalesAsync(); // MAUI API [2](https://help.syncfusion.com/maui/maps/getting-started)[3](https://www.tutorialspoint.com/android/android_location_based_services.htm)
+
+            // match full: vi-VN, en-US...
+            var exact = locales.FirstOrDefault(l =>
+                string.Equals(l.Language, lang, StringComparison.OrdinalIgnoreCase));
+            if (exact is not null) return exact;
+
+            // match primary: vi from vi-VN
+            var primary = lang.Split('-')[0];
+            var fallback = locales.FirstOrDefault(l =>
+                l.Language.StartsWith(primary, StringComparison.OrdinalIgnoreCase));
+
+            return fallback;
+        }
+        catch
+        {
+            return null;
+        }
     }
 }

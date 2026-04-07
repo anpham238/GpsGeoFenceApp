@@ -11,6 +11,7 @@ using Microsoft.Maui.Devices;
 using Microsoft.Maui.Devices.Sensors;
 using Microsoft.Maui.Graphics;
 using Microsoft.Maui.Maps;
+using Microsoft.Maui.Networking;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -25,10 +26,13 @@ public partial class MapPage : ContentPage
     private readonly ILocationService _location;
     private readonly PoiDatabase _db;
     private readonly NarrationManager _narration;
-    private readonly PoiSyncService _poiSync; // offline-first sync
+    private readonly PoiSyncService _poiSync;
     private readonly PlaybackApiClient _playback;
 
-    private string _currentLang = "vi-VN";
+    private readonly PoiNarrationApiClient _narrationApi;
+    private readonly PoiNarrationCache _narrationCache;
+
+    private string _currentLang = LanguageService.Current;
 
     private readonly List<Poi> _pois = new();
     private readonly Dictionary<string, Pin> _pinMap = new();
@@ -39,7 +43,7 @@ public partial class MapPage : ContentPage
 
     private static readonly Location _hcmCenter = new(10.776889, 106.700806);
 
-    // ── Bottom sheet state ───────────────────────────────────────────
+    // BottomSheet
     double _sheetCollapsedOffset = -1;
     readonly double _sheetExpandedOffset = 0;
     double _sheetStartPanY = 0;
@@ -52,7 +56,9 @@ public partial class MapPage : ContentPage
         PoiDatabase db,
         NarrationManager narration,
         PoiSyncService poiSync,
-        PlaybackApiClient playback)
+        PlaybackApiClient playback,
+        PoiNarrationApiClient narrationApi,
+        PoiNarrationCache narrationCache)
     {
         InitializeComponent();
 
@@ -62,8 +68,10 @@ public partial class MapPage : ContentPage
         _narration = narration ?? throw new ArgumentNullException(nameof(narration));
         _poiSync = poiSync ?? throw new ArgumentNullException(nameof(poiSync));
         _playback = playback ?? throw new ArgumentNullException(nameof(playback));
+        _narrationApi = narrationApi ?? throw new ArgumentNullException(nameof(narrationApi));
+        _narrationCache = narrationCache ?? throw new ArgumentNullException(nameof(narrationCache));
 
-        // Toolbar: Reset camera + QR + Sync
+        // Toolbar
         ToolbarItems.Add(new ToolbarItem
         {
             Text = "Reset",
@@ -76,11 +84,7 @@ public partial class MapPage : ContentPage
         {
             Text = "QR",
             Order = ToolbarItemOrder.Primary,
-            Command = new Command(async () =>
-            {
-                // Bạn đã khai báo route "qrscan" bên AppShell thì dùng y vậy
-                await Shell.Current.GoToAsync("qrscan");
-            })
+            Command = new Command(async () => await Shell.Current.GoToAsync("qrscan"))
         });
 
         ToolbarItems.Add(new ToolbarItem
@@ -92,7 +96,6 @@ public partial class MapPage : ContentPage
                 await _poiSync.SyncOnceAsync();
                 await ReloadPoisAsync();
 
-                // ✅ Không crash nếu POI rỗng
                 if (_pois.Count > 0)
                     await _geofence.RegisterAsync(_pois);
                 else
@@ -105,7 +108,7 @@ public partial class MapPage : ContentPage
         BottomSheet.SizeChanged += (_, _) => SetupBottomSheetOffsets();
         this.SizeChanged += (_, _) => SetupBottomSheetOffsets();
 
-        // Geofence ENTER / NEAR / EXIT
+        // Geofence events
         _geofence.OnPoiEvent += async (poi, type) =>
         {
             if (type == "EXIT")
@@ -114,31 +117,32 @@ public partial class MapPage : ContentPage
                 return;
             }
 
+            var evType = type == "ENTER" ? PoiEventType.Enter : PoiEventType.Near;
+
             await MainThread.InvokeOnMainThreadAsync(() =>
             {
                 HighlightPoi(poi, $"Vào vùng {type}");
                 ShowDetail(poi);
             });
 
-            var evType = type == "ENTER" ? PoiEventType.Enter : PoiEventType.Near;
             var started = DateTime.UtcNow;
 
-            // ✅ Fix: dùng đúng evType thay vì luôn Enter
-            await _narration.HandleAsync(new Announcement(poi, evType, started));  // [1](https://svsguedu-my.sharepoint.com/personal/3123411204_sv_sgu_edu_vn/Documents/Microsoft%20Copilot%20Chat%20Files/MapPage.Xaml.cs)
+            // ✅ HƯỚNG 2: lấy narration text theo lang + eventType
+            var lang = LanguageService.Current;
+            var text = await GetNarrationTextAsync(poi.Id, evType, lang);
 
-            // Log playback (fire-and-forget)
+            await _narration.HandleAsync(
+                new Announcement(poi, evType, started, PreferredLanguage: lang),
+                overrideText: text);
+
             var dur = (int)(DateTime.UtcNow - started).TotalSeconds;
             _ = _playback.LogAsync(poi.Id, type, dur > 0 ? dur : null);
         };
     }
 
-    // ════════════════════════════════════════════════════════════════
-    // LANGUAGE BAR (XAML gọi trực tiếp)
-    // ════════════════════════════════════════════════════════════════
-
+    // ====== Language bar ======
     private void RefreshLangBar()
     {
-        // XAML của bạn hiện dùng Border (BtnVi/BtnEn/...)
         var map = new Dictionary<string, Border>
         {
             ["vi-VN"] = BtnVi,
@@ -149,61 +153,97 @@ public partial class MapPage : ContentPage
         };
 
         foreach (var (code, btn) in map)
-        {
-            btn.Background = new SolidColorBrush(
-                code == _currentLang ? Color.FromArgb("#1976D2") : Color.FromArgb("#333333"));
-        }
+            btn.Background = new SolidColorBrush(code == _currentLang
+                ? Color.FromArgb("#1976D2")
+                : Color.FromArgb("#333333"));
     }
 
-    // ✅ Đây là handler đúng scope để XAML tìm thấy (fix MAUIX2002)
-    // TapGestureRecognizer sẽ truyền CommandParameter qua TappedEventArgs.Parameter [2](https://learn.microsoft.com/en-us/dotnet/maui/fundamentals/gestures/tap?view=net-maui-10.0)
     private async void OnLangTapped(object? sender, TappedEventArgs e)
     {
-        var code = e.Parameter as string; // lấy từ CommandParameter [2](https://learn.microsoft.com/en-us/dotnet/maui/fundamentals/gestures/tap?view=net-maui-10.0)
+        var code = e.Parameter as string;
         if (string.IsNullOrWhiteSpace(code)) return;
 
         _currentLang = code;
+        LanguageService.Set(code);            // ✅ đổi ngôn ngữ thật
         RefreshLangBar();
 
-        // Nếu bạn có LanguageService thì có thể bật lại 2 dòng này:
-        // LanguageService.Set(code);
-        // await AppShell.DisplayToastAsync($"Chuyển sang {LanguageService.Display(code)}");
-
-        try
-        {
-            // Dừng audio đang phát, lần tiếp theo sẽ đọc theo ngôn ngữ mới (nếu NarrationManager hỗ trợ)
-            _narration.Stop();
-        }
-        catch { }
+        try { _narration.Stop(); } catch { }
 
         await Task.CompletedTask;
     }
 
-    // ════════════════════════════════════════════════════════════════
-    // LIFECYCLE
-    // ════════════════════════════════════════════════════════════════
+    // ====== Narration fetch/cache (HƯỚNG 2) ======
+    private static byte ToEventByte(PoiEventType t) => t switch
+    {
+        PoiEventType.Enter => 0,
+        PoiEventType.Near => 1,
+        PoiEventType.Tap => 2,
+        _ => 0
+    };
 
+    private static string ToEventName(PoiEventType t) => t switch
+    {
+        PoiEventType.Enter => "Enter",
+        PoiEventType.Near => "Near",
+        PoiEventType.Tap => "Tap",
+        _ => "Enter"
+    };
+
+    private async Task<string?> GetNarrationTextAsync(string poiId, PoiEventType evType, string lang, CancellationToken ct = default)
+    {
+        try
+        {
+            var evByte = ToEventByte(evType);
+
+            // 1) cache
+            var cached = await _narrationCache.GetAsync(poiId, evByte, lang);
+            if (!string.IsNullOrWhiteSpace(cached))
+                return cached;
+
+            // 2) online fetch
+            if (Connectivity.Current.NetworkAccess == NetworkAccess.Internet)
+            {
+                var dto = await _narrationApi.GetNarrationAsync(poiId, lang, ToEventName(evType), ct);
+                var text = dto?.NarrationText;
+
+                if (!string.IsNullOrWhiteSpace(text))
+                {
+                    await _narrationCache.UpsertAsync(poiId, dto!.EventType, dto.Language, text);
+                    return text;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[NarrationFetch] {ex.Message}");
+        }
+
+        return null; // fallback -> NarrationManager dùng Poi.NarrationText
+    }
+    // ====== Lifecycle ======
     protected override async void OnAppearing()
     {
         base.OnAppearing();
 
+        _currentLang = LanguageService.Current;
         RefreshLangBar();
 
-        MyMap.MoveToRegion(
-            MapSpan.FromCenterAndRadius(_hcmCenter, Distance.FromKilometers(3)));
+        MyMap.MoveToRegion(MapSpan.FromCenterAndRadius(_hcmCenter, Distance.FromKilometers(3)));
 
+        // ✅ Luôn load POI trước để pins không phụ thuộc quyền location
+        await ReloadPoisAsync();
+
+        // Xin quyền location chỉ để show user + tracking
         if (!await EnsureLocationPermissionsAsync())
+        {
+            System.Diagnostics.Debug.WriteLine("[Map] Location permission denied. Show pins only.");
             return;
+        }
 
         await MainThread.InvokeOnMainThreadAsync(() => MyMap.IsShowingUser = true);
 
-        // Load POI (từ SQLite - offline-first)
-        await ReloadPoisAsync();
-
-        // Di chuyển về vị trí GPS thực (nếu bạn vẫn muốn)
         _ = Task.Run(MoveToRealLocationAsync);
 
-        // ✅ Không crash nếu POI rỗng
         if (_pois.Count > 0)
             await _geofence.RegisterAsync(_pois);
         else
@@ -224,21 +264,14 @@ public partial class MapPage : ContentPage
         if (when != PermissionStatus.Granted) return false;
 
         if (DeviceInfo.Platform == DevicePlatform.Android && OperatingSystem.IsAndroidVersionAtLeast(30))
-        {
             _ = await Permissions.CheckStatusAsync<Permissions.LocationAlways>();
-        }
         else
-        {
             _ = await Permissions.RequestAsync<Permissions.LocationAlways>();
-        }
 
         return true;
     }
 
-    // ════════════════════════════════════════════════════════════════
-    // LOAD POI TỪ SQLITE
-    // ════════════════════════════════════════════════════════════════
-
+    // ====== Load POIs ======
     private async Task ReloadPoisAsync()
     {
         try
@@ -271,7 +304,14 @@ public partial class MapPage : ContentPage
                         ShowDetail(p);
 
                         var started = DateTime.UtcNow;
-                        await _narration.HandleAsync(new Announcement(p, PoiEventType.Tap, started));
+                        var lang = LanguageService.Current;
+
+                        // ✅ HƯỚNG 2: lấy narration theo TAP + lang
+                        var text = await GetNarrationTextAsync(p.Id, PoiEventType.Tap, lang);
+
+                        await _narration.HandleAsync(
+                            new Announcement(p, PoiEventType.Tap, started, PreferredLanguage: lang),
+                            overrideText: text);
 
                         var dur = (int)(DateTime.UtcNow - started).TotalSeconds;
                         _ = _playback.LogAsync(p.Id, "TAP", dur > 0 ? dur : null);
@@ -288,10 +328,7 @@ public partial class MapPage : ContentPage
         }
     }
 
-    // ════════════════════════════════════════════════════════════════
-    // GPS – VỊ TRÍ NGƯỜI DÙNG
-    // ════════════════════════════════════════════════════════════════
-
+    // ====== GPS ======
     private async Task MoveToRealLocationAsync()
     {
         try
@@ -303,11 +340,7 @@ public partial class MapPage : ContentPage
             _userLocation = loc;
 
             await MainThread.InvokeOnMainThreadAsync(() =>
-                MyMap.MoveToRegion(
-                    MapSpan.FromCenterAndRadius(loc, Distance.FromKilometers(1))));
-
-            System.Diagnostics.Debug.WriteLine(
-                $"[GPS] {loc.Latitude:F6}, {loc.Longitude:F6} acc={loc.Accuracy:F0}m");
+                MyMap.MoveToRegion(MapSpan.FromCenterAndRadius(loc, Distance.FromKilometers(1))));
         }
         catch (Exception ex)
         {
@@ -315,19 +348,14 @@ public partial class MapPage : ContentPage
         }
     }
 
-    // ════════════════════════════════════════════════════════════════
-    // GPS LOOP – NEAR + PRIORITY (đã tắt follow camera trong loop)
-    // ════════════════════════════════════════════════════════════════
-
+    // ====== Tracking loop ======
     private void StartTracking()
     {
         _cts?.Cancel();
         _cts = new CancellationTokenSource();
-
         _ = TrackLoopAsync(_cts.Token);
 
-        _location.StartTracking((lat, lng) =>
-            _userLocation = new Location(lat, lng));
+        _location.StartTracking((lat, lng) => _userLocation = new Location(lat, lng));
     }
 
     private void StopTracking()
@@ -350,7 +378,6 @@ public partial class MapPage : ContentPage
 
                 _userLocation = loc;
 
-                // ── Tìm POI ưu tiên cao nhất trong vùng NEAR ────────────
                 Poi? nearest = null;
                 double nearestDist = double.MaxValue;
 
@@ -365,9 +392,7 @@ public partial class MapPage : ContentPage
                     var thisPri = poi.Priority ?? 999;
                     var bestPri = nearest?.Priority ?? 999;
 
-                    if (nearest == null
-                        || thisPri < bestPri
-                        || (thisPri == bestPri && dist < nearestDist))
+                    if (nearest == null || thisPri < bestPri || (thisPri == bestPri && dist < nearestDist))
                     {
                         nearest = poi;
                         nearestDist = dist;
@@ -378,17 +403,20 @@ public partial class MapPage : ContentPage
                 {
                     await MainThread.InvokeOnMainThreadAsync(() =>
                     {
-                        HighlightPoi(nearest,
-                            $"Đến gần (~{nearestDist:F0}m) • Ưu tiên #{nearest.Priority}");
+                        HighlightPoi(nearest, $"Đến gần (~{nearestDist:F0}m) • Ưu tiên #{nearest.Priority}");
                         ShowDetail(nearest);
                     });
 
-                    if (GeofenceEventGate.ShouldAccept(nearest.Id, "NEAR",
-                            nearest.DebounceSeconds, nearest.CooldownSeconds))
+                    if (GeofenceEventGate.ShouldAccept(nearest.Id, "NEAR", nearest.DebounceSeconds, nearest.CooldownSeconds))
                     {
                         var started = DateTime.UtcNow;
+                        var lang = LanguageService.Current;
+                        var text = await GetNarrationTextAsync(nearest.Id, PoiEventType.Near, lang, token);
+
                         await _narration.HandleAsync(
-                            new Announcement(nearest, PoiEventType.Near, started));
+                            new Announcement(nearest, PoiEventType.Near, started, PreferredLanguage: lang),
+                            overrideText: text,
+                            ct: token);
 
                         var dur = (int)(DateTime.UtcNow - started).TotalSeconds;
                         _ = _playback.LogAsync(nearest.Id, "NEAR", dur > 0 ? dur : null);
@@ -408,10 +436,7 @@ public partial class MapPage : ContentPage
         }
     }
 
-    // ════════════════════════════════════════════════════════════════
-    // HIGHLIGHT
-    // ════════════════════════════════════════════════════════════════
-
+    // ====== Highlight ======
     private void HighlightPoi(Poi poi, string status)
     {
         ClearHighlight();
@@ -431,10 +456,7 @@ public partial class MapPage : ContentPage
         _nearestPoi = null;
     }
 
-    // ════════════════════════════════════════════════════════════════
-    // BOTTOM SHEET
-    // ════════════════════════════════════════════════════════════════
-
+    // ====== Bottom sheet ======
     private void ShowDetail(Poi? poi)
     {
         if (poi == null) return;
@@ -448,15 +470,12 @@ public partial class MapPage : ContentPage
         var link = !string.IsNullOrWhiteSpace(poi.MapLink)
             ? poi.MapLink
             : $"https://maps.google.com/?q={poi.Latitude},{poi.Longitude}";
-
         LblPoiLink.Text = link;
 
         _ = ExpandSheetAsync();
 
-        MyMap.MoveToRegion(
-            MapSpan.FromCenterAndRadius(
-                new Location(poi.Latitude, poi.Longitude),
-                Distance.FromMeters(400)));
+        MyMap.MoveToRegion(MapSpan.FromCenterAndRadius(
+            new Location(poi.Latitude, poi.Longitude), Distance.FromMeters(400)));
     }
 
     private async Task OpenMapsAsync(Poi? poi)
