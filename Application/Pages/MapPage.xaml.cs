@@ -22,15 +22,18 @@ namespace MauiApp1.Pages;
 
 public partial class MapPage : ContentPage
 {
+    // ✅ Thêm field để track initialization
+    private bool _isInitialized = false;
+
     private readonly IGeofenceService _geofence;
     private readonly ILocationService _location;
     private readonly PoiDatabase _db;
     private readonly NarrationManager _narration;
     private readonly PoiSyncService _poiSync;
     private readonly PlaybackApiClient _playback;
-
     private readonly PoiNarrationApiClient _narrationApi;
     private readonly PoiNarrationCache _narrationCache;
+    private readonly TranslatorClient _translator; // ✅ THÊM
 
     private string _currentLang = LanguageService.Current;
 
@@ -58,7 +61,8 @@ public partial class MapPage : ContentPage
         PoiSyncService poiSync,
         PlaybackApiClient playback,
         PoiNarrationApiClient narrationApi,
-        PoiNarrationCache narrationCache)
+        PoiNarrationCache narrationCache,
+        TranslatorClient translator) // ✅ THÊM
     {
         InitializeComponent();
 
@@ -70,6 +74,7 @@ public partial class MapPage : ContentPage
         _playback = playback ?? throw new ArgumentNullException(nameof(playback));
         _narrationApi = narrationApi ?? throw new ArgumentNullException(nameof(narrationApi));
         _narrationCache = narrationCache ?? throw new ArgumentNullException(nameof(narrationCache));
+        _translator = translator ?? throw new ArgumentNullException(nameof(translator)); // ✅ THÊM
 
         // Toolbar
         ToolbarItems.Add(new ToolbarItem
@@ -109,35 +114,44 @@ public partial class MapPage : ContentPage
         this.SizeChanged += (_, _) => SetupBottomSheetOffsets();
 
         // Geofence events
-        _geofence.OnPoiEvent += async (poi, type) =>
+        // ✅ Thay vì lambda, dùng method reference
+        _geofence.OnPoiEvent += OnGeofenceEvent;
+    }
+
+    // ✅ Extract lambda thành method
+    private async void OnGeofenceEvent(Poi poi, string type)
+    {
+        if (type == "EXIT")
         {
-            if (type == "EXIT")
-            {
-                await MainThread.InvokeOnMainThreadAsync(ClearHighlight);
-                return;
-            }
+            await MainThread.InvokeOnMainThreadAsync(ClearHighlight);
+            return;
+        }
 
-            var evType = type == "ENTER" ? PoiEventType.Enter : PoiEventType.Near;
+        var evType = type == "ENTER" ? PoiEventType.Enter : PoiEventType.Near;
+        await MainThread.InvokeOnMainThreadAsync(() =>
+        {
+            HighlightPoi(poi, $"Vào vùng {type}");
+            ShowDetail(poi);
+        });
 
-            await MainThread.InvokeOnMainThreadAsync(() =>
-            {
-                HighlightPoi(poi, $"Vào vùng {type}");
-                ShowDetail(poi);
-            });
+        var started = DateTime.UtcNow;
+        var lang = LanguageService.Current;
+        
+        // ✅ HƯỚNG 3: Lấy cả narration từ API + dịch tên địa điểm
+        var narrationText = await GetNarrationTextAsync(poi.Id, evType, lang);
+        var poiText = await GetTranslatedPoiTextAsync(poi, lang);
+        
+        // Kết hợp: tên địa điểm (dịch) + narration text
+        var fullText = string.IsNullOrWhiteSpace(narrationText)
+            ? poiText  // Nếu không có narration, chỉ đọc tên + mô tả
+            : $"{poiText}. {narrationText}"; // Nếu có, đọc tên + mô tả + narration
 
-            var started = DateTime.UtcNow;
+        await _narration.HandleAsync(
+            new Announcement(poi, evType, started, PreferredLanguage: lang),
+            overrideText: fullText);
 
-            // ✅ HƯỚNG 2: lấy narration text theo lang + eventType
-            var lang = LanguageService.Current;
-            var text = await GetNarrationTextAsync(poi.Id, evType, lang);
-
-            await _narration.HandleAsync(
-                new Announcement(poi, evType, started, PreferredLanguage: lang),
-                overrideText: text);
-
-            var dur = (int)(DateTime.UtcNow - started).TotalSeconds;
-            _ = _playback.LogAsync(poi.Id, type, dur > 0 ? dur : null);
-        };
+        var dur = (int)(DateTime.UtcNow - started).TotalSeconds;
+        _ = _playback.LogAsync(poi.Id, type, dur > 0 ? dur : null);
     }
 
     // ====== Language bar ======
@@ -221,7 +235,7 @@ public partial class MapPage : ContentPage
         return null; // fallback -> NarrationManager dùng Poi.NarrationText
     }
     // ====== Lifecycle ======
-    protected override async void OnAppearing()
+    protected override void OnAppearing()
     {
         base.OnAppearing();
 
@@ -230,47 +244,93 @@ public partial class MapPage : ContentPage
 
         MyMap.MoveToRegion(MapSpan.FromCenterAndRadius(_hcmCenter, Distance.FromKilometers(3)));
 
-        // ✅ Luôn load POI trước để pins không phụ thuộc quyền location
-        await ReloadPoisAsync();
-
-        // Xin quyền location chỉ để show user + tracking
-        if (!await EnsureLocationPermissionsAsync())
+        // ✅ Chỉ chạy initialization một lần
+        if (!_isInitialized)
         {
-            System.Diagnostics.Debug.WriteLine("[Map] Location permission denied. Show pins only.");
-            return;
+            _isInitialized = true;
+            // ✅ Chạy background, không block lifecycle
+            _ = InitializeMapAsync();
         }
+    }
 
-        await MainThread.InvokeOnMainThreadAsync(() => MyMap.IsShowingUser = true);
+    // ✅ Extract tất cả async operations vào method riêng
+    private async Task InitializeMapAsync()
+    {
+        try
+        {
+            // Init DB + Sync
+            await _db.InitAsync();
+            if (Connectivity.Current.NetworkAccess == NetworkAccess.Internet)
+                await _poiSync.SyncOnceAsync();
 
-        _ = Task.Run(MoveToRealLocationAsync);
+            // Load POIs
+            await ReloadPoisAsync();
 
-        if (_pois.Count > 0)
-            await _geofence.RegisterAsync(_pois);
-        else
-            System.Diagnostics.Debug.WriteLine("[Geofence] Skip register: no POIs.");
+            // ✅ Request permissions với timeout
+            if (!await EnsureLocationPermissionsWithTimeoutAsync())
+            {
+                System.Diagnostics.Debug.WriteLine("[Map] Location permission denied");
+                return;
+            }
 
-        StartTracking();
+            await MainThread.InvokeOnMainThreadAsync(() => MyMap.IsShowingUser = true);
+
+            // Register geofence
+            if (_pois.Count > 0)
+            {
+                try { await _geofence.RegisterAsync(_pois); }
+                catch (Exception ex) 
+                { 
+                    System.Diagnostics.Debug.WriteLine($"[Geofence] Register error: {ex.Message}"); 
+                }
+            }
+
+            // Start tracking
+            _poiSync.StartAutoSync(TimeSpan.FromMinutes(2));
+            _ = Task.Run(MoveToRealLocationAsync);
+            StartTracking();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[MapInit] Fatal error: {ex}");
+        }
+    }
+
+    // ✅ Thêm timeout cho permission request
+    private async Task<bool> EnsureLocationPermissionsWithTimeoutAsync()
+    {
+        try
+        {
+            // ✅ Timeout 30 giây - nếu user không response, return false
+            var task = Permissions.RequestAsync<Permissions.LocationWhenInUse>();
+            var result = await task.WaitAsync(TimeSpan.FromSeconds(30));
+            return result == PermissionStatus.Granted;
+        }
+        catch (TimeoutException)
+        {
+            System.Diagnostics.Debug.WriteLine("[Permissions] Request timeout");
+            return false;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[Permissions] Error: {ex.Message}");
+            return false;
+        }
     }
 
     protected override void OnDisappearing()
     {
+        _geofence.OnPoiEvent -= OnGeofenceEvent;
         StopTracking();
+        _poiSync.StopAutoSync();
         base.OnDisappearing();
     }
-
     private async Task<bool> EnsureLocationPermissionsAsync()
     {
+        // ✅ Chỉ xin WhenInUse để tránh cảnh báo "only one set of permissions at a time"
         var when = await Permissions.RequestAsync<Permissions.LocationWhenInUse>();
-        if (when != PermissionStatus.Granted) return false;
-
-        if (DeviceInfo.Platform == DevicePlatform.Android && OperatingSystem.IsAndroidVersionAtLeast(30))
-            _ = await Permissions.CheckStatusAsync<Permissions.LocationAlways>();
-        else
-            _ = await Permissions.RequestAsync<Permissions.LocationAlways>();
-
-        return true;
+        return when == PermissionStatus.Granted;
     }
-
     // ====== Load POIs ======
     private async Task ReloadPoisAsync()
     {
@@ -299,19 +359,22 @@ public partial class MapPage : ContentPage
                     pin.MarkerClicked += async (_, e) =>
                     {
                         e.HideInfoWindow = false;
-
                         HighlightPoi(p, "Đã chọn");
                         ShowDetail(p);
 
                         var started = DateTime.UtcNow;
                         var lang = LanguageService.Current;
 
-                        // ✅ HƯỚNG 2: lấy narration theo TAP + lang
-                        var text = await GetNarrationTextAsync(p.Id, PoiEventType.Tap, lang);
+                        var narrationText = await GetNarrationTextAsync(p.Id, PoiEventType.Tap, lang);
+                        var poiText = await GetTranslatedPoiTextAsync(p, lang);
+                        
+                        var fullText = string.IsNullOrWhiteSpace(narrationText)
+                            ? poiText
+                            : $"{poiText}. {narrationText}";
 
                         await _narration.HandleAsync(
                             new Announcement(p, PoiEventType.Tap, started, PreferredLanguage: lang),
-                            overrideText: text);
+                            overrideText: fullText);
 
                         var dur = (int)(DateTime.UtcNow - started).TotalSeconds;
                         _ = _playback.LogAsync(p.Id, "TAP", dur > 0 ? dur : null);
@@ -411,11 +474,17 @@ public partial class MapPage : ContentPage
                     {
                         var started = DateTime.UtcNow;
                         var lang = LanguageService.Current;
-                        var text = await GetNarrationTextAsync(nearest.Id, PoiEventType.Near, lang, token);
+                        
+                        var narrationText = await GetNarrationTextAsync(nearest.Id, PoiEventType.Near, lang, token);
+                        var poiText = await GetTranslatedPoiTextAsync(nearest, lang, token);
+                        
+                        var fullText = string.IsNullOrWhiteSpace(narrationText)
+                            ? poiText
+                            : $"{poiText}. {narrationText}";
 
                         await _narration.HandleAsync(
                             new Announcement(nearest, PoiEventType.Near, started, PreferredLanguage: lang),
-                            overrideText: text,
+                            overrideText: fullText,
                             ct: token);
 
                         var dur = (int)(DateTime.UtcNow - started).TotalSeconds;
@@ -544,5 +613,66 @@ public partial class MapPage : ContentPage
                     180, Easing.CubicOut);
                 break;
         }
+    }
+
+    // ✅ Thêm method mới để dịch tên + mô tả POI
+    private async Task<string?> GetTranslatedPoiTextAsync(Poi poi, string lang, CancellationToken ct = default)
+    {
+        try
+        {
+            // 1) Nếu là tiếng Việt, không cần dịch
+            if (lang == "vi-VN")
+            {
+                return BuildPoiText(poi.Name, poi.Description);
+            }
+
+            // 2) Dịch tên địa điểm
+            var translatedName = await TranslateTextAsync(poi.Name, "vi-VN", lang, ct);
+            
+            // 3) Dịch mô tả
+            var translatedDesc = string.IsNullOrWhiteSpace(poi.Description) 
+                ? null 
+                : await TranslateTextAsync(poi.Description, "vi-VN", lang, ct);
+
+            return BuildPoiText(translatedName, translatedDesc);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[TranslatePoi] Error: {ex.Message}");
+            return BuildPoiText(poi.Name, poi.Description); // Fallback tiếng Việt
+        }
+    }
+
+    // ✅ Helper: dùng TranslatorClient để dịch
+    private async Task<string?> TranslateTextAsync(string text, string fromLang, string toLang, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return text;
+        if (fromLang == toLang) return text;
+
+        try
+        {
+            // ✅ Gọi TranslatorClient thực
+            var translated = await _translator.TryTranslateAsync(text, toLang, fromLang, ct);
+            return translated ?? text; // Fallback to original text nếu dịch fail
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[TranslateTextAsync] Error: {ex.Message}");
+            return text; // Fallback to original
+        }
+    }
+
+    // ✅ Helper: format text (tên + mô tả)
+    private static string BuildPoiText(string? name, string? desc)
+    {
+        var parts = new List<string>();
+        
+        if (!string.IsNullOrWhiteSpace(name))
+            parts.Add(name);
+        
+        if (!string.IsNullOrWhiteSpace(desc))
+            parts.Add(desc);
+        
+        return string.Join(". ", parts);
     }
 }

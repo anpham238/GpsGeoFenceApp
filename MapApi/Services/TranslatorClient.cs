@@ -14,17 +14,20 @@ public sealed class TranslatorClient
         _config = config;
     }
 
-    // Không ném lỗi nếu thiếu key/region: trả null -> server fallback về baseText
+    /// <summary>
+    /// Dịch text sang toLang. Nếu thiếu key/region hoặc call fail -> trả null (server sẽ fallback baseText).
+    /// Azure Translator Text Translation: POST /translate?api-version=3.0&to=...
+    /// </summary>
     public async Task<string?> TryTranslateAsync(string text, string toLang, string? fromLang = null, CancellationToken ct = default)
     {
         var endpoint = _config["Translator:Endpoint"] ?? "https://api.cognitive.microsofttranslator.com";
         var key = _config["Translator:Key"];
         var region = _config["Translator:Region"];
 
+        // thiếu cấu hình => không dịch
         if (string.IsNullOrWhiteSpace(key) || string.IsNullOrWhiteSpace(region))
             return null;
 
-        // Text translation REST API: POST translate [3](https://developers.arcgis.com/net/maps-2d/tutorials/display-a-map-maui/)[4](https://www.w3tutorials.net/blog/how-to-auto-create-database-on-first-run/)
         var url = $"{endpoint}/translate?api-version=3.0&to={Uri.EscapeDataString(toLang)}";
         if (!string.IsNullOrWhiteSpace(fromLang))
             url += $"&from={Uri.EscapeDataString(fromLang)}";

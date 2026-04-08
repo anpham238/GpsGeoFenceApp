@@ -3,7 +3,6 @@ using MauiApp1.Services;
 using MauiApp1.Services.Audio;
 using Microsoft.Maui.Media;
 using System.Text.RegularExpressions;
-
 namespace MauiApp1.Services.Narration;
 
 public enum PoiEventType { Enter, Near, Tap }
@@ -14,7 +13,6 @@ public sealed record Announcement(
     DateTime CreatedAtUtc,
     string? PreferredLanguage = null)
 {
-    // Ưu tiên: PreferredLanguage -> LanguageService.Current -> vi-VN
     public string ResolvedLanguage =>
         PreferredLanguage
         ?? TryGetCurrentLanguage()
@@ -41,11 +39,6 @@ public sealed class NarrationManager
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
     }
 
-    /// <summary>
-    /// Đọc thuyết minh:
-    /// 1) Nếu có AudioUrl: tải cache -> phát file
-    /// 2) Nếu không: TTS theo ngôn ngữ (locale) + pause theo câu
-    /// </summary>
     public async Task HandleAsync(Announcement ann, string? overrideText = null, CancellationToken ct = default)
     {
         Stop();
@@ -55,7 +48,7 @@ public sealed class NarrationManager
 
         try
         {
-            // 1) Ưu tiên phát audio file nếu có
+            // 1) Ưu tiên phát audio nếu có
             if (!string.IsNullOrWhiteSpace(ann.Poi.AudioUrl))
             {
                 var localPath = await _cache.GetOrAddFromUrlAsync(ann.Poi.AudioUrl!, token);
@@ -66,7 +59,7 @@ public sealed class NarrationManager
                 }
             }
 
-            // 2) TTS fallback (đọc text đã dịch nếu có)
+            // 2) TTS: đọc text đã dịch (overrideText) nếu có
             var text = !string.IsNullOrWhiteSpace(overrideText)
                 ? overrideText!
                 : (!string.IsNullOrWhiteSpace(ann.Poi.NarrationText)
@@ -75,29 +68,18 @@ public sealed class NarrationManager
 
             var lang = ann.ResolvedLanguage;
 
-            // MAUI cho phép lấy locale và set SpeechOptions.Locale khi SpeakAsync [2](https://help.syncfusion.com/maui/maps/getting-started)[3](https://www.tutorialspoint.com/android/android_location_based_services.htm)
-            var options = new SpeechOptions
-            {
-                Volume = 1.0f,
-                Pitch = 1.0f
-            };
-
+            var options = new SpeechOptions { Volume = 1.0f, Pitch = 1.0f };
             var locale = await FindLocaleAsync(lang, token);
-            if (locale is not null)
-                options.Locale = locale;
+            if (locale is not null) options.Locale = locale;
 
-            // đọc theo câu để tạo pause tự nhiên (cách thực tế nhất)
             foreach (var part in SplitToParts(text))
             {
                 token.ThrowIfCancellationRequested();
                 await TextToSpeech.Default.SpeakAsync(part, options, token);
-                await Task.Delay(500, token); // pause giữa câu
+                await Task.Delay(500, token); // ✅ pause 500ms
             }
         }
-        catch (OperationCanceledException)
-        {
-            // Stop() hoặc token cancel => ignore
-        }
+        catch (OperationCanceledException) { }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[Narration] Error: {ex}");
@@ -114,7 +96,6 @@ public sealed class NarrationManager
         {
             try { _currentCts?.Cancel(); } catch { }
             try { _player.Stop(); } catch { }
-
             _currentCts?.Dispose();
             _currentCts = null;
         }
@@ -145,7 +126,6 @@ public sealed class NarrationManager
 
     private static IEnumerable<string> SplitToParts(string text)
     {
-        // Ưu tiên xuống dòng
         var lines = text
             .Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries)
             .Select(x => x.Trim())
@@ -155,7 +135,7 @@ public sealed class NarrationManager
         if (lines.Count > 1)
             return lines;
 
-        // Nếu 1 dòng: tách theo dấu câu để tạo pause
+        // tách theo dấu câu để tạo nghỉ tự nhiên
         var parts = Regex.Split(text, @"(?<=[\.!\?。！？])\s+")
             .Select(x => x.Trim())
             .Where(x => x.Length > 0)
@@ -168,19 +148,14 @@ public sealed class NarrationManager
     {
         try
         {
-            var locales = await TextToSpeech.Default.GetLocalesAsync(); // MAUI API [2](https://help.syncfusion.com/maui/maps/getting-started)[3](https://www.tutorialspoint.com/android/android_location_based_services.htm)
-
-            // match full: vi-VN, en-US...
+            var locales = await TextToSpeech.Default.GetLocalesAsync();
             var exact = locales.FirstOrDefault(l =>
                 string.Equals(l.Language, lang, StringComparison.OrdinalIgnoreCase));
             if (exact is not null) return exact;
 
-            // match primary: vi from vi-VN
             var primary = lang.Split('-')[0];
-            var fallback = locales.FirstOrDefault(l =>
+            return locales.FirstOrDefault(l =>
                 l.Language.StartsWith(primary, StringComparison.OrdinalIgnoreCase));
-
-            return fallback;
         }
         catch
         {

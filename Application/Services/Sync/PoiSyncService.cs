@@ -57,7 +57,7 @@ public sealed class PoiSyncService
 
     public async Task SyncOnceAsync(CancellationToken ct = default)
     {
-        // ✅ Không lọc theo LanguageService.Current nữa để không bị mất POI khi đổi ngôn ngữ
+        // ✅ POI list KHÔNG phụ thuộc ngôn ngữ
         var remote = await _api.GetAllAsync(lang: null, ct: ct);
         System.Diagnostics.Debug.WriteLine($"[PoiSync] Remote count = {remote.Count}");
 

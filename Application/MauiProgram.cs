@@ -87,35 +87,20 @@ public static class MauiProgram
             http.Timeout = TimeSpan.FromSeconds(30);
         });
 
+        // ✅ THÊM: TranslatorClient (Azure Translator)
+        builder.Services.AddHttpClient<TranslatorClient>(http =>
+        {
+            http.Timeout = TimeSpan.FromSeconds(10);
+        });
+
         // ── Sync engine ───────────────────────────────────────────────
         builder.Services.AddSingleton<PoiSyncService>();
 
         // ── Pages ─────────────────────────────────────────────────────
-        builder.Services.AddSingleton<MapPage>();
+        // ✅ Khuyến nghị: MapPage nên Transient để tránh giữ page sống quá lâu
+        builder.Services.AddTransient<MapPage>();
         builder.Services.AddTransient<QrScanPage>();
 
-        var app = builder.Build();
-
-        // Init + AutoSync
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                var db = app.Services.GetRequiredService<PoiDatabase>();
-                await db.InitAsync();
-
-                await Task.Delay(1500);
-
-                var sync = app.Services.GetRequiredService<PoiSyncService>();
-                await sync.SyncOnceAsync();
-                sync.StartAutoSync(TimeSpan.FromMinutes(2));
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"[Startup] Init/Sync error: {ex}");
-            }
-        });
-
-        return app;
+        return builder.Build();
     }
 }

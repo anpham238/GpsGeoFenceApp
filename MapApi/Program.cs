@@ -10,7 +10,7 @@ var cs = builder.Configuration.GetConnectionString("Default")
          ?? "Server=.\\SQLEXPRESS;Database=GpsApi;Trusted_Connection=True;"
           + "Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=True";
 
-// 2) EF Core (✅ chỉ rõ AppDb)
+// 2) EF Core (✅ phải có <AppDb>)
 builder.Services.AddDbContext<AppDb>(opt =>
     opt.UseSqlServer(cs, sql =>
     {
@@ -26,7 +26,7 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddCors(opt =>
     opt.AddDefaultPolicy(p => p.AllowAnyHeader().AllowAnyMethod().AllowAnyOrigin()));
 
-// 5) Translator client (auto translate)
+// 5) Translator client
 builder.Services.AddHttpClient<TranslatorClient>();
 
 var app = builder.Build();
@@ -40,15 +40,10 @@ if (app.Environment.IsDevelopment())
 }
 
 // Health
-app.MapGet("/health", () => Results.Ok(new
-{
-    ok = true,
-    time = DateTime.UtcNow,
-    service = "GpsApi"
-}));
+app.MapGet("/health", () => Results.Ok(new { ok = true, time = DateTime.UtcNow }));
 
 // ============================================================
-// GET /api/v1/pois  (KHÔNG lọc theo ngôn ngữ để vẽ map/pins)
+// GET /api/v1/pois (KHÔNG lọc theo ngôn ngữ để vẽ map/pins)
 // ============================================================
 app.MapGet("/api/v1/pois", async (AppDb db) =>
 {
@@ -75,8 +70,9 @@ app.MapGet("/api/v1/pois/{id}", async (string id, AppDb db) =>
 
 // ============================================================
 // GET /api/v1/pois/{id}/narration?lang=...&eventType=Enter|Near|Tap
-// Auto translate + cache into dbo.PoiNarration
-// Base text = dbo.Pois.NarrationText (vi) + fromLang = dbo.Pois.Language (vi-VN)
+// - Cache hit: dbo.PoiNarration
+// - Cache miss: dịch từ dbo.Pois.NarrationText (gốc) theo dbo.Pois.Language (vi-VN)
+//   rồi lưu vào dbo.PoiNarration
 // ============================================================
 app.MapGet("/api/v1/pois/{id}/narration", async (
     string id,
@@ -91,9 +87,9 @@ app.MapGet("/api/v1/pois/{id}/narration", async (
         return Results.NotFound(new { error = "POI not found" });
 
     var toLang = string.IsNullOrWhiteSpace(lang) ? "vi-VN" : lang.Trim();
-    var evt = ParseNarrationEventType(eventType); // 0=Enter,1=Near,2=Tap
+    var evt = ParseNarrationEventType(eventType);
 
-    // 1) Cache hit?
+    // 1) cache hit?
     var cached = await db.PoiNarrations.AsNoTracking()
         .Where(n => n.PoiId == id && n.EventType == evt && n.LanguageTag == toLang)
         .Select(n => n.NarrationText)
@@ -111,15 +107,15 @@ app.MapGet("/api/v1/pois/{id}/narration", async (
         });
     }
 
-    // 2) Base text from dbo.Pois.NarrationText (gốc)
+    // 2) base text (nguồn gốc tiếng Việt)
     var baseText = poi.NarrationText;
     if (string.IsNullOrWhiteSpace(baseText))
         baseText = $"Bạn đang đến {poi.Name}. {poi.Description ?? ""}".Trim();
 
-    // 3) Source language from dbo.Pois.Language (Option A), default vi-VN
+    // 3) fromLang = dbo.Pois.Language (Option A), default vi-VN
     var fromLang = string.IsNullOrWhiteSpace(poi.Language) ? "vi-VN" : poi.Language!.Trim();
 
-    // 4) Translate if needed (fallback to baseText if Translator missing config)
+    // 4) translate if needed
     string finalText;
     if (string.Equals(fromLang, toLang, StringComparison.OrdinalIgnoreCase))
     {
@@ -131,7 +127,7 @@ app.MapGet("/api/v1/pois/{id}/narration", async (
         finalText = string.IsNullOrWhiteSpace(translated) ? baseText! : translated!;
     }
 
-    // 5) Save cache to dbo.PoiNarration (ignore duplicates on race)
+    // 5) save cache to dbo.PoiNarration (ignore race duplicates)
     try
     {
         db.PoiNarrations.Add(new PoiNarration
@@ -147,7 +143,7 @@ app.MapGet("/api/v1/pois/{id}/narration", async (
     }
     catch (DbUpdateException)
     {
-        // Unique key (PoiId,EventType,LanguageTag) may conflict if concurrent
+        // Unique key conflict (PoiId,EventType,LanguageTag) -> ignore
     }
 
     return Results.Ok(new
@@ -162,7 +158,7 @@ app.MapGet("/api/v1/pois/{id}/narration", async (
 
 // ============================================================
 // POST /api/v1/playback
-// Lưu đúng theo model PlaybackLog hiện tại (không có DurationSeconds/TriggerType)
+// (theo model PlaybackLog hiện tại: PoiId/EventType/FiredAtUtc/DeviceId/DistanceMeters)
 // ============================================================
 app.MapPost("/api/v1/playback", async (PlaybackCreateRequest req, AppDb db) =>
 {
@@ -205,7 +201,6 @@ static byte ParseNarrationEventType(string? s)
 
 static byte ParsePlaybackEventType(string? triggerType)
 {
-    // 0=Enter,1=Near,2=Tap,3=QR (QR chỉ dùng cho log)
     return (triggerType ?? "").Trim().ToUpperInvariant() switch
     {
         "ENTER" => 0,
@@ -221,8 +216,8 @@ public sealed class PlaybackCreateRequest
 {
     public string PoiId { get; set; } = "";
     public string? TriggerType { get; set; }       // ENTER/NEAR/TAP/QR
-    public int? DurationSeconds { get; set; }      // hiện chưa lưu vì PlaybackLog model chưa có field này
+    public int? DurationSeconds { get; set; }      // chưa lưu vì PlaybackLog model chưa có
     public int? DistanceMeters { get; set; }
     public string? DeviceId { get; set; }
-    public bool? IsSuccess { get; set; }           // hiện chưa lưu vì PlaybackLog model chưa có field này
+    public bool? IsSuccess { get; set; }           // chưa lưu vì PlaybackLog model chưa có
 }
