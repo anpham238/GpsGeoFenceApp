@@ -6,27 +6,27 @@
     xmlns:zxing="clr-namespace:ZXing.Net.Maui.Controls;assembly=ZXing.Net.MAUI.Controls"
     Title="Quét QR">
 
-    <Grid RowDefinitions="Auto,* ,Auto" Padding="12">
+	<Grid RowDefinitions="Auto,* ,Auto" Padding="12">
 
-        <Label x:Name="LblStatus"
+		<Label x:Name="LblStatus"
                Grid.Row="0"
                Text="Đang khởi động camera..."
                FontSize="16"
                HorizontalOptions="Center"
                Margin="0,0,0,8" />
 
-        <zxing:CameraBarcodeReaderView
+		<zxing:CameraBarcodeReaderView
             x:Name="BarcodeReader"
             Grid.Row="1"
             BarcodesDetected="OnBarcodesDetected"
             IsDetecting="False" />
 
-        <Button
+		<Button
             Grid.Row="2"
             Text="Đóng"
             Clicked="OnCloseClicked"
             HorizontalOptions="Center"
             Margin="0,8,0,0" />
 
-    </Grid>
-</ContentPage>
+	</Grid>
+</ContentPage> 
