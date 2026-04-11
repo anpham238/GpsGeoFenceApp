@@ -3,30 +3,67 @@
     x:Class="MauiApp1.Pages.QrScanPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    xmlns:zxing="clr-namespace:ZXing.Net.Maui.Controls;assembly=ZXing.Net.MAUI.Controls"
-    Title="Quét QR">
+    Title="Quét QR"
+    Shell.NavBarIsVisible="False"
+    BackgroundColor="Black">
+	<Grid>
+		<ContentView x:Name="CameraContainer" HorizontalOptions="Fill" VerticalOptions="Fill" />
 
-	<Grid RowDefinitions="Auto,* ,Auto" Padding="12">
+		<Grid RowDefinitions="180, 250, *" ColumnDefinitions="40, *, 40">
+			<BoxView Grid.Row="0" Grid.ColumnSpan="3" BackgroundColor="#99000000" />
+			<BoxView Grid.Row="1" Grid.Column="0" BackgroundColor="#99000000" />
+			<BoxView Grid.Row="1" Grid.Column="2" BackgroundColor="#99000000" />
+			<BoxView Grid.Row="2" Grid.ColumnSpan="3" BackgroundColor="#99000000" />
 
-		<Label x:Name="LblStatus"
-               Grid.Row="0"
-               Text="Đang khởi động camera..."
-               FontSize="16"
-               HorizontalOptions="Center"
-               Margin="0,0,0,8" />
+			<Grid Grid.Row="1" Grid.Column="1">
+				<Label Text="Quét mọi mã QR" TextColor="White" FontSize="14" HorizontalOptions="Center" VerticalOptions="Start" Margin="0,-30,0,0"/>
 
-		<zxing:CameraBarcodeReaderView
-            x:Name="BarcodeReader"
-            Grid.Row="1"
-            BarcodesDetected="OnBarcodesDetected"
-            IsDetecting="False" />
+				<BoxView WidthRequest="40" HeightRequest="4" CornerRadius="2" Color="White" HorizontalOptions="Start" VerticalOptions="Start" />
+				<BoxView WidthRequest="4" HeightRequest="40" CornerRadius="2" Color="White" HorizontalOptions="Start" VerticalOptions="Start" />
 
-		<Button
-            Grid.Row="2"
-            Text="Đóng"
-            Clicked="OnCloseClicked"
-            HorizontalOptions="Center"
-            Margin="0,8,0,0" />
+				<BoxView WidthRequest="40" HeightRequest="4" CornerRadius="2" Color="White" HorizontalOptions="End" VerticalOptions="Start" />
+				<BoxView WidthRequest="4" HeightRequest="40" CornerRadius="2" Color="White" HorizontalOptions="End" VerticalOptions="Start" />
 
+				<BoxView WidthRequest="40" HeightRequest="4" CornerRadius="2" Color="White" HorizontalOptions="Start" VerticalOptions="End" />
+				<BoxView WidthRequest="4" HeightRequest="40" CornerRadius="2" Color="White" HorizontalOptions="Start" VerticalOptions="End" />
+
+				<BoxView WidthRequest="40" HeightRequest="4" CornerRadius="2" Color="White" HorizontalOptions="End" VerticalOptions="End" />
+				<BoxView WidthRequest="4" HeightRequest="40" CornerRadius="2" Color="White" HorizontalOptions="End" VerticalOptions="End" />
+			</Grid>
+		</Grid>
+
+		<Grid VerticalOptions="Start" Margin="16, 40, 16, 0" ColumnDefinitions="Auto, *, Auto">
+			<Border Grid.Column="0" StrokeShape="RoundRectangle 25" BackgroundColor="#66000000" Stroke="Transparent" WidthRequest="44" HeightRequest="44">
+				<Label Text="✕" TextColor="White" FontSize="20" HorizontalOptions="Center" VerticalOptions="Center" />
+				<Border.GestureRecognizers>
+					<TapGestureRecognizer Tapped="OnCloseClicked" />
+				</Border.GestureRecognizers>
+			</Border>
+
+			<Label x:Name="LblStatus" Grid.Column="1" Text="Sẵn sàng" TextColor="White" FontSize="14" HorizontalOptions="Center" VerticalOptions="Center" />
+
+			<Border Grid.Column="2" StrokeShape="RoundRectangle 25" BackgroundColor="#66000000" Stroke="Transparent" WidthRequest="44" HeightRequest="44">
+				<Label Text="⚡" TextColor="White" FontSize="20" HorizontalOptions="Center" VerticalOptions="Center" />
+				<Border.GestureRecognizers>
+					<TapGestureRecognizer Tapped="OnToggleTorchClicked" />
+				</Border.GestureRecognizers>
+			</Border>
+		</Grid>
+
+		<HorizontalStackLayout VerticalOptions="End" HorizontalOptions="Center" Spacing="30" Margin="0, 0, 0, 40">
+			<VerticalStackLayout Spacing="8">
+				<Border StrokeShape="RoundRectangle 25" BackgroundColor="#33FFFFFF" Stroke="Transparent" WidthRequest="50" HeightRequest="50">
+					<Label Text="🖼️" FontSize="20" HorizontalOptions="Center" VerticalOptions="Center" />
+				</Border>
+				<Label Text="Ảnh có sẵn" TextColor="White" FontSize="12" HorizontalOptions="Center" />
+			</VerticalStackLayout>
+
+			<VerticalStackLayout Spacing="8">
+				<Border StrokeShape="RoundRectangle 25" BackgroundColor="#44000000" Stroke="#1976D2" StrokeThickness="2" WidthRequest="50" HeightRequest="50">
+					<Label Text="📷" FontSize="20" HorizontalOptions="Center" VerticalOptions="Center" />
+				</Border>
+				<Label Text="Quét mã QR" TextColor="White" FontSize="12" HorizontalOptions="Center" />
+			</VerticalStackLayout>
+		</HorizontalStackLayout>
 	</Grid>
-</ContentPage> 
+</ContentPage>

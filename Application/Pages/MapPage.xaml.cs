@@ -17,7 +17,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-
 namespace MauiApp1.Pages;
 
 public partial class MapPage : ContentPage
@@ -62,7 +61,7 @@ public partial class MapPage : ContentPage
         PlaybackApiClient playback,
         PoiNarrationApiClient narrationApi,
         PoiNarrationCache narrationCache,
-        TranslatorClient translator) // ✅ THÊM
+        TranslatorClient translator)
     {
         InitializeComponent();
 
@@ -89,7 +88,35 @@ public partial class MapPage : ContentPage
         {
             Text = "QR",
             Order = ToolbarItemOrder.Primary,
-            Command = new Command(async () => await Shell.Current.GoToAsync("qrscan"))
+            Command = new Command(async () =>
+            {
+                try
+                {
+                    // 1. Xin quyền Camera
+                    var status = await Permissions.CheckStatusAsync<Permissions.Camera>();
+                    if (status != PermissionStatus.Granted)
+                    {
+                        status = await Permissions.RequestAsync<Permissions.Camera>();
+                    }
+
+                    // 2. Đã có quyền thì mở trang QR
+                    if (status == PermissionStatus.Granted)
+                    {
+                        // Chú ý: Dùng đúng chữ "qrscan" khớp với AppShell
+                        await Shell.Current!.GoToAsync("qrscan");
+                    }
+                    else
+                    {
+                        await Application.Current!.MainPage!.DisplayAlert("Từ chối", "Bạn cần cấp quyền Camera.", "OK");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // NẾU CÓ LỖI, HIỆN LÊN MÀN HÌNH CHỨ KHÔNG VĂNG APP NỮA
+                    await Application.Current!.MainPage!.DisplayAlert("Lỗi Crash QR", ex.Message, "OK");
+                    System.Diagnostics.Debug.WriteLine($"[CRASH QR] {ex}");
+                }
+            })
         });
 
         ToolbarItems.Add(new ToolbarItem
@@ -136,12 +163,8 @@ public partial class MapPage : ContentPage
 
         var started = DateTime.UtcNow;
         var lang = LanguageService.Current;
-        
-        // ✅ HƯỚNG 3: Lấy cả narration từ API + dịch tên địa điểm
         var narrationText = await GetNarrationTextAsync(poi.Id, evType, lang);
         var poiText = await GetTranslatedPoiTextAsync(poi, lang);
-        
-        // Kết hợp: tên địa điểm (dịch) + narration text
         var fullText = string.IsNullOrWhiteSpace(narrationText)
             ? poiText  // Nếu không có narration, chỉ đọc tên + mô tả
             : $"{poiText}. {narrationText}"; // Nếu có, đọc tên + mô tả + narration
@@ -526,27 +549,35 @@ public partial class MapPage : ContentPage
     }
 
     // ====== Bottom sheet ======
-    private void ShowDetail(Poi? poi)
+    // Đổi thành async void
+    private async void ShowDetail(Poi? poi)
     {
         if (poi == null) return;
 
-        DetailName.Text = poi.Name;
-        DetailDesc.Text = string.IsNullOrWhiteSpace(poi.Description) ? "(Không có mô tả)" : poi.Description;
+        // Hiển thị tạm tiếng Việt trong lúc chờ dịch
+        DetailName.Text = "Đang dịch...";
+        DetailDesc.Text = "";
         DetailCoord.Text = $"📍 {poi.Latitude:F6}, {poi.Longitude:F6}";
         DetailRadius.Text = $"🔵 Bán kính: {poi.RadiusMeters}m | Gần: {poi.NearRadiusMeters}m";
         DetailImage.Source = !string.IsNullOrWhiteSpace(poi.ImageUrl) ? poi.ImageUrl : null;
+        // Mở Bottom sheet lên trước
+        _ = ExpandSheetAsync();
+        MyMap.MoveToRegion(MapSpan.FromCenterAndRadius(new Location(poi.Latitude, poi.Longitude), Distance.FromMeters(400)));
+        // Bắt đầu dịch Text cho UI
+        var lang = LanguageService.Current;
+        var translatedName = lang == "vi-VN" ? poi.Name : await TranslateTextAsync(poi.Name, "vi-VN", lang);
+        var translatedDesc = lang == "vi-VN" ? poi.Description : await TranslateTextAsync(poi.Description, "vi-VN", lang);
 
+        // Cập nhật lại UI sau khi dịch xong
+        DetailName.Text = translatedName ?? poi.Name;
+        DetailDesc.Text = string.IsNullOrWhiteSpace(translatedDesc) ? "(Không có mô tả)" : translatedDesc;
+
+        // SỬA LUÔN LỖI LINK GOOGLE MAPS Ở ĐÂY
         var link = !string.IsNullOrWhiteSpace(poi.MapLink)
             ? poi.MapLink
-            : $"https://maps.google.com/?q={poi.Latitude},{poi.Longitude}";
+            : $"https://www.google.com/maps/search/?api=1&query={poi.Latitude},{poi.Longitude}";
         LblPoiLink.Text = link;
-
-        _ = ExpandSheetAsync();
-
-        MyMap.MoveToRegion(MapSpan.FromCenterAndRadius(
-            new Location(poi.Latitude, poi.Longitude), Distance.FromMeters(400)));
     }
-
     private async Task OpenMapsAsync(Poi? poi)
     {
         if (poi == null) return;

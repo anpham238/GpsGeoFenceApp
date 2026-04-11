@@ -55,49 +55,35 @@ public static class MauiProgram
         builder.Services.AddSingleton<PoiDatabase>();
         builder.Services.AddSingleton<SyncMetadataRepository>();
         builder.Services.AddSingleton<PoiNarrationCache>();
-
-        // ── API clients (emulator: 10.0.2.2) ─────────────────────────
+        // 👇 ĐIỀN ĐỊA CHỈ IP WIFI CỦA MÁY TÍNH VÀO ĐÂY
+        // Thay "192.168.1.121" bằng IPv4 thật của bạn
+        string apiBaseUrl = "http://192.168.1.121:5150";
+        // ── API clients ─────────────────────────
         builder.Services.AddHttpClient<PoiApiClient>(http =>
         {
-#if ANDROID
-            http.BaseAddress = new Uri("http://10.0.2.2:5150");
-#else
-            http.BaseAddress = new Uri("http://localhost:5150");
-#endif
+            http.BaseAddress = new Uri(apiBaseUrl);
             http.Timeout = TimeSpan.FromSeconds(30);
         });
-
         builder.Services.AddHttpClient<PlaybackApiClient>(http =>
         {
-#if ANDROID
-            http.BaseAddress = new Uri("http://10.0.2.2:5150");
-#else
-            http.BaseAddress = new Uri("http://localhost:5150");
-#endif
+            http.BaseAddress = new Uri(apiBaseUrl);
             http.Timeout = TimeSpan.FromSeconds(30);
         });
 
         builder.Services.AddHttpClient<PoiNarrationApiClient>(http =>
         {
-#if ANDROID
-            http.BaseAddress = new Uri("http://10.0.2.2:5150");
-#else
-            http.BaseAddress = new Uri("http://localhost:5150");
-#endif
+            http.BaseAddress = new Uri(apiBaseUrl);
             http.Timeout = TimeSpan.FromSeconds(30);
         });
-
-        // ✅ THÊM: TranslatorClient (Azure Translator)
+ // ✅ THÊM: TranslatorClient (Azure Translator)
         builder.Services.AddHttpClient<TranslatorClient>(http =>
         {
             http.Timeout = TimeSpan.FromSeconds(10);
         });
-
         // ── Sync engine ───────────────────────────────────────────────
         builder.Services.AddSingleton<PoiSyncService>();
 
         // ── Pages ─────────────────────────────────────────────────────
-        // ✅ Khuyến nghị: MapPage nên Transient để tránh giữ page sống quá lâu
         builder.Services.AddTransient<MapPage>();
         builder.Services.AddTransient<QrScanPage>();
 

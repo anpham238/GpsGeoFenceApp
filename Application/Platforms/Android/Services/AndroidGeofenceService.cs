@@ -3,18 +3,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-
 using Android;
 using Android.App;
 using Android.Content;
 using Android.Content.PM;
 using Android.Gms.Location;
-
 using AndroidX.Core.Content;
-
 using MauiApp1.Models;
 using MauiApp1.Services;
-
 namespace MauiApp1.Platforms.Android.Services
 {
     public sealed class AndroidGeofenceService : IGeofenceService
@@ -51,52 +47,44 @@ namespace MauiApp1.Platforms.Android.Services
 
         public async Task RegisterAsync(IEnumerable<Poi> pois, bool initialTriggerOnEnter = true)
         {
-            // ✅ Guard: nếu chưa có ACCESS_FINE_LOCATION thì không làm gì (tránh crash)
-            var perm = ContextCompat.CheckSelfPermission(_ctx, Manifest.Permission.AccessFineLocation);
-            if (perm != Permission.Granted)
-            {
-                System.Diagnostics.Debug.WriteLine("[Geofence] Skip register: missing ACCESS_FINE_LOCATION runtime permission.");
-                return;
-            }
-
+            if (pois == null || !pois.Any()) return; // Kiểm tra rỗng để tránh lỗi
             _poiLookup = pois.ToDictionary(p => p.Id, p => p);
-
             var builder = new GeofencingRequest.Builder()
-                .SetInitialTrigger(initialTriggerOnEnter
-                    ? GeofencingRequest.InitialTriggerEnter
-                    : GeofencingRequest.InitialTriggerDwell);
-
+                .SetInitialTrigger(initialTriggerOnEnter ? 1 /*ENTER*/ : 4 /*DWELL*/);
             var list = new List<IGeofence>();
-
             foreach (var poi in pois)
             {
                 var gf = new GeofenceBuilder()
                     .SetRequestId(poi.Id)
-                    .SetCircularRegion((float)poi.Latitude, (float)poi.Longitude, poi.RadiusMeters)
+                    .SetCircularRegion(poi.Latitude, poi.Longitude, poi.RadiusMeters)
                     .SetExpirationDuration(Geofence.NeverExpire)
                     .SetTransitionTypes(
-                        Geofence.GeofenceTransitionEnter |
-                        Geofence.GeofenceTransitionExit |
-                        Geofence.GeofenceTransitionDwell)
+                          Geofence.GeofenceTransitionEnter
+                        | Geofence.GeofenceTransitionExit
+                        | Geofence.GeofenceTransitionDwell)
                     .SetLoiteringDelay(10_000)
                     .Build();
 
                 list.Add(gf);
             }
-
             builder.AddGeofences(list);
 
+            // BẮT BUỘC PHẢI CÓ TRY-CATCH NÀY ĐỂ APP KHÔNG BỊ VĂNG NỮA!
             try
             {
                 await _client.AddGeofencesAsync(builder.Build(), _pendingIntent);
-                System.Diagnostics.Debug.WriteLine($"[Geofence] Registered: {list.Count}");
+                System.Diagnostics.Debug.WriteLine("[Geofence] Đăng ký thành công!");
+            }
+            catch (global::Android.Gms.Common.Apis.ApiException apiEx) // <-- Đã thêm global:: ở đây
+            {
+                // Máy ảo/Máy thật tắt GPS hoặc chưa cấp quyền "Luôn luôn" sẽ nhảy vào đây thay vì văng app
+                System.Diagnostics.Debug.WriteLine($"[Geofence Error] Lỗi API: {apiEx.StatusCode} - {apiEx.Message}");
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[Geofence] AddGeofences error: {ex}");
+                System.Diagnostics.Debug.WriteLine($"[Geofence Error] Lỗi hệ thống: {ex.Message}");
             }
         }
-
         public Task UnregisterAllAsync()
             => _client.RemoveGeofencesAsync(_pendingIntent);
 
