@@ -64,8 +64,7 @@
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAEQAAAAOAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
               "WhenOpened": "2026-04-10T16:47:42.916Z",
-              "IsPinned": true,
-              "EditorCaption": ""
+              "IsPinned": true
             },
             {
               "$type": "Bookmark",
@@ -90,15 +89,14 @@
             {
               "$type": "Document",
               "DocumentIndex": 2,
-              "Title": "MauiApp1",
+              "Title": "MauiApp1.csproj",
               "DocumentMoniker": "C:\\Users\\lhnhan\\source\\repos\\GpsGeoFenceApp\\Application\\MauiApp1.csproj",
               "RelativeDocumentMoniker": "MauiApp1.csproj",
               "ToolTip": "C:\\Users\\lhnhan\\source\\repos\\GpsGeoFenceApp\\Application\\MauiApp1.csproj",
               "RelativeToolTip": "MauiApp1.csproj",
               "ViewState": "AgIAABUAAAAAAAAAAAAwwEwAAABYAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
-              "WhenOpened": "2026-04-11T01:06:25.681Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-04-11T01:06:25.681Z"
             },
             {
               "$type": "Document",
@@ -110,8 +108,7 @@
               "RelativeToolTip": "Pages\\QrScanPage.xaml",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAB0AAAAdAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
-              "WhenOpened": "2026-04-11T00:56:22.066Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-04-11T00:56:22.066Z"
             },
             {
               "$type": "Document",
@@ -123,8 +120,7 @@
               "RelativeToolTip": "..\\MapApi\\Properties\\launchSettings.json",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABYAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
-              "WhenOpened": "2026-04-10T20:04:49.199Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-04-10T20:04:49.199Z"
             },
             {
               "$type": "Document",
@@ -136,8 +132,7 @@
               "RelativeToolTip": "..\\MapApi\\appsettings.json",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABEAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
-              "WhenOpened": "2026-04-10T20:03:31.108Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-04-10T20:03:31.108Z"
             },
             {
               "$type": "Document",
@@ -149,8 +144,7 @@
               "RelativeToolTip": "Platforms\\Android\\Services\\AndroidGeofenceService.cs",
               "ViewState": "AgIAABcAAAAAAAAAAAAAwDEAAABSAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-10T19:59:40.875Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-04-10T19:59:40.875Z"
             },
             {
               "$type": "Document",
@@ -162,8 +156,7 @@
               "RelativeToolTip": "MauiProgram.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAADgAAAAHAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-10T19:49:37.561Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-04-10T19:49:37.561Z"
             },
             {
               "$type": "Document",
@@ -187,8 +180,7 @@
               "RelativeToolTip": "Services\\Api\\TranslatorClient.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAAkAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-10T18:01:32.919Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-04-10T18:01:32.919Z"
             },
             {
               "$type": "Document",
@@ -200,8 +192,7 @@
               "RelativeToolTip": "Pages\\MapPage.xaml.cs",
               "ViewState": "AgIAADIAAAAAAAAAAAAswHcAAAALAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-10T17:56:00.456Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-04-10T17:56:00.456Z"
             },
             {
               "$type": "Document",
@@ -211,7 +202,7 @@
               "RelativeDocumentMoniker": "Pages\\QrScanPage.xaml.cs",
               "ToolTip": "C:\\Users\\lhnhan\\source\\repos\\GpsGeoFenceApp\\Application\\Pages\\QrScanPage.xaml.cs",
               "RelativeToolTip": "Pages\\QrScanPage.xaml.cs",
-              "ViewState": "AgIAACQAAAAAAAAAAAAYwHIAAAAxAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABAAAAAxAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-04-10T17:02:51.987Z",
               "EditorCaption": ""

@@ -15,7 +15,6 @@ public partial class QrScanPage : ContentPage
     private bool _isProcessing;
     private bool _torchOn; // ✅ Biến lưu trạng thái bật/tắt đèn flash
     private CameraBarcodeReaderView? _cameraView;
-
     public QrScanPage(PoiDatabase db, NarrationManager narration, PlaybackApiClient playback)
     {
         InitializeComponent();
