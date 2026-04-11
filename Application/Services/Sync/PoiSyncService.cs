@@ -54,10 +54,8 @@ public sealed class PoiSyncService
         _cts = null;
         _loop = null;
     }
-
     public async Task SyncOnceAsync(CancellationToken ct = default)
     {
-        // ✅ POI list KHÔNG phụ thuộc ngôn ngữ
         var remote = await _api.GetAllAsync(lang: null, ct: ct);
         System.Diagnostics.Debug.WriteLine($"[PoiSync] Remote count = {remote.Count}");
 
@@ -72,23 +70,19 @@ public sealed class PoiSyncService
                 Latitude = r.Latitude,
                 Longitude = r.Longitude,
                 RadiusMeters = r.RadiusMeters,
-                NearRadiusMeters = r.NearRadiusMeters,
-                DebounceSeconds = r.DebounceSeconds,
+                NearRadiusMeters = r.NearRadiusMeters > 0 ? r.NearRadiusMeters : r.RadiusMeters * 2,
+                DebounceSeconds = r.DebounceSeconds > 0 ? r.DebounceSeconds : 3,
                 CooldownSeconds = r.CooldownSeconds,
-                Priority = r.Priority,
-                NarrationText = r.NarrationText,
-                AudioUrl = r.AudioUrl,
+                NarrationText = r.NarrationText,   
                 ImageUrl = r.ImageUrl,
                 MapLink = r.MapLink,
                 Language = r.Language ?? "vi-VN",
                 IsActive = r.IsActive,
                 UpdatedAt = r.UpdatedAt
             };
-
             await _db.SaveAsync(poi);
             saved++;
         }
-
         await _meta.SetLastSyncUtcAsync("pois", DateTime.UtcNow);
         System.Diagnostics.Debug.WriteLine($"[PoiSync] Saved/Upserted = {saved}");
     }

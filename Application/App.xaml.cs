@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using MauiApp1.Services.Api;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace MauiApp1
 {
@@ -15,8 +16,19 @@ namespace MauiApp1
         }
         protected override async void OnStart()
         {
-            _ = await Permissions.RequestAsync<Permissions.LocationWhenInUse>();
-            _ = await Permissions.RequestAsync<Permissions.LocationAlways>();
+            try
+            {
+                _ = await Permissions.RequestAsync<Permissions.LocationWhenInUse>();
+                _ = await Permissions.RequestAsync<Permissions.LocationAlways>();
+                // Nếu đã đăng nhập → chuyển thẳng vào MapPage
+                if (AuthApiClient.IsLoggedIn())
+                    await Shell.Current.GoToAsync("//map");
+                // Nếu chưa → AppShell mặc định sẽ hiển thị LoginPage
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[App] OnStart: {ex.Message}");
+            }
         }
     }
 }

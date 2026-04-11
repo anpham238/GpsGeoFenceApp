@@ -41,8 +41,6 @@ public class PoiController : ControllerBase
             Latitude = dto.Lat,
             Longitude = dto.Lng,
             RadiusMeters = dto.Radius > 0 ? dto.Radius : 100, // Mặc định 100m
-            NearRadiusMeters = dto.NearRadius > 0 ? dto.NearRadius : 200,
-            DebounceSeconds = 5,
             CooldownSeconds = 30,
             IsActive = true,
             CreatedAt = DateTime.UtcNow,

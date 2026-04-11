@@ -54,9 +54,7 @@ public static class MauiProgram
         // ── Local DB (SQLite) ─────────────────────────────────────────
         builder.Services.AddSingleton<PoiDatabase>();
         builder.Services.AddSingleton<SyncMetadataRepository>();
-        builder.Services.AddSingleton<PoiNarrationCache>();
-        // 👇 ĐIỀN ĐỊA CHỈ IP WIFI CỦA MÁY TÍNH VÀO ĐÂY
-        // Thay "192.168.1.121" bằng IPv4 thật của bạn
+        builder.Services.AddSingleton<PoiNarrationCache>();   
         string apiBaseUrl = "http://192.168.1.121:5150";
         // ── API clients ─────────────────────────
         builder.Services.AddHttpClient<PoiApiClient>(http =>
@@ -75,18 +73,24 @@ public static class MauiProgram
             http.BaseAddress = new Uri(apiBaseUrl);
             http.Timeout = TimeSpan.FromSeconds(30);
         });
- // ✅ THÊM: TranslatorClient (Azure Translator)
+        // Thêm vào sau PoiNarrationApiClient registration:
+        builder.Services.AddHttpClient<AuthApiClient>(http =>
+        {
+            http.BaseAddress = new Uri(apiBaseUrl);
+            http.Timeout = TimeSpan.FromSeconds(15);
+        });
+        // ✅ THÊM: TranslatorClient (Azure Translator)
         builder.Services.AddHttpClient<TranslatorClient>(http =>
         {
             http.Timeout = TimeSpan.FromSeconds(10);
         });
         // ── Sync engine ───────────────────────────────────────────────
         builder.Services.AddSingleton<PoiSyncService>();
-
         // ── Pages ─────────────────────────────────────────────────────
         builder.Services.AddTransient<MapPage>();
         builder.Services.AddTransient<QrScanPage>();
-
+        builder.Services.AddTransient<LoginPage>();
+        builder.Services.AddTransient<RegisterPage>();
         return builder.Build();
     }
 }

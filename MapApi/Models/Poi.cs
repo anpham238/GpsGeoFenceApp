@@ -9,21 +9,10 @@ public sealed class Poi
     public double Latitude { get; set; }
     public double Longitude { get; set; }
 
-    public int RadiusMeters { get; set; }
-    public int NearRadiusMeters { get; set; }
-    public int DebounceSeconds { get; set; }
-    public int CooldownSeconds { get; set; }
+    public int RadiusMeters { get; set; } = 120;
+    public int CooldownSeconds { get; set; } = 30;
 
-    public int? Priority { get; set; }
-    public string? MapLink { get; set; }
-
-    public bool IsActive { get; set; }
-
-    // bản “chung” fallback
-    public string? NarrationText { get; set; }
-    public string? AudioUrl { get; set; }
-    public string? ImageUrl { get; set; }
-    public string? Language { get; set; }
+    public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 }

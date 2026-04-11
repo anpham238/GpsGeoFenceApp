@@ -78,10 +78,16 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<MauiXaml Update="Pages\LoginPage.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</MauiXaml>
 		<MauiXaml Update="Pages\MapPage.xaml">
 			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
 		<MauiXaml Update="Pages\QrScanPage.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</MauiXaml>
+		<MauiXaml Update="Pages\RegisterPage.xaml">
 		  <Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
 	</ItemGroup>

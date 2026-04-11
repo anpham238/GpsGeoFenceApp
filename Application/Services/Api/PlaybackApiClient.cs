@@ -1,5 +1,4 @@
 ﻿using System.Net.Http.Json;
-using Microsoft.Maui.Storage;
 
 namespace MauiApp1.Services.Api;
 
@@ -7,50 +6,33 @@ public sealed class PlaybackApiClient
 {
     private readonly HttpClient _http;
 
-    public PlaybackApiClient(HttpClient http)
-    {
-        _http = http;
-    }
+    public PlaybackApiClient(HttpClient http) => _http = http;
 
     public async Task LogAsync(
         string poiId,
-        string triggerType,      // ENTER / NEAR / TAP
+        string triggerType,
         int? durationSeconds = null,
         bool success = true,
         CancellationToken ct = default)
     {
         try
         {
-            var deviceId = GetOrCreateDeviceId();
+            var userId = AuthApiClient.GetCurrentUserId();
+            if (userId == Guid.Empty) return; // chưa đăng nhập → bỏ qua
 
             var body = new
             {
-                DeviceId = deviceId,
                 PoiId = poiId,
-                TriggerType = triggerType,
-                DurationListened = durationSeconds,
-                IsSuccess = success
+                UserId = userId,
+                DurationSeconds = durationSeconds
             };
 
-            // MapApi: bạn sẽ tạo endpoint /api/v1/playback tương ứng (nếu chưa có)
-            var resp = await _http.PostAsJsonAsync("/api/v1/playback", body, ct);
-            // Không throw để tránh crash khi server tạm lỗi
+            var resp = await _http.PostAsJsonAsync("/api/v1/history", body, ct);
             _ = resp.IsSuccessStatusCode;
         }
         catch
         {
-            // offline hoặc timeout -> bỏ qua, đúng offline-first
+            // offline / timeout → bỏ qua (offline-first)
         }
-    }
-    private static string GetOrCreateDeviceId()
-    {
-        const string key = "device_id";
-        var id = Preferences.Get(key, "");
-        if (string.IsNullOrEmpty(id))
-        {
-            id = Guid.NewGuid().ToString();
-            Preferences.Set(key, id);
-        }
-        return id;
     }
 }

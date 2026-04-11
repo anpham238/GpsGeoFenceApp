@@ -166,9 +166,7 @@ ON CONFLICT(Id) DO UPDATE SET
             up.Parameters.AddWithValue("$NearRadiusMeters", r.NearRadiusMeters);
             up.Parameters.AddWithValue("$DebounceSeconds", r.DebounceSeconds);
             up.Parameters.AddWithValue("$CooldownSeconds", r.CooldownSeconds);
-            up.Parameters.AddWithValue("$Priority", (object?)r.Priority ?? DBNull.Value);
             up.Parameters.AddWithValue("$NarrationText", (object?)r.NarrationText ?? DBNull.Value);
-            up.Parameters.AddWithValue("$AudioUrl", (object?)r.AudioUrl ?? DBNull.Value);
             up.Parameters.AddWithValue("$ImageUrl", (object?)r.ImageUrl ?? DBNull.Value);
             up.Parameters.AddWithValue("$MapLink", (object?)r.MapLink ?? DBNull.Value);
             up.Parameters.AddWithValue("$IsActive", r.IsActive ? 1 : 0);

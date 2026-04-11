@@ -1,8 +1,11 @@
 ﻿using MapApi.Data;
 using MapApi.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace MapApi.Controllers;
+
+public sealed record SetMapLinkRequest(string MapLink);
 
 [ApiController]
 [Route("api/v1/pois/{id}")]
@@ -40,22 +43,39 @@ public class PoiMediaController : ControllerBase
 
         var fileUrl = $"/images/{safeName}";
 
-        // TỐI ƯU: Lưu vào bảng PoiMedia thay vì bảng Pois
-        var newMedia = new PoiMedia
+        // Lưu URL ảnh vào bảng PoiMedia (schema mới: chỉ có Image + MapLink)
+        var existing = await _db.PoiMedia.FirstOrDefaultAsync(m => m.IdPoi == id, ct);
+        if (existing is not null)
         {
-            PoiId = id,
-            Url = fileUrl,
-            MediaType = 1, // Giả sử 1 là Image
-            MimeType = file.ContentType,
-            IsPrimary = true,
-            CreatedAtUtc = DateTime.UtcNow
-        };
+            existing.Image = fileUrl;   // cập nhật ảnh nếu đã có
+        }
+        else
+        {
+            _db.PoiMedia.Add(new PoiMedia { IdPoi = id, Image = fileUrl });
+        }
 
-        _db.PoiMedia.Add(newMedia);
         await _db.SaveChangesAsync(ct);
 
         return Ok(new { poiId = id, imageUrl = fileUrl });
     }
 
-    // Bạn có thể giữ lại hàm UploadAudio và sửa tương tự như UploadImage (Thay MediaType = 2)
+    [HttpPost("maplink")]
+    public async Task<IActionResult> SetMapLink(string id, [FromBody] SetMapLinkRequest req, CancellationToken ct)
+    {
+        var poi = await _db.Pois.FindAsync(new object[] { id }, ct);
+        if (poi is null) return NotFound("Không tìm thấy địa điểm này.");
+
+        var existing = await _db.PoiMedia.FirstOrDefaultAsync(m => m.IdPoi == id, ct);
+        if (existing is not null)
+        {
+            existing.MapLink = req.MapLink;
+        }
+        else
+        {
+            _db.PoiMedia.Add(new PoiMedia { IdPoi = id, MapLink = req.MapLink });
+        }
+
+        await _db.SaveChangesAsync(ct);
+        return Ok(new { poiId = id, mapLink = req.MapLink });
+    }
 }

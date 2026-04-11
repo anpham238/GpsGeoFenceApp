@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="MauiApp1.Pages.LoginPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Title="Đăng nhập"
+    BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Black}}">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="32" Spacing="16" VerticalOptions="Center">
+
+            <Label Text="GPS Guide" FontSize="28" FontAttributes="Bold"
+                   HorizontalOptions="Center" Margin="0,0,0,20" />
+
+            <Label Text="Tên đăng nhập" FontSize="14" />
+            <Entry x:Name="UsernameEntry"
+                   Placeholder="Nhập tên đăng nhập"
+                   ReturnType="Next" />
+
+            <Label Text="Mật khẩu" FontSize="14" />
+            <Entry x:Name="PasswordEntry"
+                   Placeholder="Nhập mật khẩu"
+                   IsPassword="True"
+                   ReturnType="Done"
+                   ReturnCommand="{Binding Source={x:Reference LoginBtn}, Path=Command}" />
+
+            <Label x:Name="ErrorLabel" TextColor="Red" FontSize="13"
+                   IsVisible="False" HorizontalOptions="Center" />
+
+            <Button x:Name="LoginBtn"
+                    Text="Đăng nhập"
+                    Clicked="OnLoginClicked"
+                    Margin="0,8,0,0"
+                    HeightRequest="48" />
+
+            <HorizontalStackLayout HorizontalOptions="Center" Spacing="4">
+                <Label Text="Chưa có tài khoản?" VerticalOptions="Center" />
+                <Button Text="Đăng ký" Clicked="OnRegisterClicked"
+                        BackgroundColor="Transparent"
+                        TextColor="{StaticResource Primary}" />
+            </HorizontalStackLayout>
+
+            <ActivityIndicator x:Name="LoadingIndicator"
+                               IsRunning="False" IsVisible="False"
+                               HorizontalOptions="Center" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

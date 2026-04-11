@@ -4,8 +4,15 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:pages="clr-namespace:MauiApp1.Pages">
+    <!--  LoginPage là màn hình mặc định  -->
+    <ShellContent
+        Route="login"
+        Title="Đăng nhập"
+        ContentTemplate="{DataTemplate pages:LoginPage}" />
+    <!--  MapPage chỉ vào được sau khi đăng nhập thành công  -->
     <ShellContent
         Route="map"
-        Title="Map"
+        Title="Bản đồ"
         ContentTemplate="{DataTemplate pages:MapPage}" />
+
 </Shell>
