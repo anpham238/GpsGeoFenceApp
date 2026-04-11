@@ -1,4 +1,5 @@
-﻿using MauiApp1.Data;
+﻿using System.Text.Json;
+using MauiApp1.Data;
 using MauiApp1.Services.Api;
 using MauiApp1.Services.Narration;
 using ZXing.Net.Maui;
@@ -13,8 +14,9 @@ public partial class QrScanPage : ContentPage
     private readonly PlaybackApiClient _playback;
 
     private bool _isProcessing;
-    private bool _torchOn; // ✅ Biến lưu trạng thái bật/tắt đèn flash
+    private bool _torchOn;
     private CameraBarcodeReaderView? _cameraView;
+
     public QrScanPage(PoiDatabase db, NarrationManager narration, PlaybackApiClient playback)
     {
         InitializeComponent();
@@ -74,27 +76,76 @@ public partial class QrScanPage : ContentPage
             if (_cameraView != null) _cameraView.IsDetecting = false;
             LblStatus.Text = "Đang xử lý...";
 
-            var poiId = raw.Replace("smarttourism://poi/", "").Trim('/');
-            var poi = await _db.GetByIdAsync(poiId);
-
-            if (poi == null)
+            // =========================================================
+            // TRƯỜNG HỢP 1: KIỂM TRA MÃ QR CỦA HỆ THỐNG THUYẾT MINH APP
+            // =========================================================
+            var poiId = ParsePoiId(raw);
+            if (!string.IsNullOrWhiteSpace(poiId))
             {
-                LblStatus.Text = "Không tìm thấy POI";
-                await DisplayAlert("Lỗi", "POI chưa có offline.", "OK");
-                await ResumeScanAsync();
-                return;
+                var poi = await _db.GetByIdAsync(poiId);
+                if (poi != null)
+                {
+                    // Mã hợp lệ của App -> Phát thuyết minh
+                    LblStatus.Text = $"✓ {poi.Name}";
+                    var started = DateTime.UtcNow;
+                    await _narration.HandleAsync(new Announcement(poi, PoiEventType.Tap, started));
+                    await DisplayAlert(poi.Name, "Đang phát thuyết minh...", "OK");
+                    await CloseAsync();
+                    return; // Kết thúc
+                }
             }
 
-            LblStatus.Text = $"✓ {poi.Name}";
-            var started = DateTime.UtcNow;
-            await _narration.HandleAsync(new Announcement(poi, PoiEventType.Tap, started));
-            await DisplayAlert(poi.Name, "Đang phát thuyết minh...", "OK");
-            await CloseAsync();
+            // =========================================================
+            // TRƯỜNG HỢP 2: KIỂM TRA XEM CÓ PHẢI LÀ ĐƯỜNG LINK (URL) KHÔNG
+            // =========================================================
+            if (Uri.TryCreate(raw, UriKind.Absolute, out Uri? uriResult)
+                && (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps))
+            {
+                LblStatus.Text = "Đang mở trình duyệt...";
+
+                // Hỏi người dùng xem có muốn mở trình duyệt ngoài không
+                bool openLink = await DisplayAlert("Quét được liên kết (Link)", $"Bạn có muốn mở trang web này không?\n\n{raw}", "Mở", "Hủy");
+
+                if (openLink)
+                {
+                    await Launcher.Default.OpenAsync(uriResult);
+                }
+
+                await ResumeScanAsync(); // Quét xong cho phép quét tiếp
+                return; // Kết thúc
+            }
+
+            // =========================================================
+            // TRƯỜNG HỢP 3: MÃ KHÔNG HỢP LỆ (KHÔNG PHẢI POI, KHÔNG PHẢI LINK)
+            // =========================================================
+            LblStatus.Text = "Mã QR không hợp lệ";
+            await DisplayAlert("Lỗi quét mã", "Mã QR này không thuộc hệ thống ứng dụng và cũng không phải là một đường dẫn hợp lệ.", "Quét lại");
+
+            await ResumeScanAsync(); // Bật lại camera cho người dùng quét mã khác
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine($"[QR Error] {ex.Message}");
             await ResumeScanAsync();
         }
+    }
+
+    // Hàm hỗ trợ bóc tách ID địa điểm từ QR Code
+    private static string? ParsePoiId(string raw)
+    {
+        const string prefix = "smarttourism://poi/";
+        if (raw.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            return raw[prefix.Length..].Trim('/');
+
+        try
+        {
+            using var doc = JsonDocument.Parse(raw);
+            if (doc.RootElement.TryGetProperty("poi_id", out var poiIdElement))
+                return poiIdElement.GetString()?.Trim();
+        }
+        catch { }
+
+        return raw.Trim();
     }
 
     private async Task ResumeScanAsync()
@@ -104,11 +155,12 @@ public partial class QrScanPage : ContentPage
         if (_cameraView != null) _cameraView.IsDetecting = true;
         LblStatus.Text = "Sẵn sàng quét";
     }
+
     private void OnToggleTorchClicked(object? sender, EventArgs e)
     {
         try
         {
-            _torchOn = !_torchOn; // Đảo ngược trạng thái
+            _torchOn = !_torchOn;
             if (_cameraView != null)
             {
                 _cameraView.IsTorchOn = _torchOn;

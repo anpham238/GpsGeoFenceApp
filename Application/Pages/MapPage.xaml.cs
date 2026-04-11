@@ -64,7 +64,6 @@ public partial class MapPage : ContentPage
         TranslatorClient translator)
     {
         InitializeComponent();
-
         _geofence = geofence ?? throw new ArgumentNullException(nameof(geofence));
         _location = location ?? throw new ArgumentNullException(nameof(location));
         _db = db ?? throw new ArgumentNullException(nameof(db));
@@ -74,16 +73,7 @@ public partial class MapPage : ContentPage
         _narrationApi = narrationApi ?? throw new ArgumentNullException(nameof(narrationApi));
         _narrationCache = narrationCache ?? throw new ArgumentNullException(nameof(narrationCache));
         _translator = translator ?? throw new ArgumentNullException(nameof(translator)); // ✅ THÊM
-
         // Toolbar
-        ToolbarItems.Add(new ToolbarItem
-        {
-            Text = "Reset",
-            Order = ToolbarItemOrder.Primary,
-            Command = new Command(() => MyMap.MoveToRegion(
-                MapSpan.FromCenterAndRadius(_hcmCenter, Distance.FromKilometers(3))))
-        });
-
         ToolbarItems.Add(new ToolbarItem
         {
             Text = "QR",
@@ -118,7 +108,6 @@ public partial class MapPage : ContentPage
                 }
             })
         });
-
         ToolbarItems.Add(new ToolbarItem
         {
             Text = "Sync",
@@ -133,6 +122,13 @@ public partial class MapPage : ContentPage
                 else
                     System.Diagnostics.Debug.WriteLine("[Geofence] Skip register: no POIs after sync.");
             })
+        });
+        ToolbarItems.Add(new ToolbarItem
+        {
+            Text = "Reset",
+            Order = ToolbarItemOrder.Secondary,
+            Command = new Command(() => MyMap.MoveToRegion(
+                MapSpan.FromCenterAndRadius(_hcmCenter, Distance.FromKilometers(3))))
         });
 
         // Bottom sheet

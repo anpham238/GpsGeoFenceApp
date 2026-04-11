@@ -1,8 +1,11 @@
 ﻿using MapApi.Data;
+using MapApi.Models;
 using Microsoft.AspNetCore.Mvc;
 
+namespace MapApi.Controllers;
+
 [ApiController]
-[Route("api/pois/{id}")]
+[Route("api/v1/pois/{id}")]
 public class PoiMediaController : ControllerBase
 {
     private readonly AppDb _db;
@@ -12,37 +15,6 @@ public class PoiMediaController : ControllerBase
     {
         _db = db;
         _env = env;
-    }
-
-    [HttpPost("audio")]
-    public async Task<IActionResult> UploadAudio(string id, IFormFile file, CancellationToken ct)
-    {
-        if (file is null || file.Length == 0) return BadRequest("No file");
-        var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
-
-        // chỉ cho phép mp3/wav (whitelist)  [7](https://learn.microsoft.com/en-us/aspnet/core/mvc/models/file-uploads?view=aspnetcore-10.0)
-        if (ext is not ".mp3" and not ".wav") return BadRequest("Only .mp3/.wav");
-
-        // giới hạn kích thước (ví dụ 20MB)  [7](https://learn.microsoft.com/en-us/aspnet/core/mvc/models/file-uploads?view=aspnetcore-10.0)
-        if (file.Length > 20 * 1024 * 1024) return BadRequest("File too large");
-
-        var poi = await _db.Pois.FindAsync(new object[] { id }, ct);
-        if (poi is null) return NotFound();
-
-        var dir = Path.Combine(_env.WebRootPath, "audio");
-        Directory.CreateDirectory(dir);
-
-        // tên an toàn (không dùng trực tiếp file.FileName)  [7](https://learn.microsoft.com/en-us/aspnet/core/mvc/models/file-uploads?view=aspnetcore-10.0)
-        var safeName = $"{id}_{Guid.NewGuid():N}{ext}";
-        var path = Path.Combine(dir, safeName);
-
-        await using var fs = System.IO.File.Create(path);
-        await file.CopyToAsync(fs, ct);
-
-        poi.AudioUrl = $"/audio/{safeName}";
-        await _db.SaveChangesAsync(ct);
-
-        return Ok(new { poi.Id, poi.AudioUrl });
     }
 
     [HttpPost("image")]
@@ -55,7 +27,7 @@ public class PoiMediaController : ControllerBase
         if (file.Length > 10 * 1024 * 1024) return BadRequest("File too large");
 
         var poi = await _db.Pois.FindAsync(new object[] { id }, ct);
-        if (poi is null) return NotFound();
+        if (poi is null) return NotFound("Không tìm thấy địa điểm này.");
 
         var dir = Path.Combine(_env.WebRootPath, "images");
         Directory.CreateDirectory(dir);
@@ -66,9 +38,24 @@ public class PoiMediaController : ControllerBase
         await using var fs = System.IO.File.Create(path);
         await file.CopyToAsync(fs, ct);
 
-        poi.ImageUrl = $"/images/{safeName}";
+        var fileUrl = $"/images/{safeName}";
+
+        // TỐI ƯU: Lưu vào bảng PoiMedia thay vì bảng Pois
+        var newMedia = new PoiMedia
+        {
+            PoiId = id,
+            Url = fileUrl,
+            MediaType = 1, // Giả sử 1 là Image
+            MimeType = file.ContentType,
+            IsPrimary = true,
+            CreatedAtUtc = DateTime.UtcNow
+        };
+
+        _db.PoiMedia.Add(newMedia);
         await _db.SaveChangesAsync(ct);
 
-        return Ok(new { poi.Id, poi.ImageUrl });
+        return Ok(new { poiId = id, imageUrl = fileUrl });
     }
+
+    // Bạn có thể giữ lại hàm UploadAudio và sửa tương tự như UploadImage (Thay MediaType = 2)
 }
