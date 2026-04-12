@@ -8,19 +8,12 @@ public sealed class PoiManagementService
 {
     private readonly AppDb _db;
     private readonly TranslatorClient _translator;
-
-    // Các ngôn ngữ TTS sẽ tự động dịch và lưu vào PoiLanguage
-    // vi-VN luôn là ngôn ngữ gốc, được lưu đầu tiên, không cần dịch
     public static readonly string[] TargetLanguages =
     [
         "en-US",   // Tiếng Anh
         "zh-Hans", // Tiếng Trung (giản thể)
         "ja-JP",   // Tiếng Nhật
         "ko-KR",   // Tiếng Hàn
-        "fr-FR",   // Tiếng Pháp
-        "de-DE",   // Tiếng Đức
-        "es-ES",   // Tiếng Tây Ban Nha
-        "th-TH",   // Tiếng Thái
     ];
 
     public PoiManagementService(AppDb db, TranslatorClient translator)

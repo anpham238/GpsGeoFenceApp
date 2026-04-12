@@ -26,9 +26,6 @@ public class PoiController : ControllerBase
         var pois = await _db.Pois.Where(p => p.IsActive).ToListAsync();
         return Ok(pois);
     }
-
-    // API: Thêm mới hoặc Cập nhật POI (Cho Admin dùng)
-    [HttpPost]
     public async Task<IActionResult> CreateOrUpdatePoi([FromBody] PoiCreateDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.Id) || string.IsNullOrWhiteSpace(dto.Name))
@@ -67,6 +64,5 @@ public record PoiCreateDto(
     string? NarrationText, // Thuyết minh Tiếng Việt
     double Lat,
     double Lng,
-    int Radius = 100,
-    int NearRadius = 200
+    int Radius = 100
 );

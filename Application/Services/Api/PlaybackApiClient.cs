@@ -18,7 +18,7 @@ public sealed class PlaybackApiClient
         try
         {
             var userId = AuthApiClient.GetCurrentUserId();
-            if (userId == Guid.Empty) return; // chưa đăng nhập → bỏ qua
+            if (userId == Guid.Empty) return;
 
             var body = new
             {
@@ -26,8 +26,7 @@ public sealed class PlaybackApiClient
                 UserId = userId,
                 DurationSeconds = durationSeconds
             };
-
-            var resp = await _http.PostAsJsonAsync("/api/v1/history", body, ct);
+            using var resp = await _http.PostAsJsonAsync("/api/v1/history", body, ct);
             _ = resp.IsSuccessStatusCode;
         }
         catch

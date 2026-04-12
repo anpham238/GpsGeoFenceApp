@@ -28,7 +28,8 @@ namespace MauiApp1.Pages.Controls
 
         public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
-            throw new NotImplementedException();
+            value = value?.ToString();
+            return value;
         }
     }
 }

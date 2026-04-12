@@ -32,7 +32,7 @@ public partial class MapPage : ContentPage
     private readonly PlaybackApiClient _playback;
     private readonly PoiNarrationApiClient _narrationApi;
     private readonly PoiNarrationCache _narrationCache;
-    private readonly TranslatorClient _translator; // ✅ THÊM
+    private readonly TranslatorClient _translator;
 
     private string _currentLang = LanguageService.Current;
 
@@ -72,7 +72,7 @@ public partial class MapPage : ContentPage
         _playback = playback ?? throw new ArgumentNullException(nameof(playback));
         _narrationApi = narrationApi ?? throw new ArgumentNullException(nameof(narrationApi));
         _narrationCache = narrationCache ?? throw new ArgumentNullException(nameof(narrationCache));
-        _translator = translator ?? throw new ArgumentNullException(nameof(translator)); // ✅ THÊM
+        _translator = translator ?? throw new ArgumentNullException(nameof(translator));
         // Toolbar
         ToolbarItems.Add(new ToolbarItem
         {
@@ -159,11 +159,8 @@ public partial class MapPage : ContentPage
 
         var started = DateTime.UtcNow;
         var lang = LanguageService.Current;
-        var narrationText = await GetNarrationTextAsync(poi.Id, evType, lang);
-        var poiText = await GetTranslatedPoiTextAsync(poi, lang);
-        var fullText = string.IsNullOrWhiteSpace(narrationText)
-            ? poiText  // Nếu không có narration, chỉ đọc tên + mô tả
-            : $"{poiText}. {narrationText}"; // Nếu có, đọc tên + mô tả + narration
+        // Backend đã compose đúng text theo eventType (Near / Enter)
+        var fullText = await GetNarrationTextAsync(poi.Id, evType, lang);
 
         await _narration.HandleAsync(
             new Announcement(poi, evType, started, PreferredLanguage: lang),
@@ -197,14 +194,11 @@ public partial class MapPage : ContentPage
         if (string.IsNullOrWhiteSpace(code)) return;
 
         _currentLang = code;
-        LanguageService.Set(code);            // ✅ đổi ngôn ngữ thật
+        LanguageService.Set(code);
         RefreshLangBar();
-
         try { _narration.Stop(); } catch { }
-
         await Task.CompletedTask;
     }
-
     // ====== Narration fetch/cache (HƯỚNG 2) ======
     private static byte ToEventByte(PoiEventType t) => t switch
     {
@@ -271,8 +265,6 @@ public partial class MapPage : ContentPage
             _ = InitializeMapAsync();
         }
     }
-
-    // ✅ Extract tất cả async operations vào method riêng
     private async Task InitializeMapAsync()
     {
         try
@@ -383,13 +375,7 @@ public partial class MapPage : ContentPage
 
                         var started = DateTime.UtcNow;
                         var lang = LanguageService.Current;
-
-                        var narrationText = await GetNarrationTextAsync(p.Id, PoiEventType.Tap, lang);
-                        var poiText = await GetTranslatedPoiTextAsync(p, lang);
-                        
-                        var fullText = string.IsNullOrWhiteSpace(narrationText)
-                            ? poiText
-                            : $"{poiText}. {narrationText}";
+                        var fullText = await GetNarrationTextAsync(p.Id, PoiEventType.Tap, lang);
 
                         await _narration.HandleAsync(
                             new Announcement(p, PoiEventType.Tap, started, PreferredLanguage: lang),
@@ -493,13 +479,7 @@ public partial class MapPage : ContentPage
                     {
                         var started = DateTime.UtcNow;
                         var lang = LanguageService.Current;
-                        
-                        var narrationText = await GetNarrationTextAsync(nearest.Id, PoiEventType.Near, lang, token);
-                        var poiText = await GetTranslatedPoiTextAsync(nearest, lang, token);
-                        
-                        var fullText = string.IsNullOrWhiteSpace(narrationText)
-                            ? poiText
-                            : $"{poiText}. {narrationText}";
+                        var fullText = await GetNarrationTextAsync(nearest.Id, PoiEventType.Near, lang, token);
 
                         await _narration.HandleAsync(
                             new Announcement(nearest, PoiEventType.Near, started, PreferredLanguage: lang),
@@ -642,64 +622,18 @@ public partial class MapPage : ContentPage
         }
     }
 
-    // ✅ Thêm method mới để dịch tên + mô tả POI
-    private async Task<string?> GetTranslatedPoiTextAsync(Poi poi, string lang, CancellationToken ct = default)
+    // Helper: dịch text cho UI (tên + mô tả trong panel)
+    private async Task<string?> TranslateTextAsync(string? text, string fromLang, string toLang, CancellationToken ct = default)
     {
+        if (string.IsNullOrWhiteSpace(text) || fromLang == toLang) return text;
         try
         {
-            // 1) Nếu là tiếng Việt, không cần dịch
-            if (lang == "vi-VN")
-            {
-                return BuildPoiText(poi.Name, poi.Description);
-            }
-
-            // 2) Dịch tên địa điểm
-            var translatedName = await TranslateTextAsync(poi.Name, "vi-VN", lang, ct);
-            
-            // 3) Dịch mô tả
-            var translatedDesc = string.IsNullOrWhiteSpace(poi.Description) 
-                ? null 
-                : await TranslateTextAsync(poi.Description, "vi-VN", lang, ct);
-
-            return BuildPoiText(translatedName, translatedDesc);
+            return await _translator.TryTranslateAsync(text, toLang, fromLang, ct) ?? text;
         }
-        catch (Exception ex)
+        catch
         {
-            System.Diagnostics.Debug.WriteLine($"[TranslatePoi] Error: {ex.Message}");
-            return BuildPoiText(poi.Name, poi.Description); // Fallback tiếng Việt
+            return text;
         }
     }
 
-    // ✅ Helper: dùng TranslatorClient để dịch
-    private async Task<string?> TranslateTextAsync(string text, string fromLang, string toLang, CancellationToken ct = default)
-    {
-        if (string.IsNullOrWhiteSpace(text)) return text;
-        if (fromLang == toLang) return text;
-
-        try
-        {
-            // ✅ Gọi TranslatorClient thực
-            var translated = await _translator.TryTranslateAsync(text, toLang, fromLang, ct);
-            return translated ?? text; // Fallback to original text nếu dịch fail
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[TranslateTextAsync] Error: {ex.Message}");
-            return text; // Fallback to original
-        }
-    }
-
-    // ✅ Helper: format text (tên + mô tả)
-    private static string BuildPoiText(string? name, string? desc)
-    {
-        var parts = new List<string>();
-        
-        if (!string.IsNullOrWhiteSpace(name))
-            parts.Add(name);
-        
-        if (!string.IsNullOrWhiteSpace(desc))
-            parts.Add(desc);
-        
-        return string.Join(". ", parts);
-    }
 }

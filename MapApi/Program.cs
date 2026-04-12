@@ -7,9 +7,7 @@ using MapApi.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-
 var builder = WebApplication.CreateBuilder(args);
-
 // 1) Connection string
 var cs = builder.Configuration.GetConnectionString("Default")
          ?? "Server=.\\SQLEXPRESS;Database=GpsApi;Trusted_Connection=True;"
@@ -49,6 +47,7 @@ builder.Services.AddCors(opt =>
     opt.AddDefaultPolicy(p => p.AllowAnyHeader().AllowAnyMethod().AllowAnyOrigin()));
 builder.Services.AddHttpClient<TranslatorClient>();
 builder.Services.AddScoped<PoiManagementService>();
+builder.Services.AddHostedService<TranslationBackgroundService>();
 
 var app = builder.Build();
 
@@ -85,6 +84,51 @@ app.MapGet("/api/v1/admin/seed/status", async (AppDb db) =>
 })
 .WithName("SeedStatus")
 .WithSummary("Kiểm tra số bản dịch trong bảng PoiLanguage");
+
+// ============================================================
+// POST /api/v1/admin/translate-all — Dịch tất cả POI hiện có sang 4 ngôn ngữ
+// Query: ?overwrite=false  (true = ghi đè bản dịch cũ)
+// ============================================================
+app.MapPost("/api/v1/admin/translate-all", async (
+    bool? overwrite, AppDb db, PoiManagementService svc) =>
+{
+    var force = overwrite ?? false;
+    var pois  = await db.Pois.AsNoTracking().Where(p => p.IsActive).ToListAsync();
+    var log   = new List<string>();
+    int done  = 0, skipped = 0;
+
+    foreach (var poi in pois)
+    {
+        // Lấy bản nguồn vi-VN (ưu tiên từ PoiLanguage, fallback từ Pois)
+        var viRow = await db.PoiLanguages.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.IdPoi == poi.Id && x.LanguageTag == "vi-VN");
+
+        var viName = viRow?.NamePoi ?? poi.Name;
+        var viDesc = viRow?.Description ?? poi.Description;
+        var viNar  = viRow?.NarTTS;   // null nếu chưa có — sẽ bỏ qua NarTTS
+
+        // Kiểm tra đã dịch đủ chưa (nếu không overwrite)
+        if (!force)
+        {
+            var existCount = await db.PoiLanguages
+                .CountAsync(x => x.IdPoi == poi.Id);
+            if (existCount >= 5) // vi-VN + 4 ngôn ngữ
+            {
+                log.Add($"[SKIP] {poi.Id} — đã có {existCount} ngôn ngữ");
+                skipped++;
+                continue;
+            }
+        }
+
+        var progress = new Progress<string>(msg => log.Add(msg));
+        await svc.AddOrUpdatePoiWithAutoTranslationAsync(poi, viName, viDesc, viNar, progress);
+        done++;
+    }
+
+    return Results.Ok(new { Translated = done, Skipped = skipped, Log = log });
+})
+.WithName("TranslateAll")
+.WithSummary("Dịch tất cả POI đang có sang 4 ngôn ngữ (en-US, zh-Hans, ja-JP, ko-KR)");
 
 // ============================================================
 // GET /api/v1/pois — Trả về POI kèm media đầu tiên (backward compat)
@@ -159,65 +203,71 @@ app.MapGet("/api/v1/pois/{id}", async (string id, AppDb db) =>
 });
 
 // ============================================================
-// GET /api/v1/pois/{id}/narration?lang=...
+// GET /api/v1/pois/{id}/narration?lang=...&eventType=enter|near|tap
+// Near  (evt=1) → "[gần đến Name]. NarTTS"
+// Enter (evt=0) / Tap (evt=2) → "[đã đến Name]. NarTTS. Description"
 // ============================================================
+
+// Lời mở đầu đa ngôn ngữ — Near
+var NearPrefix = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+{
+    ["vi-VN"]  = "Bạn sắp đến {0}.",
+    ["en-US"]  = "You are approaching {0}.",
+    ["zh-Hans"]= "您即将到达{0}。",
+    ["ja-JP"]  = "{0}に近づいています。",
+    ["ko-KR"]  = "{0}에 가까워지고 있습니다.",
+};
+
+// Lời mở đầu đa ngôn ngữ — Enter / Tap
+var EnterPrefix = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+{
+    ["vi-VN"]  = "Bạn đã đến {0}.",
+    ["en-US"]  = "You have arrived at {0}.",
+    ["zh-Hans"]= "您已到达{0}。",
+    ["ja-JP"]  = "{0}に到着しました。",
+    ["ko-KR"]  = "{0}에 도착하셨습니다.",
+};
+
 app.MapGet("/api/v1/pois/{id}/narration", async (
     string id, string? lang, string? eventType,
-    AppDb db, TranslatorClient translator, CancellationToken ct) =>
+    AppDb db, CancellationToken ct) =>
 {
     var poi = await db.Pois.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id, ct);
     if (poi is null) return Results.NotFound(new { error = "POI not found" });
+
     var toLang = string.IsNullOrWhiteSpace(lang) ? "vi-VN" : lang.Trim();
-    var evt = ParseEventTypeByte(eventType);
-    // 1) Tìm trong PoiLanguage
+    var evt    = ParseEventTypeByte(eventType);
+
     var poiLang = await db.PoiLanguages.AsNoTracking()
         .FirstOrDefaultAsync(n => n.IdPoi == id && n.LanguageTag == toLang, ct);
 
-    if (poiLang != null && !string.IsNullOrWhiteSpace(poiLang.NarTTS))
-        return Results.Ok(new
-        {
-            PoiId = id,
-            EventType = evt,
-            Language = toLang,
-            NarrationText = poiLang.NarTTS,
-            Cached = true
-        });
-    // 2) Fallback: dịch từ tiếng Việt (dùng Name + Description thay vì NarrationText cũ)
-    var baseText = $"Bạn đang đến gần {poi.Name}. {poi.Description ?? ""}".Trim();
-    const string fromLang = "vi-VN";
-    string finalText;
-    if (string.Equals(fromLang, toLang, StringComparison.OrdinalIgnoreCase))
-    {
-        finalText = baseText;
-    }
-    else
-    {
-        var translated = await translator.TryTranslateAsync(baseText, toLang, fromLang, ct);
-        finalText = string.IsNullOrWhiteSpace(translated) ? baseText : translated!;
-    }
+    var name = poiLang?.NamePoi ?? poi.Name;
+    var nar  = poiLang?.NarTTS  ?? "";
+    var desc = poiLang?.Description ?? poi.Description ?? "";
 
-    // 3) Cache vào PoiLanguage để lần sau không cần dịch lại
-    try
+    string narText;
+
+    if (evt == 1) // Near → "[gần đến Name]. NarTTS"
     {
-        db.PoiLanguages.Add(new PoiLanguage
-        {
-            IdPoi = id,
-            LanguageTag = toLang,
-            NamePoi = poi.Name,
-            NarTTS = finalText,
-            Description = poi.Description
-        });
-        await db.SaveChangesAsync(ct);
+        var template = NearPrefix.TryGetValue(toLang, out var t) ? t : NearPrefix["vi-VN"];
+        var prefix   = string.Format(template, name);
+        narText = string.IsNullOrWhiteSpace(nar) ? prefix : $"{prefix} {nar}";
     }
-    catch (DbUpdateException) { /* unique constraint nếu đã có */ }
+    else // Enter (0) hoặc Tap (2) → "[đã đến Name]. NarTTS. Description"
+    {
+        var template = EnterPrefix.TryGetValue(toLang, out var t) ? t : EnterPrefix["vi-VN"];
+        var prefix   = string.Format(template, name);
+        narText = string.Join(" ", new[] { prefix, nar, desc }
+            .Where(s => !string.IsNullOrWhiteSpace(s)));
+    }
 
     return Results.Ok(new
     {
-        PoiId = id,
-        EventType = evt,
-        Language = toLang,
-        NarrationText = finalText,
-        Cached = false
+        PoiId         = id,
+        EventType     = evt,
+        Language      = toLang,
+        NarrationText = narText,
+        Cached        = poiLang != null
     });
 });
 // ============================================================

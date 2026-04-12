@@ -76,7 +76,7 @@ public sealed class NarrationManager
             {
                 token.ThrowIfCancellationRequested();
                 await TextToSpeech.Default.SpeakAsync(part, options, token);
-                await Task.Delay(500, token); // ✅ pause 500ms
+                await Task.Delay(400, token); // ✅ pause 500ms
             }
         }
         catch (OperationCanceledException) { }
@@ -108,17 +108,13 @@ public sealed class NarrationManager
 
         return ann.EventType switch
         {
-            PoiEventType.Enter => string.IsNullOrWhiteSpace(desc)
-                ? $"Bạn đang ở {name}."
-                : $"Bạn đang ở {name}. {desc}",
+            // Near → "Bạn sắp đến Name." (không có NarTTS khi offline)
+            PoiEventType.Near => $"Bạn sắp đến {name}.",
 
-            PoiEventType.Near => string.IsNullOrWhiteSpace(desc)
-                ? $"Bạn sắp đến {name}."
-                : $"Bạn sắp đến {name}. {desc}",
-
-            PoiEventType.Tap => string.IsNullOrWhiteSpace(desc)
-                ? $"{name}."
-                : $"{name}. {desc}",
+            // Enter / Tap → "Bạn đã đến Name. Description"
+            PoiEventType.Enter or PoiEventType.Tap => string.IsNullOrWhiteSpace(desc)
+                ? $"Bạn đã đến {name}."
+                : $"Bạn đã đến {name}. {desc}",
 
             _ => name
         };
