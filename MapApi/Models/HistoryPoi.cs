@@ -3,7 +3,7 @@
 public sealed class HistoryPoi
 {
     public long Id { get; set; }
-    public string IdPoi { get; set; } = "";
+    public int IdPoi { get; set; }
     public Guid IdUser { get; set; }
     public string PoiName { get; set; } = "";
     public int Quantity { get; set; } = 1;

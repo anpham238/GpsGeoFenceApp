@@ -1,8 +1,8 @@
-﻿namespace MauiApp1.Models;
+namespace MauiApp1.Models;
 
 public sealed class PoiDto
 {
-    public string Id { get; set; } = "";
+    public int Id { get; set; }
     public string Name { get; set; } = "";
     public string? Description { get; set; }
     public double Latitude { get; set; }
@@ -15,6 +15,7 @@ public sealed class PoiDto
     public string? Language { get; set; } = "vi-VN";
     public string? ImageUrl { get; set; }
     public string? MapLink { get; set; }
+    public string? AudioUrl { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTime UpdatedAt { get; set; }
 }

@@ -80,9 +80,9 @@ public partial class QrScanPage : ContentPage
             // TRƯỜNG HỢP 1: KIỂM TRA MÃ QR CỦA HỆ THỐNG THUYẾT MINH APP
             // =========================================================
             var poiId = ParsePoiId(raw);
-            if (!string.IsNullOrWhiteSpace(poiId))
+            if (poiId.HasValue)
             {
-                var poi = await _db.GetByIdAsync(poiId);
+                var poi = await _db.GetByIdAsync(poiId.Value);
                 if (poi != null)
                 {
                     // Mã hợp lệ của App -> Phát thuyết minh
@@ -130,22 +130,35 @@ public partial class QrScanPage : ContentPage
         }
     }
 
-    // Hàm hỗ trợ bóc tách ID địa điểm từ QR Code
-    private static string? ParsePoiId(string raw)
+    // Hàm hỗ trợ bóc tách ID địa điểm (int) từ QR Code
+    private static int? ParsePoiId(string raw)
     {
         const string prefix = "smarttourism://poi/";
+        string? idStr = null;
+
         if (raw.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-            return raw[prefix.Length..].Trim('/');
-
-        try
+            idStr = raw[prefix.Length..].Trim('/');
+        else
         {
-            using var doc = JsonDocument.Parse(raw);
-            if (doc.RootElement.TryGetProperty("poi_id", out var poiIdElement))
-                return poiIdElement.GetString()?.Trim();
+            try
+            {
+                using var doc = JsonDocument.Parse(raw);
+                if (doc.RootElement.TryGetProperty("poi_id", out var poiIdElement))
+                    idStr = poiIdElement.ValueKind == System.Text.Json.JsonValueKind.Number
+                        ? poiIdElement.GetInt32().ToString()
+                        : poiIdElement.GetString()?.Trim();
+            }
+            catch { }
         }
-        catch { }
 
-        return raw.Trim();
+        if (idStr is not null && int.TryParse(idStr, out var result))
+            return result;
+
+        // Fallback: maybe the whole raw string is just a number
+        if (int.TryParse(raw.Trim(), out var directId))
+            return directId;
+
+        return null;
     }
 
     private async Task ResumeScanAsync()

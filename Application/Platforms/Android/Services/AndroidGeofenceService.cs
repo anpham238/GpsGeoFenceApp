@@ -19,7 +19,7 @@ namespace MauiApp1.Platforms.Android.Services
         private readonly IGeofencingClient _client;
         private readonly PendingIntent _pendingIntent;
 
-        private Dictionary<string, Poi> _poiLookup = new();
+        private Dictionary<int, Poi> _poiLookup = new();
 
         public event Action<Poi, string>? OnPoiEvent;
 
@@ -48,14 +48,14 @@ namespace MauiApp1.Platforms.Android.Services
         public async Task RegisterAsync(IEnumerable<Poi> pois, bool initialTriggerOnEnter = true)
         {
             if (pois == null || !pois.Any()) return; // Kiểm tra rỗng để tránh lỗi
-            _poiLookup = pois.ToDictionary(p => p.Id, p => p);
+            _poiLookup = pois.ToDictionary(p => p.Id, p => p);   // int key
             var builder = new GeofencingRequest.Builder()
                 .SetInitialTrigger(initialTriggerOnEnter ? 1 /*ENTER*/ : 4 /*DWELL*/);
             var list = new List<IGeofence>();
             foreach (var poi in pois)
             {
                 var gf = new GeofenceBuilder()
-                    .SetRequestId(poi.Id)
+                    .SetRequestId(poi.Id.ToString())   // Android requires string
                     .SetCircularRegion(poi.Latitude, poi.Longitude, poi.RadiusMeters)
                     .SetExpirationDuration(Geofence.NeverExpire)
                     .SetTransitionTypes(
@@ -88,8 +88,9 @@ namespace MauiApp1.Platforms.Android.Services
         public Task UnregisterAllAsync()
             => _client.RemoveGeofencesAsync(_pendingIntent);
 
-        private void HandleTransition(string poiId, int transition)
+        private void HandleTransition(string poiIdStr, int transition)
         {
+            if (!int.TryParse(poiIdStr, out var poiId)) return;
             if (!_poiLookup.TryGetValue(poiId, out var poi)) return;
 
             var type = transition switch

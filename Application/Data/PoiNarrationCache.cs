@@ -1,4 +1,4 @@
-﻿using Microsoft.Data.Sqlite;
+using Microsoft.Data.Sqlite;
 
 namespace MauiApp1.Data;
 
@@ -16,7 +16,7 @@ public sealed class PoiNarrationCache
         var cmd = conn.CreateCommand();
         cmd.CommandText = @"
 CREATE TABLE IF NOT EXISTS PoiNarrationCache(
-  PoiId TEXT NOT NULL,
+  PoiId INTEGER NOT NULL,
   EventType INTEGER NOT NULL,
   LanguageTag TEXT NOT NULL,
   NarrationText TEXT NULL,
@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS PoiNarrationCache(
         _inited = true;
     }
 
-    public async Task<string?> GetAsync(string poiId, byte eventType, string lang)
+    public async Task<string?> GetAsync(int poiId, byte eventType, string lang)
     {
         await InitAsync();
 
@@ -48,7 +48,7 @@ LIMIT 1;";
         return obj == null || obj == DBNull.Value ? null : (string)obj;
     }
 
-    public async Task UpsertAsync(string poiId, byte eventType, string lang, string? text)
+    public async Task UpsertAsync(int poiId, byte eventType, string lang, string? text)
     {
         await InitAsync();
 

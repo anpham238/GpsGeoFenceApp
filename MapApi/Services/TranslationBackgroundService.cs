@@ -42,7 +42,8 @@ public sealed class TranslationBackgroundService : BackgroundService
             var db  = scope.ServiceProvider.GetRequiredService<AppDb>();
             var svc = scope.ServiceProvider.GetRequiredService<PoiManagementService>();
 
-            var totalLangs = 1 + PoiManagementService.TargetLanguages.Length; // vi-VN + 4
+            // vi-VN + 5 target languages = 6 total
+            var totalLangs = 1 + PoiManagementService.TargetLanguages.Length;
 
             // POI chưa có đủ bản dịch
             var allPoiIds = await db.Pois.AsNoTracking()
@@ -73,14 +74,18 @@ public sealed class TranslationBackgroundService : BackgroundService
                     .FirstOrDefaultAsync(p => p.Id == id, ct);
                 if (poi is null) continue;
 
+                // Lấy vi-VN TextToSpeech đã lưu (nếu có) làm nguồn dịch
                 var viRow = await db.PoiLanguages.AsNoTracking()
                     .FirstOrDefaultAsync(x => x.IdPoi == id && x.LanguageTag == "vi-VN", ct);
 
+                // Tách ngược TextToSpeech vi-VN → dùng làm viNarration; Description từ Pois
+                var viTts = viRow?.TextToSpeech;
+                var viDesc = poi.Description;
+
                 await svc.AddOrUpdatePoiWithAutoTranslationAsync(
                     poi,
-                    viRow?.NamePoi ?? poi.Name,
-                    viRow?.Description ?? poi.Description,
-                    viRow?.NarTTS,
+                    viNarration: viTts,
+                    viDesc: viDesc,
                     progress: null);
 
                 _logger.LogInformation("Auto-translated: {Id}", id);

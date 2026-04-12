@@ -1,4 +1,4 @@
-﻿using System.Net.Http.Json;
+using System.Net.Http.Json;
 
 namespace MauiApp1.Services.Api;
 
@@ -9,7 +9,7 @@ public sealed class PlaybackApiClient
     public PlaybackApiClient(HttpClient http) => _http = http;
 
     public async Task LogAsync(
-        string poiId,
+        int poiId,
         string triggerType,
         int? durationSeconds = null,
         bool success = true,
@@ -27,11 +27,12 @@ public sealed class PlaybackApiClient
                 DurationSeconds = durationSeconds
             };
             using var resp = await _http.PostAsJsonAsync("/api/v1/history", body, ct);
-            _ = resp.IsSuccessStatusCode;
+            if (!resp.IsSuccessStatusCode)
+                System.Diagnostics.Debug.WriteLine($"[Playback] Log failed: {resp.StatusCode}");
         }
-        catch
+        catch (Exception ex)
         {
-            // offline / timeout → bỏ qua (offline-first)
+            System.Diagnostics.Debug.WriteLine($"[Playback] LogAsync error: {ex.Message}");
         }
     }
 }

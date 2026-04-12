@@ -6,9 +6,9 @@ namespace MauiApp1.Services;
 
 public static class GeofenceEventGate
 {
-    static string Key(string poiId, string eventType) => $"geo_{poiId}_{eventType}_last";
+    static string Key(int poiId, string eventType) => $"geo_{poiId}_{eventType}_last";
 
-    public static bool ShouldAccept(string poiId, string eventType, int debounceSec, int cooldownSec)
+    public static bool ShouldAccept(int poiId, string eventType, int debounceSec, int cooldownSec)
     {
         var now = DateTimeOffset.UtcNow;
         var key = Key(poiId, eventType);

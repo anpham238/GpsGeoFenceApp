@@ -1,4 +1,4 @@
-﻿using MapApi.Data;
+using MapApi.Data;
 using MapApi.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,12 +8,14 @@ public sealed class PoiManagementService
 {
     private readonly AppDb _db;
     private readonly TranslatorClient _translator;
+
     public static readonly string[] TargetLanguages =
     [
         "en-US",   // Tiếng Anh
         "zh-Hans", // Tiếng Trung (giản thể)
         "ja-JP",   // Tiếng Nhật
         "ko-KR",   // Tiếng Hàn
+        "de-DE",   // Tiếng Đức
     ];
 
     public PoiManagementService(AppDb db, TranslatorClient translator)
@@ -24,9 +26,10 @@ public sealed class PoiManagementService
 
     /// <summary>
     /// Thêm/cập nhật POI và tự động dịch sang tất cả ngôn ngữ, lưu vào PoiLanguage.
+    /// TextToSpeech = NarTTS_translated + ". " + Description_translated (kết hợp)
     /// </summary>
     public async Task AddOrUpdatePoiWithAutoTranslationAsync(
-        Poi poi, string viName, string? viDesc, string? viNarration,
+        Poi poi, string? viNarration, string? viDesc,
         IProgress<string>? progress = null)
     {
         // 1. Upsert vào bảng Pois
@@ -37,27 +40,26 @@ public sealed class PoiManagementService
             _db.Entry(existing).CurrentValues.SetValues(poi);
 
         await _db.SaveChangesAsync();
-        progress?.Report($"[POI] Đã lưu: {viName}");
+        progress?.Report($"[POI] Đã lưu: {poi.Name} (Id={poi.Id})");
 
         // 2. Lưu bản gốc tiếng Việt
-        await UpsertLanguageAsync(poi.Id, "vi-VN", viName, viDesc, viNarration);
-        progress?.Report($"  → vi-VN ✓");
+        var viTts = CombineTts(viNarration, viDesc);
+        await UpsertLanguageAsync(poi.Id, "vi-VN", viTts);
+        progress?.Report("  → vi-VN ✓");
 
         // 3. Dịch sang từng ngôn ngữ và lưu
         foreach (var lang in TargetLanguages)
         {
             try
             {
-                var tName = await _translator.TryTranslateAsync(viName, lang, "vi-VN") ?? viName;
+                var tNar = string.IsNullOrWhiteSpace(viNarration) ? null
+                    : await _translator.TryTranslateAsync(viNarration, lang, "vi-VN");
 
                 var tDesc = string.IsNullOrWhiteSpace(viDesc) ? null
                     : await _translator.TryTranslateAsync(viDesc, lang, "vi-VN");
 
-                var tNar = string.IsNullOrWhiteSpace(viNarration) ? null
-                    : await _translator.TryTranslateAsync(viNarration, lang, "vi-VN");
-
-                // Fallback: nếu Azure không dịch được, vẫn lưu tên gốc
-                await UpsertLanguageAsync(poi.Id, lang, tName, tDesc, tNar);
+                var tts = CombineTts(tNar, tDesc);
+                await UpsertLanguageAsync(poi.Id, lang, tts);
                 progress?.Report($"  → {lang} ✓");
             }
             catch (Exception ex)
@@ -67,25 +69,32 @@ public sealed class PoiManagementService
         }
     }
 
-    // ── Upsert dùng EF Core (không cần Stored Procedure) ─────────────────
-    private async Task UpsertLanguageAsync(
-        string idPoi, string langTag, string name, string? desc, string? nar)
+    // ── Helpers ──────────────────────────────────────────────────────────────
+
+    private static string? CombineTts(string? nar, string? desc)
+    {
+        var parts = new[] { nar?.Trim(), desc?.Trim() }
+            .Where(s => !string.IsNullOrWhiteSpace(s));
+        var combined = string.Join(". ", parts);
+        return string.IsNullOrWhiteSpace(combined) ? null : combined;
+    }
+
+    private async Task UpsertLanguageAsync(int idPoi, string langTag, string? tts)
     {
         var row = await _db.PoiLanguages
             .FirstOrDefaultAsync(x => x.IdPoi == idPoi && x.LanguageTag == langTag);
 
         if (row is not null)
         {
-            row.NamePoi = name;
-            row.Description = desc;
-            row.NarTTS = nar;
+            row.TextToSpeech = tts;
         }
         else
         {
             _db.PoiLanguages.Add(new PoiLanguage
             {
-                IdPoi = idPoi, LanguageTag = langTag,
-                NamePoi = name, Description = desc, NarTTS = nar
+                IdPoi = idPoi,
+                LanguageTag = langTag,
+                TextToSpeech = tts
             });
         }
 

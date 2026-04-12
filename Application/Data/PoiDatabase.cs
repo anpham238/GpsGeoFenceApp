@@ -1,4 +1,4 @@
-﻿using Microsoft.Data.Sqlite;
+using Microsoft.Data.Sqlite;
 using MauiApp1.Models;
 
 namespace MauiApp1.Data;
@@ -15,10 +15,34 @@ public sealed class PoiDatabase
         await using var conn = new SqliteConnection(Constants.ConnectionString);
         await conn.OpenAsync();
 
+        // Migration: drop old table if Id column is TEXT (schema v1 → v2)
+        try
+        {
+            var checkCmd = conn.CreateCommand();
+            checkCmd.CommandText = $"PRAGMA table_info({TableName});";
+            await using var infoReader = await checkCmd.ExecuteReaderAsync();
+            while (await infoReader.ReadAsync())
+            {
+                var colName = infoReader.GetString(1); // column name
+                var colType = infoReader.GetString(2); // column type
+                if (string.Equals(colName, "Id", StringComparison.OrdinalIgnoreCase)
+                    && string.Equals(colType, "TEXT", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Old schema detected — drop and let CREATE recreate below
+                    await infoReader.CloseAsync();
+                    var dropCmd = conn.CreateCommand();
+                    dropCmd.CommandText = $"DROP TABLE IF EXISTS {TableName};";
+                    await dropCmd.ExecuteNonQueryAsync();
+                    break;
+                }
+            }
+        }
+        catch { /* table doesn't exist yet — fine */ }
+
         var cmd = conn.CreateCommand();
         cmd.CommandText = $@"
 CREATE TABLE IF NOT EXISTS {TableName}(
-  Id TEXT PRIMARY KEY,
+  Id INTEGER PRIMARY KEY,
   Name TEXT NOT NULL,
   Description TEXT NOT NULL,
   Latitude REAL NOT NULL,
@@ -42,15 +66,6 @@ CREATE INDEX IF NOT EXISTS IX_{TableName}_ActivePriority
 ON {TableName}(IsActive, Priority, Name);
 ";
         await cmd.ExecuteNonQueryAsync();
-
-        // DB cũ chưa có cột Language thì add (có rồi thì ignore)
-        try
-        {
-            var alter = conn.CreateCommand();
-            alter.CommandText = $"ALTER TABLE {TableName} ADD COLUMN Language TEXT NULL DEFAULT 'vi-VN';";
-            await alter.ExecuteNonQueryAsync();
-        }
-        catch { /* column exists */ }
 
         _inited = true;
         System.Diagnostics.Debug.WriteLine($"[SQLite] Ready: {Constants.DatabasePath}");
@@ -129,7 +144,6 @@ ON CONFLICT(Id) DO UPDATE SET
         await using var conn = new SqliteConnection(Constants.ConnectionString);
         await conn.OpenAsync();
 
-        // ✅ SELECT có Language để đọc đúng index
         var cmd = conn.CreateCommand();
         cmd.CommandText = $@"
 SELECT
@@ -147,27 +161,24 @@ ORDER BY Priority, Name;
         {
             list.Add(new Poi
             {
-                Id = r.GetString(0),
-                Name = r.GetString(1),
-                Description = r.GetString(2),
-                Latitude = r.GetDouble(3),
-                Longitude = r.GetDouble(4),
-
-                RadiusMeters = r.GetInt32(5),
+                Id               = r.GetInt32(0),
+                Name             = r.GetString(1),
+                Description      = r.GetString(2),
+                Latitude         = r.GetDouble(3),
+                Longitude        = r.GetDouble(4),
+                RadiusMeters     = r.GetInt32(5),
                 NearRadiusMeters = r.GetInt32(6),
-                DebounceSeconds = r.GetInt32(7),
-                CooldownSeconds = r.GetInt32(8),
-
-                Priority = r.IsDBNull(9) ? null : r.GetInt32(9),
-                NarrationText = r.IsDBNull(10) ? null : r.GetString(10),
-                AudioUrl = r.IsDBNull(11) ? null : r.GetString(11),
-                ImageUrl = r.IsDBNull(12) ? null : r.GetString(12),
-                MapLink = r.IsDBNull(13) ? null : r.GetString(13),
-
-                IsActive = r.GetInt32(14) == 1,
-                CreatedAt = DateTime.Parse(r.GetString(15)),
-                UpdatedAt = DateTime.Parse(r.GetString(16)),
-                Language = r.IsDBNull(17) ? "vi-VN" : r.GetString(17),
+                DebounceSeconds  = r.GetInt32(7),
+                CooldownSeconds  = r.GetInt32(8),
+                Priority         = r.IsDBNull(9)  ? null : r.GetInt32(9),
+                NarrationText    = r.IsDBNull(10) ? null : r.GetString(10),
+                AudioUrl         = r.IsDBNull(11) ? null : r.GetString(11),
+                ImageUrl         = r.IsDBNull(12) ? null : r.GetString(12),
+                MapLink          = r.IsDBNull(13) ? null : r.GetString(13),
+                IsActive         = r.GetInt32(14) == 1,
+                CreatedAt        = DateTime.Parse(r.GetString(15)),
+                UpdatedAt        = DateTime.Parse(r.GetString(16)),
+                Language         = r.IsDBNull(17) ? "vi-VN" : r.GetString(17),
             });
         }
 
@@ -175,7 +186,7 @@ ORDER BY Priority, Name;
         return list;
     }
 
-    public async Task<Poi?> GetByIdAsync(string id)
+    public async Task<Poi?> GetByIdAsync(int id)
     {
         await InitAsync();
 
@@ -200,27 +211,24 @@ LIMIT 1;
 
         return new Poi
         {
-            Id = r.GetString(0),
-            Name = r.GetString(1),
-            Description = r.GetString(2),
-            Latitude = r.GetDouble(3),
-            Longitude = r.GetDouble(4),
-
-            RadiusMeters = r.GetInt32(5),
+            Id               = r.GetInt32(0),
+            Name             = r.GetString(1),
+            Description      = r.GetString(2),
+            Latitude         = r.GetDouble(3),
+            Longitude        = r.GetDouble(4),
+            RadiusMeters     = r.GetInt32(5),
             NearRadiusMeters = r.GetInt32(6),
-            DebounceSeconds = r.GetInt32(7),
-            CooldownSeconds = r.GetInt32(8),
-
-            Priority = r.IsDBNull(9) ? null : r.GetInt32(9),
-            NarrationText = r.IsDBNull(10) ? null : r.GetString(10),
-            AudioUrl = r.IsDBNull(11) ? null : r.GetString(11),
-            ImageUrl = r.IsDBNull(12) ? null : r.GetString(12),
-            MapLink = r.IsDBNull(13) ? null : r.GetString(13),
-
-            IsActive = r.GetInt32(14) == 1,
-            CreatedAt = DateTime.Parse(r.GetString(15)),
-            UpdatedAt = DateTime.Parse(r.GetString(16)),
-            Language = r.IsDBNull(17) ? "vi-VN" : r.GetString(17),
+            DebounceSeconds  = r.GetInt32(7),
+            CooldownSeconds  = r.GetInt32(8),
+            Priority         = r.IsDBNull(9)  ? null : r.GetInt32(9),
+            NarrationText    = r.IsDBNull(10) ? null : r.GetString(10),
+            AudioUrl         = r.IsDBNull(11) ? null : r.GetString(11),
+            ImageUrl         = r.IsDBNull(12) ? null : r.GetString(12),
+            MapLink          = r.IsDBNull(13) ? null : r.GetString(13),
+            IsActive         = r.GetInt32(14) == 1,
+            CreatedAt        = DateTime.Parse(r.GetString(15)),
+            UpdatedAt        = DateTime.Parse(r.GetString(16)),
+            Language         = r.IsDBNull(17) ? "vi-VN" : r.GetString(17),
         };
     }
 }

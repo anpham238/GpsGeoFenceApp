@@ -4,10 +4,10 @@ using Microsoft.AspNetCore.Mvc;
 namespace MapApi.Controllers;
 
 [ApiController]
+[Route("api/v1/translator")]
 public class TranslatorController : ControllerBase
 {
     private readonly TranslatorClient _translator;
-
     public TranslatorController(TranslatorClient translator)
     {
         _translator = translator;

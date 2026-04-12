@@ -37,7 +37,7 @@ public partial class MapPage : ContentPage
     private string _currentLang = LanguageService.Current;
 
     private readonly List<Poi> _pois = new();
-    private readonly Dictionary<string, Pin> _pinMap = new();
+    private readonly Dictionary<int, Pin> _pinMap = new();
 
     private CancellationTokenSource? _cts;
     private Poi? _nearestPoi;
@@ -216,7 +216,7 @@ public partial class MapPage : ContentPage
         _ => "Enter"
     };
 
-    private async Task<string?> GetNarrationTextAsync(string poiId, PoiEventType evType, string lang, CancellationToken ct = default)
+    private async Task<string?> GetNarrationTextAsync(int poiId, PoiEventType evType, string lang, CancellationToken ct = default)
     {
         try
         {

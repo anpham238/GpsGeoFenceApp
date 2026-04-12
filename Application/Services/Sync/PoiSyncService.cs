@@ -73,9 +73,10 @@ public sealed class PoiSyncService
                 NearRadiusMeters = r.NearRadiusMeters > 0 ? r.NearRadiusMeters : r.RadiusMeters * 2,
                 DebounceSeconds = r.DebounceSeconds > 0 ? r.DebounceSeconds : 3,
                 CooldownSeconds = r.CooldownSeconds,
-                NarrationText = r.NarrationText,   
+                NarrationText = r.NarrationText,
                 ImageUrl = r.ImageUrl,
-                MapLink = r.MapLink,
+                MapLink  = r.MapLink,
+                AudioUrl = r.AudioUrl,
                 Language = r.Language ?? "vi-VN",
                 IsActive = r.IsActive,
                 UpdatedAt = r.UpdatedAt

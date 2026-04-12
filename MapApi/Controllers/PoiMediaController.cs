@@ -1,4 +1,4 @@
-﻿using MapApi.Data;
+using MapApi.Data;
 using MapApi.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 namespace MapApi.Controllers;
 
 public sealed record SetMapLinkRequest(string MapLink);
+public sealed record SetAudioRequest(string AudioUrl);
 
 [ApiController]
 [Route("api/v1/pois/{id}")]
@@ -21,7 +22,7 @@ public class PoiMediaController : ControllerBase
     }
 
     [HttpPost("image")]
-    public async Task<IActionResult> UploadImage(string id, IFormFile file, CancellationToken ct)
+    public async Task<IActionResult> UploadImage(int id, IFormFile file, CancellationToken ct)
     {
         if (file is null || file.Length == 0) return BadRequest("No file");
         var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
@@ -43,39 +44,45 @@ public class PoiMediaController : ControllerBase
 
         var fileUrl = $"/images/{safeName}";
 
-        // Lưu URL ảnh vào bảng PoiMedia (schema mới: chỉ có Image + MapLink)
         var existing = await _db.PoiMedia.FirstOrDefaultAsync(m => m.IdPoi == id, ct);
         if (existing is not null)
-        {
-            existing.Image = fileUrl;   // cập nhật ảnh nếu đã có
-        }
+            existing.Image = fileUrl;
         else
-        {
             _db.PoiMedia.Add(new PoiMedia { IdPoi = id, Image = fileUrl });
-        }
 
         await _db.SaveChangesAsync(ct);
-
         return Ok(new { poiId = id, imageUrl = fileUrl });
     }
 
     [HttpPost("maplink")]
-    public async Task<IActionResult> SetMapLink(string id, [FromBody] SetMapLinkRequest req, CancellationToken ct)
+    public async Task<IActionResult> SetMapLink(int id, [FromBody] SetMapLinkRequest req, CancellationToken ct)
     {
         var poi = await _db.Pois.FindAsync(new object[] { id }, ct);
         if (poi is null) return NotFound("Không tìm thấy địa điểm này.");
 
         var existing = await _db.PoiMedia.FirstOrDefaultAsync(m => m.IdPoi == id, ct);
         if (existing is not null)
-        {
             existing.MapLink = req.MapLink;
-        }
         else
-        {
             _db.PoiMedia.Add(new PoiMedia { IdPoi = id, MapLink = req.MapLink });
-        }
 
         await _db.SaveChangesAsync(ct);
         return Ok(new { poiId = id, mapLink = req.MapLink });
+    }
+
+    [HttpPost("audio")]
+    public async Task<IActionResult> SetAudio(int id, [FromBody] SetAudioRequest req, CancellationToken ct)
+    {
+        var poi = await _db.Pois.FindAsync(new object[] { id }, ct);
+        if (poi is null) return NotFound("Không tìm thấy địa điểm này.");
+
+        var existing = await _db.PoiMedia.FirstOrDefaultAsync(m => m.IdPoi == id, ct);
+        if (existing is not null)
+            existing.Audio = req.AudioUrl;
+        else
+            _db.PoiMedia.Add(new PoiMedia { IdPoi = id, Audio = req.AudioUrl });
+
+        await _db.SaveChangesAsync(ct);
+        return Ok(new { poiId = id, audioUrl = req.AudioUrl });
     }
 }

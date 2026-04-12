@@ -1,5 +1,4 @@
 ﻿namespace MapApi.Models;
-
 public sealed class Users
 {
     public Guid UserId { get; set; } = Guid.NewGuid();
