@@ -6,15 +6,11 @@ using System.Text.RegularExpressions;
 namespace MauiApp1.Services.Narration;
 
 public enum PoiEventType { Enter, Near, Tap }
-
-public sealed record Announcement(
-    Poi Poi,
-    PoiEventType EventType,
-    DateTime CreatedAtUtc,
-    string? PreferredLanguage = null)
+// ĐỔI CHỮ 'PoiLang' THÀNH 'string'
+public record Announcement(Poi Poi, string Lang, PoiEventType EventType, DateTime CreatedAtUtc, string? OverrideText = null)
 {
     public string ResolvedLanguage =>
-        PreferredLanguage
+        Lang
         ?? TryGetCurrentLanguage()
         ?? "vi-VN";
 
@@ -100,26 +96,48 @@ public sealed class NarrationManager
             _currentCts = null;
         }
     }
-
     private static string ComposeFallbackText(Announcement ann)
     {
         var name = ann.Poi.Name?.Trim() ?? "";
         var desc = string.IsNullOrWhiteSpace(ann.Poi.Description) ? "" : ann.Poi.Description!.Trim();
+        var lang = ann.ResolvedLanguage; // Lấy ngôn ngữ hiện tại (ví dụ: en-US, ja-JP)
 
+        // 1. Gán tiếng Việt làm mặc định
+        string textNear = "Bạn sắp đến";
+        string textEnter = "Bạn đã đến";
+
+        // 2. Tự động đổi câu chào theo ngôn ngữ đang chọn
+        if (lang.StartsWith("en", StringComparison.OrdinalIgnoreCase))
+        {
+            textNear = "You are approaching";
+            textEnter = "You have arrived at";
+        }
+        else if (lang.StartsWith("ja", StringComparison.OrdinalIgnoreCase))
+        {
+            textNear = "まもなく到着します"; // Mamonaku tōchaku shimasu
+            textEnter = "到着しました";       // Tōchaku shimashita
+        }
+        else if (lang.StartsWith("ko", StringComparison.OrdinalIgnoreCase))
+        {
+            textNear = "곧 도착합니다";   // Got dochakhamnida
+            textEnter = "도착했습니다";   // Dochakhaetseumnida
+        }
+        else if (lang.StartsWith("de", StringComparison.OrdinalIgnoreCase))
+        {
+            textNear = "Sie nähern sich";
+            textEnter = "Sie haben erreicht";
+        }
+
+        // 3. Ghép câu chào + Tên địa điểm + Mô tả
         return ann.EventType switch
         {
-            // Near → "Bạn sắp đến Name." (không có NarTTS khi offline)
-            PoiEventType.Near => $"Bạn sắp đến {name}.",
-
-            // Enter / Tap → "Bạn đã đến Name. Description"
+            PoiEventType.Near => $"{textNear} {name}.",
             PoiEventType.Enter or PoiEventType.Tap => string.IsNullOrWhiteSpace(desc)
-                ? $"Bạn đã đến {name}."
-                : $"Bạn đã đến {name}. {desc}",
-
+                ? $"{textEnter} {name}."
+                : $"{textEnter} {name}. {desc}",
             _ => name
         };
     }
-
     private static IEnumerable<string> SplitToParts(string text)
     {
         var lines = text

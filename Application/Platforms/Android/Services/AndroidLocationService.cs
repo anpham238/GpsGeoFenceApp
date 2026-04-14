@@ -6,6 +6,7 @@ using global::Android.Content;
 using global::Android.Gms.Location;
 using global::Android.OS;
 using global::MauiApp1.Services;
+using Microsoft.Maui.Devices;
 
 namespace MauiApp1.Platforms.Android.Services;
 public sealed class AndroidLocationService : ILocationService
@@ -22,13 +23,19 @@ public sealed class AndroidLocationService : ILocationService
     {
         if (_client == null) return;
 
+        // Giảm tần suất GPS khi pin < 20%
+        var batteryLevel = Battery.Default.ChargeLevel; // 0.0 → 1.0
+        long intervalMs = batteryLevel < 0.20 ? 30_000L : 5_000L;
+        float minDistM  = batteryLevel < 0.20 ? 30f : 10f;
+
         var request = new global::Android.Gms.Location.LocationRequest
-            .Builder(global::Android.Gms.Location.Priority.PriorityBalancedPowerAccuracy, 5000) // 5s – Balanced
-            .SetMinUpdateDistanceMeters(10)
+            .Builder(global::Android.Gms.Location.Priority.PriorityBalancedPowerAccuracy, intervalMs)
+            .SetMinUpdateDistanceMeters(minDistM)
             .Build();
 
         _callback = new CallbackImpl(onLocation);
         _client.RequestLocationUpdates(request, _callback, global::Android.OS.Looper.MainLooper);
+        System.Diagnostics.Debug.WriteLine($"[GPS] interval={intervalMs}ms, battery={batteryLevel:P0}");
     }
 
     public void StopTracking()

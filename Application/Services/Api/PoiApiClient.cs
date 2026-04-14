@@ -24,4 +24,16 @@ public sealed class PoiApiClient
         var res = await _http.PutAsJsonAsync($"/api/v1/pois/{Uri.EscapeDataString(id)}", dto, ct);
         res.EnsureSuccessStatusCode();
     }
+
+    public async Task<string?> GetServerVersionAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            var result = await _http.GetFromJsonAsync<SyncVersionDto>("/api/v1/sync/version", ct);
+            return result?.Version;
+        }
+        catch { return null; }
+    }
+
+    private sealed record SyncVersionDto(string Version, int Count);
 }

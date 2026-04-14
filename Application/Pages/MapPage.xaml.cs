@@ -17,6 +17,7 @@ public partial class MapPage : ContentPage
     private readonly PoiNarrationApiClient _narrationApi;
     private readonly PoiNarrationCache _narrationCache;
     private readonly TranslatorClient _translator;
+    private readonly AnalyticsClient _analytics;
     private string _currentLang = LanguageService.Current;
     private readonly List<Poi> _pois = new();
     private readonly Dictionary<int, Pin> _pinMap = new();
@@ -40,7 +41,8 @@ public partial class MapPage : ContentPage
         PlaybackApiClient playback,
         PoiNarrationApiClient narrationApi,
         PoiNarrationCache narrationCache,
-        TranslatorClient translator)
+        TranslatorClient translator,
+        AnalyticsClient analytics)
     {
         InitializeComponent();
         _geofence = geofence ?? throw new ArgumentNullException(nameof(geofence));
@@ -52,6 +54,7 @@ public partial class MapPage : ContentPage
         _narrationApi = narrationApi ?? throw new ArgumentNullException(nameof(narrationApi));
         _narrationCache = narrationCache ?? throw new ArgumentNullException(nameof(narrationCache));
         _translator = translator ?? throw new ArgumentNullException(nameof(translator));
+        _analytics = analytics ?? throw new ArgumentNullException(nameof(analytics));
 
         // Toolbar
         ToolbarItems.Add(new ToolbarItem
@@ -133,17 +136,16 @@ public partial class MapPage : ContentPage
 
         var started = DateTime.UtcNow;
         var lang = LanguageService.Current;
-        var fullText = await GetNarrationTextAsync(poi.Id, evType, lang);
 
-        await _narration.HandleAsync(new Announcement(poi, evType, started, PreferredLanguage: lang), overrideText: fullText);
+        var fullText = await GetNarrationTextAsync(poi.Id, evType, lang) ?? poi.NarrationText ?? poi.Description;
+
+        // ĐÃ SỬA CẤU TRÚC ANNOUNCEMENT TẠI ĐÂY
+        await _narration.HandleAsync(new Announcement(poi, lang, evType, started), overrideText: fullText);
 
         var dur = (int)(DateTime.UtcNow - started).TotalSeconds;
         _ = _playback.LogAsync(poi.Id, type, dur > 0 ? dur : null);
-    }
-
-    private void OnMenuTapped(object sender, TappedEventArgs e)
-    {
-        Shell.Current.FlyoutIsPresented = true;
+        _ = _analytics.LogVisitAsync(poi.Id, type == "ENTER" ? "enter" : "near");
+        if (dur > 0) _ = _analytics.LogListenDurationAsync(poi.Id, dur);
     }
 
     private void RefreshLangBar()
@@ -207,7 +209,6 @@ public partial class MapPage : ContentPage
         _currentLang = LanguageService.Current;
         RefreshLangBar();
 
-        // Kiểm tra đăng nhập
         var currentUser = Preferences.Get("Username", "");
         bool isLoggedIn = !string.IsNullOrEmpty(currentUser);
 
@@ -301,7 +302,7 @@ public partial class MapPage : ContentPage
                     var pin = new Pin
                     {
                         Label = p.Name,
-                        Address = p.Description,
+                        Address = p.Description ?? "",
                         Location = new Location(p.Latitude, p.Longitude),
                         Type = PinType.Place
                     };
@@ -310,12 +311,18 @@ public partial class MapPage : ContentPage
                         e.HideInfoWindow = false;
                         HighlightPoi(p, "Đã chọn");
                         ShowDetail(p);
+
                         var started = DateTime.UtcNow;
                         var lang = LanguageService.Current;
-                        var fullText = await GetNarrationTextAsync(p.Id, PoiEventType.Tap, lang);
-                        await _narration.HandleAsync(new Announcement(p, PoiEventType.Tap, started, PreferredLanguage: lang), overrideText: fullText);
+                        var fullText = await GetNarrationTextAsync(p.Id, PoiEventType.Tap, lang) ?? p.NarrationText ?? p.Description;
+
+                        // ĐÃ SỬA CẤU TRÚC ANNOUNCEMENT TẠI ĐÂY
+                        await _narration.HandleAsync(new Announcement(p, lang, PoiEventType.Tap, started), overrideText: fullText);
+
                         var dur = (int)(DateTime.UtcNow - started).TotalSeconds;
                         _ = _playback.LogAsync(p.Id, "TAP", dur > 0 ? dur : null);
+                        _ = _analytics.LogVisitAsync(p.Id, "tap");
+                        if (dur > 0) _ = _analytics.LogListenDurationAsync(p.Id, dur);
                     };
                     _pinMap[p.Id] = pin;
                     MyMap.Pins.Add(pin);
@@ -355,12 +362,19 @@ public partial class MapPage : ContentPage
     private async Task TrackLoopAsync(CancellationToken token)
     {
         var req = new GeolocationRequest(GeolocationAccuracy.Medium, TimeSpan.FromSeconds(10));
+        int routeTickCount = 0;
         while (!token.IsCancellationRequested)
         {
             try
             {
                 var loc = await Geolocation.GetLocationAsync(req, token);
                 if (loc == null) { await Task.Delay(5000, token); continue; }
+
+                if (++routeTickCount >= 6)
+                {
+                    routeTickCount = 0;
+                    _ = _analytics.LogRouteAsync(loc.Latitude, loc.Longitude);
+                }
 
                 _userLocation = loc;
                 Poi? nearest = null;
@@ -389,7 +403,10 @@ public partial class MapPage : ContentPage
                         var started = DateTime.UtcNow;
                         var lang = LanguageService.Current;
                         var fullText = await GetNarrationTextAsync(nearest.Id, PoiEventType.Near, lang, token);
-                        await _narration.HandleAsync(new Announcement(nearest, PoiEventType.Near, started, PreferredLanguage: lang), overrideText: fullText, ct: token);
+
+                        // ĐÃ SỬA CẤU TRÚC ANNOUNCEMENT TẠI ĐÂY
+                        await _narration.HandleAsync(new Announcement(nearest, lang, PoiEventType.Near, started), overrideText: fullText, ct: token);
+
                         var dur = (int)(DateTime.UtcNow - started).TotalSeconds;
                         _ = _playback.LogAsync(nearest.Id, "NEAR", dur > 0 ? dur : null);
                     }

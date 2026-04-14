@@ -76,6 +76,16 @@ public static class MauiProgram
         {
             http.Timeout = TimeSpan.FromSeconds(10);
         });
+        builder.Services.AddHttpClient<TourApiClient>(http =>
+        {
+            http.BaseAddress = new Uri(apiBaseUrl);
+            http.Timeout = TimeSpan.FromSeconds(30);
+        });
+        builder.Services.AddHttpClient<AnalyticsClient>(http =>
+        {
+            http.BaseAddress = new Uri(apiBaseUrl);
+            http.Timeout = TimeSpan.FromSeconds(10);
+        });
         // ── Sync engine ───────────────────────────────────────────────
         builder.Services.AddSingleton<PoiSyncService>();
         // ── Pages ─────────────────────────────────────────────────────

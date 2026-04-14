@@ -1,4 +1,5 @@
 ﻿using Microsoft.Maui.Networking;
+using Microsoft.Maui.Storage;
 using MauiApp1.Data;
 using MauiApp1.Models;
 using MauiApp1.Services.Api;
@@ -10,6 +11,8 @@ public sealed class PoiSyncService
     private readonly PoiApiClient _api;
     private readonly PoiDatabase _db;
     private readonly SyncMetadataRepository _meta;
+
+    private const string VersionPrefKey = "poi_sync_version";
 
     private CancellationTokenSource? _cts;
     private Task? _loop;
@@ -57,6 +60,20 @@ public sealed class PoiSyncService
 
     public async Task SyncOnceAsync(CancellationToken ct = default)
     {
+        // Kiểm tra version trước khi tải toàn bộ POI
+        var serverVersion = await _api.GetServerVersionAsync(ct);
+        if (serverVersion is null)
+        {
+            System.Diagnostics.Debug.WriteLine("[PoiSync] Server không phản hồi, bỏ qua sync.");
+            return;
+        }
+        var localVersion = Preferences.Get(VersionPrefKey, "");
+        if (serverVersion == localVersion)
+        {
+            System.Diagnostics.Debug.WriteLine("[PoiSync] Version đã cập nhật, bỏ qua sync.");
+            return;
+        }
+
         var remote = await _api.GetAllAsync(lang: null, ct: ct);
         System.Diagnostics.Debug.WriteLine($"[PoiSync] Remote count = {remote.Count}");
 
@@ -84,6 +101,7 @@ public sealed class PoiSyncService
             saved++;
         }
         await _meta.SetLastSyncUtcAsync("pois", DateTime.UtcNow);
+        Preferences.Set(VersionPrefKey, serverVersion);
         System.Diagnostics.Debug.WriteLine($"[PoiSync] Saved/Upserted = {saved}");
     }
 }

@@ -10,6 +10,11 @@ public sealed class AppDb(DbContextOptions<AppDb> options) : DbContext(options)
     public DbSet<PoiMedia> PoiMedia => Set<PoiMedia>();
     public DbSet<Users> Users => Set<Users>();
     public DbSet<HistoryPoi> HistoryPoi => Set<HistoryPoi>();
+    public DbSet<Tour> Tours => Set<Tour>();
+    public DbSet<TourPoi> TourPois => Set<TourPoi>();
+    public DbSet<AnalyticsVisit> AnalyticsVisits => Set<AnalyticsVisit>();
+    public DbSet<AnalyticsRoute> AnalyticsRoutes => Set<AnalyticsRoute>();
+    public DbSet<AnalyticsListenDuration> AnalyticsListenDurations => Set<AnalyticsListenDuration>();
     protected override void OnModelCreating(ModelBuilder b)
     {
         b.Entity<Poi>(e =>
@@ -85,5 +90,29 @@ public sealed class AppDb(DbContextOptions<AppDb> options) : DbContext(options)
             e.HasIndex(x => new { x.IdUser, x.LastVisitedAt })
              .HasDatabaseName("IX_History_User");
         });
+
+        b.Entity<Tour>(e =>
+        {
+            e.ToTable("Tours");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).ValueGeneratedOnAdd();
+            e.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            e.Property(x => x.Description).HasMaxLength(2000);
+            e.Property(x => x.IsActive).HasDefaultValue(true);
+            e.Property(x => x.CreatedAt).HasDefaultValueSql("SYSUTCDATETIME()");
+            e.HasMany(x => x.TourPois).WithOne().HasForeignKey(x => x.TourId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<TourPoi>(e =>
+        {
+            e.ToTable("TourPois");
+            e.HasKey(x => new { x.TourId, x.PoiId });
+            e.Property(x => x.SortOrder).HasDefaultValue(0);
+            e.HasOne<Poi>().WithMany().HasForeignKey(x => x.PoiId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<AnalyticsVisit>(e =>      { e.ToTable("Analytics_Visit"); e.HasKey(x => x.Id); });
+        b.Entity<AnalyticsRoute>(e =>      { e.ToTable("Analytics_Route"); e.HasKey(x => x.Id); });
+        b.Entity<AnalyticsListenDuration>(e => { e.ToTable("Analytics_ListenDuration"); e.HasKey(x => x.Id); });
     }
 }

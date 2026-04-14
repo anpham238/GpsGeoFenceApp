@@ -52,6 +52,7 @@ builder.Services.AddHostedService<TranslationBackgroundService>();
 var app = builder.Build();
 
 app.UseCors();
+app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -358,6 +359,112 @@ app.MapPost("/api/v1/history", async (HistoryRequest req, AppDb db) =>
     await db.SaveChangesAsync();
     return Results.Ok(new { ok = true });
 });
+// ============================================================
+// GET /api/v1/sync/version — Mobile kiểm tra version trước khi sync
+// ============================================================
+app.MapGet("/api/v1/sync/version", async (AppDb db) =>
+{
+    var latest = await db.Pois.AsNoTracking()
+        .Where(p => p.IsActive)
+        .MaxAsync(p => (DateTime?)p.UpdatedAt);
+    var count = await db.Pois.CountAsync(p => p.IsActive);
+    var version = latest?.ToString("O") ?? "0";
+    return Results.Ok(new { version, count });
+});
+
+// ============================================================
+// GET /api/v1/sync/tours — Danh sách tour kèm POI IDs
+// ============================================================
+app.MapGet("/api/v1/sync/tours", async (AppDb db) =>
+{
+    var tours = await db.Tours.AsNoTracking()
+        .Where(t => t.IsActive)
+        .Include(t => t.TourPois)
+        .OrderBy(t => t.Id)
+        .Select(t => new
+        {
+            t.Id,
+            t.Name,
+            t.Description,
+            PoiIds = t.TourPois.OrderBy(tp => tp.SortOrder).Select(tp => tp.PoiId).ToList()
+        })
+        .ToListAsync();
+    return Results.Ok(tours);
+});
+
+// ============================================================
+// POST /api/v1/analytics/visit
+// ============================================================
+app.MapPost("/api/v1/analytics/visit", async (AnalyticsVisitRequest req, AppDb db) =>
+{
+    db.AnalyticsVisits.Add(new AnalyticsVisit
+    {
+        SessionId = req.SessionId,
+        PoiId     = req.PoiId,
+        Action    = req.Action,
+        Timestamp = DateTime.UtcNow
+    });
+    await db.SaveChangesAsync();
+    return Results.Ok(new { ok = true });
+});
+
+// POST /api/v1/analytics/route
+app.MapPost("/api/v1/analytics/route", async (AnalyticsRouteRequest req, AppDb db) =>
+{
+    db.AnalyticsRoutes.Add(new AnalyticsRoute
+    {
+        SessionId  = req.SessionId,
+        Latitude   = req.Latitude,
+        Longitude  = req.Longitude,
+        RecordedAt = DateTime.UtcNow
+    });
+    await db.SaveChangesAsync();
+    return Results.Ok(new { ok = true });
+});
+
+// POST /api/v1/analytics/listen-duration
+app.MapPost("/api/v1/analytics/listen-duration", async (AnalyticsListenRequest req, AppDb db) =>
+{
+    db.AnalyticsListenDurations.Add(new AnalyticsListenDuration
+    {
+        SessionId       = req.SessionId,
+        PoiId           = req.PoiId,
+        DurationSeconds = req.DurationSeconds,
+        RecordedAt      = DateTime.UtcNow
+    });
+    await db.SaveChangesAsync();
+    return Results.Ok(new { ok = true });
+});
+
+// GET /api/v1/analytics/dashboard
+app.MapGet("/api/v1/analytics/dashboard", async (AppDb db) =>
+{
+    var topPois = await db.AnalyticsVisits.AsNoTracking()
+        .GroupBy(x => x.PoiId)
+        .Select(g => new { PoiId = g.Key, TotalVisits = g.Count() })
+        .OrderByDescending(x => x.TotalVisits)
+        .Take(10)
+        .ToListAsync();
+
+    var avgDuration = await db.AnalyticsListenDurations.AsNoTracking()
+        .GroupBy(x => x.PoiId)
+        .Select(g => new { PoiId = g.Key, AvgSeconds = g.Average(x => x.DurationSeconds) })
+        .ToListAsync();
+
+    return Results.Ok(new { topPois, avgDuration });
+});
+
+// GET /api/v1/analytics/heatmap
+app.MapGet("/api/v1/analytics/heatmap", async (AppDb db) =>
+{
+    var points = await db.AnalyticsRoutes.AsNoTracking()
+        .OrderByDescending(x => x.RecordedAt)
+        .Take(5000)
+        .Select(x => new { x.Latitude, x.Longitude })
+        .ToListAsync();
+    return Results.Ok(points);
+});
+
 app.Run();
 // ─── Helpers ───────────────────────────────────────────────────────────────
 static byte ParseEventTypeByte(string? s) =>
@@ -393,3 +500,6 @@ public sealed class HistoryRequest
     public Guid UserId { get; set; }
     public int? DurationSeconds { get; set; }
 }
+public sealed record AnalyticsVisitRequest(Guid SessionId, int PoiId, string Action);
+public sealed record AnalyticsRouteRequest(Guid SessionId, double Latitude, double Longitude);
+public sealed record AnalyticsListenRequest(Guid SessionId, int PoiId, int DurationSeconds);
