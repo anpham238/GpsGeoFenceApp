@@ -46,7 +46,7 @@ namespace MauiApp1.PageModels
                 await _categoryRepository.SaveItemAsync(category);
             }
 
-            await AppShell.DisplayToastAsync("Categories saved");
+            await Shell.Current.DisplayAlertAsync("Thông báo", "Một nội dung gì đó", "OK");
             SemanticScreenReader.Announce("Categories saved");
         }
 
@@ -55,7 +55,7 @@ namespace MauiApp1.PageModels
         {
             Categories.Remove(category);
             await _categoryRepository.DeleteItemAsync(category);
-            await AppShell.DisplayToastAsync("Category deleted");
+            await Shell.Current.DisplayAlertAsync("Thông báo", "Một nội dung gì đó", "OK");
             SemanticScreenReader.Announce("Category deleted");
         }
 
@@ -65,7 +65,7 @@ namespace MauiApp1.PageModels
             var category = new Category();
             Categories.Add(category);
             await _categoryRepository.SaveItemAsync(category);
-            await AppShell.DisplayToastAsync("Category added");
+            await Shell.Current.DisplayAlertAsync("Thông báo", "Một nội dung gì đó", "OK");
             SemanticScreenReader.Announce("Category added");
         }
 
@@ -76,8 +76,7 @@ namespace MauiApp1.PageModels
             {
                 await _tagRepository.SaveItemAsync(tag);
             }
-
-            await AppShell.DisplayToastAsync("Tags saved");
+            await Shell.Current.DisplayAlertAsync("Thông báo", "Một nội dung gì đó", "OK");
             SemanticScreenReader.Announce("Tags saved");
         }
 
@@ -86,7 +85,7 @@ namespace MauiApp1.PageModels
         {
             Tags.Remove(tag);
             await _tagRepository.DeleteItemAsync(tag);
-            await AppShell.DisplayToastAsync("Tag deleted");
+            await Shell.Current.DisplayAlertAsync("Thông báo", "Một nội dung gì đó", "OK");
             SemanticScreenReader.Announce("Tags deleted");
         }
 
@@ -96,7 +95,7 @@ namespace MauiApp1.PageModels
             var tag = new Tag();
             Tags.Add(tag);
             await _tagRepository.SaveItemAsync(tag);
-            await AppShell.DisplayToastAsync("Tag added");
+            await Shell.Current.DisplayAlertAsync("Thông báo", "Một nội dung gì đó", "OK");
             SemanticScreenReader.Announce("Tags added");
         }
 

@@ -8,8 +8,6 @@ public sealed class PoiDto
     public double Latitude { get; set; }
     public double Longitude { get; set; }
     public int RadiusMeters { get; set; } = 120;
-    public int NearRadiusMeters { get; set; } = 220;
-    public int DebounceSeconds { get; set; } = 3;
     public int CooldownSeconds { get; set; } = 30;
     public string? NarrationText { get; set; }
     public string? Language { get; set; } = "vi-VN";

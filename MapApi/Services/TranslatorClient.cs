@@ -4,16 +4,10 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace MapApi.Services;
-
-/// <summary>
-/// Dịch văn bản đa ngôn ngữ.
-/// Ưu tiên: Azure Translator (nếu có key) → Google Translate (miễn phí, không cần key).
-/// </summary>
 public sealed class TranslatorClient
 {
     private readonly HttpClient _http;
     private readonly IConfiguration _config;
-
     // Map BCP-47 tag → mã ngôn ngữ Google Translate
     private static readonly Dictionary<string, string> GoogleLangMap = new(StringComparer.OrdinalIgnoreCase)
     {

@@ -3,16 +3,36 @@
     x:Class="MauiApp1.AppShell"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    xmlns:pages="clr-namespace:MauiApp1.Pages">
-    <!--  LoginPage là màn hình mặc định  -->
-    <ShellContent
-        Route="login"
-        Title="Đăng nhập"
-        ContentTemplate="{DataTemplate pages:LoginPage}" />
-    <!--  MapPage chỉ vào được sau khi đăng nhập thành công  -->
-    <ShellContent
-        Route="map"
-        Title="Bản đồ"
-        ContentTemplate="{DataTemplate pages:MapPage}" />
+    xmlns:pages="clr-namespace:MauiApp1.Pages"
+    FlyoutBehavior="Flyout">
 
+    <Shell.FlyoutHeader>
+        <Grid HeightRequest="160" BackgroundColor="#1976D2" Padding="20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0" WidthRequest="60" HeightRequest="60" HorizontalOptions="Start" StrokeThickness="0">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="30" />
+                </Border.StrokeShape>
+                <Image Source="dotnet_bot.png" Aspect="AspectFill" BackgroundColor="#E0E0E0"/>
+            </Border>
+
+            <Label x:Name="MenuUserName" Grid.Row="1" Text="Khách vãng lai" FontSize="18" FontAttributes="Bold" TextColor="White" Margin="0,10,0,0" />
+            <Label x:Name="MenuUserEmail" Grid.Row="2" Text="Bạn chưa đăng nhập" FontSize="14" TextColor="#E3F2FD" />
+        </Grid>
+    </Shell.FlyoutHeader>
+
+    <FlyoutItem Title="Bản đồ khám phá" Icon="map_icon.png">
+        <ShellContent Route="map" ContentTemplate="{DataTemplate pages:MapPage}" />
+    </FlyoutItem>
+
+    <ShellContent Route="login" ContentTemplate="{DataTemplate pages:LoginPage}" FlyoutItemIsVisible="False" />
+
+    <MenuItem Text="📍 Lịch sử điểm đã qua" Clicked="OnHistoryClicked" />
+    <MenuItem Text="🔒 Thay đổi mật khẩu" Clicked="OnChangePasswordClicked" />
+    <MenuItem Text="🚪 Đăng xuất" Clicked="OnLogoutClicked" />
 </Shell>

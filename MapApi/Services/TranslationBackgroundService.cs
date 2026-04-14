@@ -25,7 +25,6 @@ public sealed class TranslationBackgroundService : BackgroundService
         // Delay nhỏ để DB / EF sẵn sàng trước
         await Task.Delay(TimeSpan.FromSeconds(5), ct);
         await RunTranslationAsync(ct);
-
         var minutes  = _config.GetValue<int>("Translation:BackgroundIntervalMinutes", 10);
         var interval = TimeSpan.FromMinutes(minutes);
 

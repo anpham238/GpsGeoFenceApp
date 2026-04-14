@@ -147,7 +147,7 @@ namespace MauiApp1.PageModels
             await Shell.Current.GoToAsync("..?refresh=true");
 
             if (_task.ID > 0)
-                await AppShell.DisplayToastAsync("Task saved");
+                await Shell.Current.DisplayAlertAsync("Thông báo", "Một nội dung gì đó", "OK");
         }
 
         [RelayCommand(CanExecute = nameof(CanDelete))]
@@ -168,7 +168,7 @@ namespace MauiApp1.PageModels
                 await _taskRepository.DeleteItemAsync(_task);
 
             await Shell.Current.GoToAsync("..?refresh=true");
-            await AppShell.DisplayToastAsync("Task deleted");
+            await Shell.Current.DisplayAlertAsync("Thông báo", "Một nội dung gì đó", "OK");
         }
     }
 }

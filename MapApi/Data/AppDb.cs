@@ -10,7 +10,6 @@ public sealed class AppDb(DbContextOptions<AppDb> options) : DbContext(options)
     public DbSet<PoiMedia> PoiMedia => Set<PoiMedia>();
     public DbSet<Users> Users => Set<Users>();
     public DbSet<HistoryPoi> HistoryPoi => Set<HistoryPoi>();
-
     protected override void OnModelCreating(ModelBuilder b)
     {
         b.Entity<Poi>(e =>

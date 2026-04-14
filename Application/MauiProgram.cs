@@ -1,7 +1,6 @@
 ﻿using CommunityToolkit.Maui;
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.Controls.Maps;
-
 using MauiApp1.Data;
 using MauiApp1.Pages;
 using MauiApp1.Platforms.Android.Services;
@@ -10,17 +9,13 @@ using MauiApp1.Services.Api;
 using MauiApp1.Services.Audio;
 using MauiApp1.Services.Narration;
 using MauiApp1.Services.Sync;
-
 using ZXing.Net.Maui.Controls;
-
 namespace MauiApp1;
-
 public static class MauiProgram
 {
     public static MauiApp CreateMauiApp()
     {
         var builder = MauiApp.CreateBuilder();
-
         builder
             .UseMauiApp<App>()
             .UseMauiMaps()
@@ -31,7 +26,6 @@ public static class MauiProgram
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
                 fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
             });
-
 #if DEBUG
         builder.Logging.AddDebug();
 #endif
@@ -46,11 +40,9 @@ public static class MauiProgram
         builder.Services.AddSingleton<IGeofenceService, NoopGeofenceService>();
         builder.Services.AddSingleton<IAudioPlayer, NoopAudioPlayer>();
 #endif
-
         // ── Audio & Narration ─────────────────────────────────────────
         builder.Services.AddSingleton<AudioCache>();
         builder.Services.AddSingleton<NarrationManager>();
-
         // ── Local DB (SQLite) ─────────────────────────────────────────
         builder.Services.AddSingleton<PoiDatabase>();
         builder.Services.AddSingleton<SyncMetadataRepository>();
@@ -60,7 +52,7 @@ public static class MauiProgram
         builder.Services.AddHttpClient<PoiApiClient>(http =>
         {
             http.BaseAddress = new Uri(apiBaseUrl);
-            http.Timeout = TimeSpan.FromSeconds(30);
+            http.Timeout = TimeSpan.FromSeconds(60);
         });
         builder.Services.AddHttpClient<PlaybackApiClient>(http =>
         {

@@ -172,7 +172,7 @@ namespace MauiApp1.PageModels
 
             OnPropertyChanged(nameof(HasCompletedTasks));
             Tasks = new(Tasks);
-            await AppShell.DisplayToastAsync("All cleaned up!");
+            await Shell.Current.DisplayAlertAsync("Thông báo", "Một nội dung gì đó", "OK");
         }
     }
 }

@@ -39,7 +39,7 @@ public partial class LoginPage : ContentPage
             }
 
             AuthApiClient.SaveSession(result);
-            // Chuyển sang MapPage và xóa back stack
+            Preferences.Set("Username", username);
             await Shell.Current.GoToAsync("//map");
         }
         catch (Exception ex)

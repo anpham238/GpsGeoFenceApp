@@ -221,7 +221,7 @@ namespace MauiApp1.PageModels
             }
 
             await Shell.Current.GoToAsync("..");
-            await AppShell.DisplayToastAsync("Project saved");
+            await Shell.Current.DisplayAlertAsync("Thông báo", "Một nội dung gì đó", "OK");
         }
 
         [RelayCommand]
@@ -254,7 +254,7 @@ namespace MauiApp1.PageModels
 
             await _projectRepository.DeleteItemAsync(_project);
             await Shell.Current.GoToAsync("..");
-            await AppShell.DisplayToastAsync("Project deleted");
+            await Shell.Current.DisplayAlertAsync("Thông báo", "Một nội dung gì đó", "OK");
         }
 
         [RelayCommand]
@@ -300,7 +300,7 @@ namespace MauiApp1.PageModels
 
             Tasks = new(Tasks);
             OnPropertyChanged(nameof(HasCompletedTasks));
-            await AppShell.DisplayToastAsync("All cleaned up!");
+            await Shell.Current.DisplayAlertAsync("Thông báo", "Một nội dung gì đó", "OK");
         }
 
         [RelayCommand]

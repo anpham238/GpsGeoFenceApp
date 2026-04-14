@@ -34,7 +34,7 @@ public sealed class PoiSyncService
             {
                 try
                 {
-                    if (Connectivity.Current.NetworkAccess == NetworkAccess.Internet)
+                    if (Connectivity.Current.NetworkAccess != NetworkAccess.None)
                         await SyncOnceAsync(ct);
                 }
                 catch (Exception ex)
@@ -54,6 +54,7 @@ public sealed class PoiSyncService
         _cts = null;
         _loop = null;
     }
+
     public async Task SyncOnceAsync(CancellationToken ct = default)
     {
         var remote = await _api.GetAllAsync(lang: null, ct: ct);
@@ -70,12 +71,10 @@ public sealed class PoiSyncService
                 Latitude = r.Latitude,
                 Longitude = r.Longitude,
                 RadiusMeters = r.RadiusMeters,
-                NearRadiusMeters = r.NearRadiusMeters > 0 ? r.NearRadiusMeters : r.RadiusMeters * 2,
-                DebounceSeconds = r.DebounceSeconds > 0 ? r.DebounceSeconds : 3,
                 CooldownSeconds = r.CooldownSeconds,
                 NarrationText = r.NarrationText,
                 ImageUrl = r.ImageUrl,
-                MapLink  = r.MapLink,
+                MapLink = r.MapLink,
                 AudioUrl = r.AudioUrl,
                 Language = r.Language ?? "vi-VN",
                 IsActive = r.IsActive,

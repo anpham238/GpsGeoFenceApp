@@ -10,8 +10,6 @@ global using System;
 global using System.Collections.Generic;
 global using System.Threading;
 global using System.Threading.Tasks;
-
-// Nếu trước đây có 2 dòng dưới, hãy xóa hẳn:
-// global using MauiApp1.Data;
-// global using MauiApp1.PageModels;
+global using MauiApp1.Data;
+global using MauiApp1.PageModels;
 

@@ -103,9 +103,9 @@ namespace MauiApp1.Platforms.Android.Services
 
             if (type == "UNKNOWN") return;
 
-            if (!GeofenceEventGate.ShouldAccept(poi.Id, type, poi.DebounceSeconds, poi.CooldownSeconds))
+            // Đã đổi poi.DebounceSeconds thành số 3 mặc định
+            if (!GeofenceEventGate.ShouldAccept(poi.Id, type, 3, poi.CooldownSeconds))
                 return;
-
             OnPoiEvent?.Invoke(poi, type);
         }
     }

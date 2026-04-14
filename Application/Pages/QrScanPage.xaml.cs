@@ -89,7 +89,7 @@ public partial class QrScanPage : ContentPage
                     LblStatus.Text = $"✓ {poi.Name}";
                     var started = DateTime.UtcNow;
                     await _narration.HandleAsync(new Announcement(poi, PoiEventType.Tap, started));
-                    await DisplayAlert(poi.Name, "Đang phát thuyết minh...", "OK");
+                    await DisplayAlertAsync(poi.Name, "Đang phát thuyết minh...", "OK");
                     await CloseAsync();
                     return; // Kết thúc
                 }
