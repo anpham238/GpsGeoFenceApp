@@ -54,6 +54,9 @@
 			<VerticalStackLayout Spacing="8">
 				<Border StrokeShape="RoundRectangle 25" BackgroundColor="#33FFFFFF" Stroke="Transparent" WidthRequest="50" HeightRequest="50">
 					<Label Text="🖼️" FontSize="20" HorizontalOptions="Center" VerticalOptions="Center" />
+					<Border.GestureRecognizers>
+						<TapGestureRecognizer Tapped="OnPickImageClicked" />
+					</Border.GestureRecognizers>
 				</Border>
 				<Label Text="Ảnh có sẵn" TextColor="White" FontSize="12" HorizontalOptions="Center" />
 			</VerticalStackLayout>

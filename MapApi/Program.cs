@@ -245,6 +245,11 @@ app.MapGet("/api/v1/pois/{id}/narration", async (
     var poiLang = await db.PoiLanguages.AsNoTracking()
         .FirstOrDefaultAsync(n => n.IdPoi == id && n.LanguageTag == toLang, ct);
 
+    // Fallback về vi-VN nếu ngôn ngữ yêu cầu chưa được dịch
+    if (poiLang is null && toLang != "vi-VN")
+        poiLang = await db.PoiLanguages.AsNoTracking()
+            .FirstOrDefaultAsync(n => n.IdPoi == id && n.LanguageTag == "vi-VN", ct);
+
     // TextToSpeech đã chứa NarTTS + Description kết hợp (lưu lúc dịch)
     var tts  = poiLang?.TextToSpeech ?? "";
     var name = poi.Name;  // tên gốc — proper noun, dùng chung mọi ngôn ngữ
@@ -359,6 +364,56 @@ app.MapPost("/api/v1/history", async (HistoryRequest req, AppDb db) =>
     await db.SaveChangesAsync();
     return Results.Ok(new { ok = true });
 });
+// ============================================================
+// GET /api/v1/admin/pois — Danh sách toàn bộ POI (kể cả inactive)
+// ============================================================
+app.MapGet("/api/v1/admin/pois", async (AppDb db) =>
+{
+    var pois = await db.Pois.AsNoTracking()
+        .OrderByDescending(p => p.UpdatedAt)
+        .Select(p => new
+        {
+            p.Id, p.Name, p.Description, p.Latitude, p.Longitude,
+            p.RadiusMeters, p.CooldownSeconds, p.IsActive, p.CreatedAt, p.UpdatedAt
+        })
+        .ToListAsync();
+    return Results.Ok(pois);
+});
+
+// ============================================================
+// PUT /api/v1/admin/pois/{id} — Cập nhật POI (tên, mô tả, bán kính, toạ độ)
+// ============================================================
+app.MapPut("/api/v1/admin/pois/{id}", async (int id, PoiUpdateRequest req, AppDb db) =>
+{
+    var poi = await db.Pois.FirstOrDefaultAsync(p => p.Id == id);
+    if (poi is null) return Results.NotFound(new { error = "POI not found" });
+
+    if (!string.IsNullOrWhiteSpace(req.Name))    poi.Name        = req.Name.Trim();
+    if (req.Description is not null)             poi.Description = req.Description;
+    if (req.Latitude.HasValue)                   poi.Latitude    = req.Latitude.Value;
+    if (req.Longitude.HasValue)                  poi.Longitude   = req.Longitude.Value;
+    if (req.RadiusMeters.HasValue)               poi.RadiusMeters = req.RadiusMeters.Value;
+    if (req.CooldownSeconds.HasValue)            poi.CooldownSeconds = req.CooldownSeconds.Value;
+    poi.UpdatedAt = DateTime.UtcNow;
+
+    await db.SaveChangesAsync();
+    return Results.Ok(new { ok = true, poiId = poi.Id });
+});
+
+// ============================================================
+// DELETE /api/v1/admin/pois/{id} — Soft-delete (IsActive = false)
+// ============================================================
+app.MapDelete("/api/v1/admin/pois/{id}", async (int id, AppDb db) =>
+{
+    var poi = await db.Pois.FirstOrDefaultAsync(p => p.Id == id);
+    if (poi is null) return Results.NotFound(new { error = "POI not found" });
+
+    poi.IsActive  = false;
+    poi.UpdatedAt = DateTime.UtcNow;
+    await db.SaveChangesAsync();
+    return Results.Ok(new { ok = true });
+});
+
 // ============================================================
 // GET /api/v1/sync/version — Mobile kiểm tra version trước khi sync
 // ============================================================
@@ -499,6 +554,15 @@ public sealed class HistoryRequest
     public int PoiId { get; set; }
     public Guid UserId { get; set; }
     public int? DurationSeconds { get; set; }
+}
+public sealed class PoiUpdateRequest
+{
+    public string? Name { get; set; }
+    public string? Description { get; set; }
+    public double? Latitude { get; set; }
+    public double? Longitude { get; set; }
+    public int? RadiusMeters { get; set; }
+    public int? CooldownSeconds { get; set; }
 }
 public sealed record AnalyticsVisitRequest(Guid SessionId, int PoiId, string Action);
 public sealed record AnalyticsRouteRequest(Guid SessionId, double Latitude, double Longitude);

@@ -66,4 +66,16 @@ public partial class LoginPage : ContentPage
             System.Diagnostics.Debug.WriteLine($"[Login] Navigate register: {ex.Message}");
         }
     }
+
+    private async void OnBackToMapClicked(object sender, EventArgs e)
+    {
+        try
+        {
+            await Shell.Current.GoToAsync("//map");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[Login] Back to map: {ex.Message}");
+        }
+    }
 }

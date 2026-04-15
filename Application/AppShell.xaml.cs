@@ -5,6 +5,7 @@ public partial class AppShell : Shell
     public AppShell()
     {
         InitializeComponent();
+        Routing.RegisterRoute("qrscan", typeof(Pages.QrScanPage));
     }
 
     // Hàm này tự chạy mỗi khi chuyển màn hình để cập nhật lại tên trên Menu

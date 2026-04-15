@@ -46,9 +46,8 @@ public static class MauiProgram
         // ── Local DB (SQLite) ─────────────────────────────────────────
         builder.Services.AddSingleton<PoiDatabase>();
         builder.Services.AddSingleton<SyncMetadataRepository>();
-        builder.Services.AddSingleton<PoiNarrationCache>();   
+        builder.Services.AddSingleton<PoiNarrationCache>();
         string apiBaseUrl = "http://192.168.1.121:5150";
-        // ── API clients ─────────────────────────
         builder.Services.AddHttpClient<PoiApiClient>(http =>
         {
             http.BaseAddress = new Uri(apiBaseUrl);
@@ -85,6 +84,11 @@ public static class MauiProgram
         {
             http.BaseAddress = new Uri(apiBaseUrl);
             http.Timeout = TimeSpan.FromSeconds(10);
+        });
+        builder.Services.AddHttpClient<TicketApiClient>(http =>
+        {
+            http.BaseAddress = new Uri(apiBaseUrl);
+            http.Timeout = TimeSpan.FromSeconds(15);
         });
         // ── Sync engine ───────────────────────────────────────────────
         builder.Services.AddSingleton<PoiSyncService>();

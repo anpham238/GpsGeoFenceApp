@@ -18,6 +18,9 @@ public partial class MapPage : ContentPage
     private readonly PoiNarrationCache _narrationCache;
     private readonly TranslatorClient _translator;
     private readonly AnalyticsClient _analytics;
+    private readonly TourApiClient _tourApi;
+    private List<TourDto> _tours = [];
+    private TourDto? _selectedTour;
     private string _currentLang = LanguageService.Current;
     private readonly List<Poi> _pois = new();
     private readonly Dictionary<int, Pin> _pinMap = new();
@@ -42,7 +45,8 @@ public partial class MapPage : ContentPage
         PoiNarrationApiClient narrationApi,
         PoiNarrationCache narrationCache,
         TranslatorClient translator,
-        AnalyticsClient analytics)
+        AnalyticsClient analytics,
+        TourApiClient tourApi)
     {
         InitializeComponent();
         _geofence = geofence ?? throw new ArgumentNullException(nameof(geofence));
@@ -55,7 +59,7 @@ public partial class MapPage : ContentPage
         _narrationCache = narrationCache ?? throw new ArgumentNullException(nameof(narrationCache));
         _translator = translator ?? throw new ArgumentNullException(nameof(translator));
         _analytics = analytics ?? throw new ArgumentNullException(nameof(analytics));
-
+        _tourApi = tourApi ?? throw new ArgumentNullException(nameof(tourApi));
         // Toolbar
         ToolbarItems.Add(new ToolbarItem
         {
@@ -65,14 +69,25 @@ public partial class MapPage : ContentPage
             {
                 try
                 {
-                    var status = await Permissions.CheckStatusAsync<Permissions.Camera>();
-                    if (status != PermissionStatus.Granted)
-                        status = await Permissions.RequestAsync<Permissions.Camera>();
+                    // 1. Xin quyền Camera
+                    var camStatus = await Permissions.CheckStatusAsync<Permissions.Camera>();
+                    if (camStatus != PermissionStatus.Granted)
+                        camStatus = await Permissions.RequestAsync<Permissions.Camera>();
 
-                    if (status == PermissionStatus.Granted)
+                    // 2. Xin quyền Đọc Bộ Nhớ (Storage) để chọn ảnh QR có sẵn
+                    var storageStatus = await Permissions.CheckStatusAsync<Permissions.StorageRead>();
+                    if (storageStatus != PermissionStatus.Granted)
+                        storageStatus = await Permissions.RequestAsync<Permissions.StorageRead>();
+
+                    // 3. Nếu được cấp quyền Camera (quyền Storage có thể tùy chọn trên một số máy)
+                    if (camStatus == PermissionStatus.Granted)
+                    {
                         await Shell.Current!.GoToAsync("qrscan");
+                    }
                     else
-                        await this.DisplayAlertAsync("Từ chối", "Bạn cần cấp quyền Camera.", "OK");
+                    {
+                        await this.DisplayAlertAsync("Từ chối", "Bạn cần cấp quyền Camera để sử dụng tính năng này.", "OK");
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -80,7 +95,6 @@ public partial class MapPage : ContentPage
                 }
             })
         });
-
         ToolbarItems.Add(new ToolbarItem
         {
             Text = "Sync",
@@ -185,13 +199,14 @@ public partial class MapPage : ContentPage
             var cached = await _narrationCache.GetAsync(poiId, evByte, lang);
             if (!string.IsNullOrWhiteSpace(cached)) return cached;
 
-            if (Connectivity.Current.NetworkAccess == NetworkAccess.Internet)
+            if (Connectivity.Current.NetworkAccess != NetworkAccess.None)
             {
                 var dto = await _narrationApi.GetNarrationAsync(poiId, lang, ToEventName(evType), ct);
                 var text = dto?.NarrationText;
                 if (!string.IsNullOrWhiteSpace(text))
                 {
-                    await _narrationCache.UpsertAsync(poiId, dto!.EventType, dto.Language, text);
+                    // Dùng evByte (tính từ client) thay vì dto.EventType để key cache nhất quán
+                    await _narrationCache.UpsertAsync(poiId, evByte, dto!.Language, text);
                     return text;
                 }
             }
@@ -231,6 +246,7 @@ public partial class MapPage : ContentPage
             try { await _poiSync.SyncOnceAsync(); } catch { }
 
             await ReloadPoisAsync();
+            await LoadToursAsync();
             if (!await EnsureLocationPermissionsAsync()) return;
 
             await MainThread.InvokeOnMainThreadAsync(() => MyMap.IsShowingUser = true);
@@ -275,11 +291,42 @@ public partial class MapPage : ContentPage
         return status == PermissionStatus.Granted;
     }
 
+    private async Task LoadToursAsync()
+    {
+        try
+        {
+            _tours = await _tourApi.GetAllAsync();
+            await MainThread.InvokeOnMainThreadAsync(() =>
+            {
+                TourPicker.Items.Clear();
+                TourPicker.Items.Add("🗺 Tất cả địa điểm");
+                foreach (var t in _tours)
+                    TourPicker.Items.Add($"📍 {t.Name}");
+                TourPicker.SelectedIndex = 0;
+            });
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[Tours] Load failed: {ex.Message}");
+        }
+    }
+
+    private void OnTourSelected(object? sender, EventArgs e)
+    {
+        var idx = TourPicker.SelectedIndex;
+        _selectedTour = (idx <= 0 || idx > _tours.Count) ? null : _tours[idx - 1];
+        _ = ReloadPoisAsync();
+    }
+
     private async Task ReloadPoisAsync()
     {
         try
         {
-            var pois = await _db.GetActivePoisAsync();
+            var allPois = await _db.GetActivePoisAsync();
+            // Lọc theo tour nếu đang chọn
+            var pois = _selectedTour is null
+                ? allPois
+                : allPois.Where(p => _selectedTour.PoiIds.Contains(p.Id)).ToList();
             await MainThread.InvokeOnMainThreadAsync(() =>
             {
                 _pois.Clear();
@@ -290,18 +337,26 @@ public partial class MapPage : ContentPage
                 foreach (var p in pois)
                 {
                     _pois.Add(p);
+                    // Tour POI: màu xanh dương; POI thường: màu cam
+                    bool isTourPoi = _selectedTour?.PoiIds.Contains(p.Id) == true;
                     var circle = new Microsoft.Maui.Controls.Maps.Circle
                     {
                         Center = new Location(p.Latitude, p.Longitude),
                         Radius = Distance.FromMeters(p.RadiusMeters),
                         StrokeWidth = 0,
-                        FillColor = Color.FromRgba(255, 69, 0, 40)
+                        FillColor = isTourPoi
+                            ? Color.FromRgba(25, 118, 210, 50)   // xanh dương #1976D2
+                            : Color.FromRgba(255, 69, 0, 40)     // cam
                     };
                     MyMap.MapElements.Add(circle);
 
+                    // Hiển thị số thứ tự trong tour nếu đang lọc
+                    var tourOrder = _selectedTour is not null
+                        ? _selectedTour.PoiIds.IndexOf(p.Id) + 1
+                        : 0;
                     var pin = new Pin
                     {
-                        Label = p.Name,
+                        Label = tourOrder > 0 ? $"{tourOrder}. {p.Name}" : p.Name,
                         Address = p.Description ?? "",
                         Location = new Location(p.Latitude, p.Longitude),
                         Type = PinType.Place

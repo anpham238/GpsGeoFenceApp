@@ -40,6 +40,11 @@
                     BackgroundColor="Transparent"
                     TextColor="{StaticResource Primary}" />
 
+            <Button Text="Về bản đồ"
+                    Clicked="OnBackToMapClicked"
+                    BackgroundColor="Transparent"
+                    TextColor="{StaticResource Primary}" />
+
             <ActivityIndicator x:Name="LoadingIndicator"
                                IsRunning="False" IsVisible="False"
                                HorizontalOptions="Center" />

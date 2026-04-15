@@ -3,177 +3,129 @@ using MauiApp1.Services;
 using MauiApp1.Services.Audio;
 using Microsoft.Maui.Media;
 using System.Text.RegularExpressions;
+
 namespace MauiApp1.Services.Narration;
 
 public enum PoiEventType { Enter, Near, Tap }
-// ĐỔI CHỮ 'PoiLang' THÀNH 'string'
-public record Announcement(Poi Poi, string Lang, PoiEventType EventType, DateTime CreatedAtUtc, string? OverrideText = null)
-{
-    public string ResolvedLanguage =>
-        Lang
-        ?? TryGetCurrentLanguage()
-        ?? "vi-VN";
 
-    private static string? TryGetCurrentLanguage()
-    {
-        try { return LanguageService.Current; }
-        catch { return null; }
-    }
-}
+// Record Announcement đã sửa biến Lang
+public record Announcement(Poi Poi, string Lang, PoiEventType EventType, DateTime CreatedAtUtc);
 
 public sealed class NarrationManager
 {
     private readonly IAudioPlayer _player;
     private readonly AudioCache _cache;
-
-    private readonly object _gate = new();
     private CancellationTokenSource? _currentCts;
 
     public NarrationManager(IAudioPlayer player, AudioCache cache)
     {
-        _player = player ?? throw new ArgumentNullException(nameof(player));
-        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+        _player = player;
+        _cache = cache;
     }
+
+    public void Stop() { _currentCts?.Cancel(); _player.Stop(); }
 
     public async Task HandleAsync(Announcement ann, string? overrideText = null, CancellationToken ct = default)
     {
         Stop();
-
         _currentCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         var token = _currentCts.Token;
 
         try
         {
-            // 1) Ưu tiên phát audio nếu có
+            // 1. Ưu tiên phát Audio nếu có URL
             if (!string.IsNullOrWhiteSpace(ann.Poi.AudioUrl))
             {
-                var localPath = await _cache.GetOrAddFromUrlAsync(ann.Poi.AudioUrl!, token);
-                if (!string.IsNullOrWhiteSpace(localPath))
-                {
-                    await _player.PlayFileAsync(localPath!, token);
-                    return;
-                }
+                await _player.PlayFileAsync(ann.Poi.AudioUrl, token);
+                return;
             }
 
-            // 2) TTS: đọc text đã dịch (overrideText) nếu có
-            var text = !string.IsNullOrWhiteSpace(overrideText)
-                ? overrideText!
-                : (!string.IsNullOrWhiteSpace(ann.Poi.NarrationText)
-                    ? ann.Poi.NarrationText!
-                    : ComposeFallbackText(ann));
+            // 2. Không có Audio -> Đọc TTS (Ưu tiên Kịch bản lấy từ Database/API, nếu trống thì tự tạo câu)
+            var textToSpeak = !string.IsNullOrWhiteSpace(overrideText) 
+                              ? overrideText 
+                              : ComposeFallbackText(ann);
 
-            var lang = ann.ResolvedLanguage;
+            var locale = await FindLocaleAsync(ann.Lang, token);
+            var options = new SpeechOptions { Locale = locale, Pitch = 1.0f, Volume = 1.0f };
 
-            var options = new SpeechOptions { Volume = 1.0f, Pitch = 1.0f };
-            var locale = await FindLocaleAsync(lang, token);
-            if (locale is not null) options.Locale = locale;
-
-            foreach (var part in SplitToParts(text))
+            // Chia nhỏ câu để đọc tự nhiên hơn
+            foreach (var part in SplitToParts(textToSpeak))
             {
-                token.ThrowIfCancellationRequested();
+                if (token.IsCancellationRequested) break;
                 await TextToSpeech.Default.SpeakAsync(part, options, token);
-                await Task.Delay(400, token); // ✅ pause 500ms
             }
         }
-        catch (OperationCanceledException) { }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[Narration] Error: {ex}");
-        }
-        finally
-        {
-            Stop();
-        }
+        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[TTS Error] {ex.Message}"); }
     }
 
-    public void Stop()
-    {
-        lock (_gate)
-        {
-            try { _currentCts?.Cancel(); } catch { }
-            try { _player.Stop(); } catch { }
-            _currentCts?.Dispose();
-            _currentCts = null;
-        }
-    }
     private static string ComposeFallbackText(Announcement ann)
     {
         var name = ann.Poi.Name?.Trim() ?? "";
         var desc = string.IsNullOrWhiteSpace(ann.Poi.Description) ? "" : ann.Poi.Description!.Trim();
-        var lang = ann.ResolvedLanguage; // Lấy ngôn ngữ hiện tại (ví dụ: en-US, ja-JP)
+        var lang = ann.Lang ?? "vi-VN";
 
-        // 1. Gán tiếng Việt làm mặc định
+        // 1. Mặc định là Tiếng Việt
         string textNear = "Bạn sắp đến";
         string textEnter = "Bạn đã đến";
+        string textTap = "Bạn đang xem thông tin về";
 
-        // 2. Tự động đổi câu chào theo ngôn ngữ đang chọn
+        // 2. Tự động đổi theo Đa ngôn ngữ
         if (lang.StartsWith("en", StringComparison.OrdinalIgnoreCase))
         {
             textNear = "You are approaching";
             textEnter = "You have arrived at";
+            textTap = "You are viewing information for";
         }
         else if (lang.StartsWith("ja", StringComparison.OrdinalIgnoreCase))
         {
-            textNear = "まもなく到着します"; // Mamonaku tōchaku shimasu
-            textEnter = "到着しました";       // Tōchaku shimashita
+            textNear = "まもなく到着します"; 
+            textEnter = "到着しました";       
+            textTap = "の詳細を表示しています"; 
         }
         else if (lang.StartsWith("ko", StringComparison.OrdinalIgnoreCase))
         {
-            textNear = "곧 도착합니다";   // Got dochakhamnida
-            textEnter = "도착했습니다";   // Dochakhaetseumnida
+            textNear = "곧 도착합니다";   
+            textEnter = "도착했습니다";   
+            textTap = "정보를 보고 계십니다"; 
         }
         else if (lang.StartsWith("de", StringComparison.OrdinalIgnoreCase))
         {
             textNear = "Sie nähern sich";
-            textEnter = "Sie haben erreicht";
+            textEnter = "Sie sind angekommen in";
+            textTap = "Sie sehen sich Informationen an über";
         }
 
-        // 3. Ghép câu chào + Tên địa điểm + Mô tả
-        return ann.EventType switch
+        // 3. Lắp ráp thành câu hoàn chỉnh dựa trên hành động (Sắp đến / Đã đến / Bấm vào)
+        string sentence = ann.EventType switch
         {
             PoiEventType.Near => $"{textNear} {name}.",
-            PoiEventType.Enter or PoiEventType.Tap => string.IsNullOrWhiteSpace(desc)
-                ? $"{textEnter} {name}."
-                : $"{textEnter} {name}. {desc}",
-            _ => name
+            PoiEventType.Tap => $"{textTap} {name}.",
+            _ => $"{textEnter} {name}." // Mặc định là Enter (Đã đến)
         };
+
+        // Xử lý ngữ pháp riêng cho tiếng Nhật và tiếng Hàn (Tên địa điểm đứng trước động từ)
+        if (lang.StartsWith("ja", StringComparison.OrdinalIgnoreCase)) 
+        {
+            sentence = ann.EventType == PoiEventType.Tap ? $"{name}{textTap}." : $"{name}に{textEnter}.";
+        }
+        else if (lang.StartsWith("ko", StringComparison.OrdinalIgnoreCase)) 
+        {
+            sentence = ann.EventType == PoiEventType.Tap ? $"{name} {textTap}." : $"{name}에 {textEnter}.";
+        }
+
+        // 4. Nếu có mô tả thì ghép thêm mô tả vào sau
+        return string.IsNullOrWhiteSpace(desc) ? sentence : $"{sentence} {desc}";
     }
+
     private static IEnumerable<string> SplitToParts(string text)
     {
-        var lines = text
-            .Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries)
-            .Select(x => x.Trim())
-            .Where(x => x.Length > 0)
-            .ToList();
-
-        if (lines.Count > 1)
-            return lines;
-
-        // tách theo dấu câu để tạo nghỉ tự nhiên
-        var parts = Regex.Split(text, @"(?<=[\.!\?。！？])\s+")
-            .Select(x => x.Trim())
-            .Where(x => x.Length > 0)
-            .ToList();
-
-        return parts.Count > 0 ? parts : new[] { text };
+        return Regex.Split(text, @"(?<=[\.!\?。！？])\s+").Where(x => !string.IsNullOrWhiteSpace(x));
     }
 
     private static async Task<Locale?> FindLocaleAsync(string lang, CancellationToken ct)
     {
-        try
-        {
-            var locales = await TextToSpeech.Default.GetLocalesAsync();
-            var exact = locales.FirstOrDefault(l =>
-                string.Equals(l.Language, lang, StringComparison.OrdinalIgnoreCase));
-            if (exact is not null) return exact;
-
-            var primary = lang.Split('-')[0];
-            return locales.FirstOrDefault(l =>
-                l.Language.StartsWith(primary, StringComparison.OrdinalIgnoreCase));
-        }
-        catch
-        {
-            return null;
-        }
+        var locales = await TextToSpeech.Default.GetLocalesAsync();
+        return locales.FirstOrDefault(l => string.Equals(l.Language, lang, StringComparison.OrdinalIgnoreCase))
+               ?? locales.FirstOrDefault(l => l.Language.StartsWith(lang.Split('-')[0], StringComparison.OrdinalIgnoreCase));
     }
 }

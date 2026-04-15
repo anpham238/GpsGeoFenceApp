@@ -54,7 +54,7 @@ public partial class RegisterPage : ContentPage
             }
 
             await DisplayAlert("Thành công", "Tài khoản đã được tạo. Vui lòng đăng nhập.", "OK");
-            await Shell.Current.GoToAsync("..");  // quay về LoginPage
+            await Shell.Current.GoToAsync("..");  // quay về LoginPage+
         }
         catch (Exception ex)
         {
@@ -75,6 +75,18 @@ public partial class RegisterPage : ContentPage
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[Register] Back: {ex.Message}");
+        }
+    }
+
+    private async void OnBackToMapClicked(object sender, EventArgs e)
+    {
+        try
+        {
+            await Shell.Current.GoToAsync("//map");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[Register] Back to map: {ex.Message}");
         }
     }
 }

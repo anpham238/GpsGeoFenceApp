@@ -6,133 +6,209 @@
     xmlns:maps="clr-namespace:Microsoft.Maui.Controls.Maps;assembly=Microsoft.Maui.Controls.Maps"
     Title="">
     <Shell.TitleView>
-        <Grid ColumnDefinitions="*, Auto" Padding="0,0,16,0">
-            <Label x:Name="TopTitle" Text="Khách vãng lai" VerticalOptions="Center" FontSize="16" FontAttributes="Bold" TextColor="#555" />
-            <Button x:Name="BtnTopLogin" Grid.Column="1" Text="Đăng nhập" BackgroundColor="Transparent" TextColor="#1976D2" FontAttributes="Bold" Clicked="OnTopLoginClicked" Padding="0" />
-        </Grid>
+        <Border BackgroundColor="White" Stroke="#E6E6E6" StrokeThickness="1" Padding="12,8" Margin="0,4,10,4">
+            <Border.StrokeShape>
+                <RoundRectangle CornerRadius="18" />
+            </Border.StrokeShape>
+            <Border.Shadow>
+                <Shadow Brush="Black" Opacity="0.12" Offset="0,2" Radius="8" />
+            </Border.Shadow>
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                <Label x:Name="TopTitle"
+                       Text="Khách vãng lai"
+                       VerticalOptions="Center"
+                       FontSize="15"
+                       FontAttributes="Bold"
+                       TextColor="#2B2B2B"
+                       LineBreakMode="TailTruncation" />
+                <Button x:Name="BtnTopLogin"
+                        Grid.Column="1"
+                        Text="Đăng nhập"
+                        BackgroundColor="Transparent"
+                        TextColor="#1976D2"
+                        FontAttributes="Bold"
+                        FontSize="14"
+                        Clicked="OnTopLoginClicked"
+                        Padding="0" />
+            </Grid>
+        </Border>
     </Shell.TitleView>
 
     <Grid RowDefinitions="*" ColumnDefinitions="*">
-
         <maps:Map x:Name="MyMap"
                   MapType="Street"
                   IsShowingUser="False"
                   IsScrollEnabled="True"
                   IsZoomEnabled="True" />
 
-        <HorizontalStackLayout x:Name="LangBar" Grid.Row="0" HorizontalOptions="End" VerticalOptions="Start" Margin="0,8,8,0" Spacing="4" ZIndex="5">
-            <Border x:Name="BtnVi" Padding="8,4" Background="#1976D2" Stroke="#00000000">
-                <Border.StrokeShape>
-                    <RoundRectangle CornerRadius="6" />
-                </Border.StrokeShape>
-                <Label Text="🇻🇳" FontSize="16" />
-                <Border.GestureRecognizers>
-                    <TapGestureRecognizer Tapped="OnLangTapped" CommandParameter="vi-VN" />
-                </Border.GestureRecognizers>
-            </Border>
-            <Border x:Name="BtnEn" Padding="8,4" Background="#333333" Stroke="#00000000">
-                <Border.StrokeShape>
-                    <RoundRectangle CornerRadius="6" />
-                </Border.StrokeShape>
-                <Label Text="🇺🇸" FontSize="16" />
-                <Border.GestureRecognizers>
-                    <TapGestureRecognizer Tapped="OnLangTapped" CommandParameter="en-US" />
-                </Border.GestureRecognizers>
-            </Border>
-            <Border x:Name="BtnJa" Padding="8,4" Background="#333333" Stroke="#00000000">
-                <Border.StrokeShape>
-                    <RoundRectangle CornerRadius="6" />
-                </Border.StrokeShape>
-                <Label Text="🇯🇵" FontSize="16" />
-                <Border.GestureRecognizers>
-                    <TapGestureRecognizer Tapped="OnLangTapped" CommandParameter="ja-JP" />
-                </Border.GestureRecognizers>
-            </Border>
-            <Border x:Name="BtnKo" Padding="8,4" Background="#333333" Stroke="#00000000">
-                <Border.StrokeShape>
-                    <RoundRectangle CornerRadius="6" />
-                </Border.StrokeShape>
-                <Label Text="🇰🇷" FontSize="16" />
-                <Border.GestureRecognizers>
-                    <TapGestureRecognizer Tapped="OnLangTapped" CommandParameter="ko-KR" />
-                </Border.GestureRecognizers>
-            </Border>
-            <Border x:Name="BtnDe" Padding="8,4" Background="#333333" Stroke="#00000000">
-                <Border.StrokeShape>
-                    <RoundRectangle CornerRadius="6" />
-                </Border.StrokeShape>
-                <Label Text="🇩🇪" FontSize="16" />
-                <Border.GestureRecognizers>
-                    <TapGestureRecognizer Tapped="OnLangTapped" CommandParameter="de-DE" />
-                </Border.GestureRecognizers>
-            </Border>
-        </HorizontalStackLayout>
+        <Border Margin="12,10,12,0"
+                Padding="10,8"
+                VerticalOptions="Start"
+                HorizontalOptions="Fill"
+                BackgroundColor="#F8FFFFFF"
+                Stroke="#E6E6E6"
+                StrokeThickness="1"
+                ZIndex="6">
+            <Border.StrokeShape>
+                <RoundRectangle CornerRadius="14" />
+            </Border.StrokeShape>
+            <Border.Shadow>
+                <Shadow Brush="Black" Opacity="0.14" Offset="0,2" Radius="8" />
+            </Border.Shadow>
+            <VerticalStackLayout Spacing="8">
+                <HorizontalStackLayout x:Name="LangBar" Spacing="6">
+                    <Border x:Name="BtnVi" Padding="8,4" Background="#1976D2" Stroke="#00000000">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="8" />
+                        </Border.StrokeShape>
+                        <Label Text="🇻🇳" FontSize="15" />
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnLangTapped" CommandParameter="vi-VN" />
+                        </Border.GestureRecognizers>
+                    </Border>
+                    <Border x:Name="BtnEn" Padding="8,4" Background="#333333" Stroke="#00000000">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="8" />
+                        </Border.StrokeShape>
+                        <Label Text="🇺🇸" FontSize="15" />
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnLangTapped" CommandParameter="en-US" />
+                        </Border.GestureRecognizers>
+                    </Border>
+                    <Border x:Name="BtnJa" Padding="8,4" Background="#333333" Stroke="#00000000">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="8" />
+                        </Border.StrokeShape>
+                        <Label Text="🇯🇵" FontSize="15" />
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnLangTapped" CommandParameter="ja-JP" />
+                        </Border.GestureRecognizers>
+                    </Border>
+                    <Border x:Name="BtnKo" Padding="8,4" Background="#333333" Stroke="#00000000">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="8" />
+                        </Border.StrokeShape>
+                        <Label Text="🇰🇷" FontSize="15" />
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnLangTapped" CommandParameter="ko-KR" />
+                        </Border.GestureRecognizers>
+                    </Border>
+                    <Border x:Name="BtnDe" Padding="8,4" Background="#333333" Stroke="#00000000">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="8" />
+                        </Border.StrokeShape>
+                        <Label Text="🇩🇪" FontSize="15" />
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnLangTapped" CommandParameter="de-DE" />
+                        </Border.GestureRecognizers>
+                    </Border>
+                </HorizontalStackLayout>
 
-        <VerticalStackLayout Grid.Row="0" HorizontalOptions="End" VerticalOptions="Center" Margin="0,0,16,0" Spacing="16" ZIndex="5">
-            <Border Background="White" Stroke="#E0E0E0" StrokeThickness="1" WidthRequest="48" HeightRequest="48">
+                <Border BackgroundColor="#0F000000" Stroke="#00000000" Padding="8,0">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="10" />
+                    </Border.StrokeShape>
+                    <Picker x:Name="TourPicker"
+                            Title="Tất cả địa điểm"
+                            TextColor="#1F1F1F"
+                            TitleColor="#5F6368"
+                            FontSize="15"
+                            BackgroundColor="Transparent"
+                            HeightRequest="42"
+                            SelectedIndexChanged="OnTourSelected" />
+                </Border>
+            </VerticalStackLayout>
+        </Border>
+
+        <VerticalStackLayout Grid.Row="0"
+                             HorizontalOptions="End"
+                             VerticalOptions="Center"
+                             Margin="0,130,12,0"
+                             Spacing="10"
+                             ZIndex="7">
+            <Border Background="White" Stroke="#E6E6E6" StrokeThickness="1" WidthRequest="46" HeightRequest="46">
                 <Border.StrokeShape>
-                    <RoundRectangle CornerRadius="24" />
+                    <RoundRectangle CornerRadius="23" />
                 </Border.StrokeShape>
                 <Border.Shadow>
-                    <Shadow Brush="Black" Opacity="0.2" Offset="0,2" Radius="4" />
+                    <Shadow Brush="Black" Opacity="0.16" Offset="0,2" Radius="6" />
                 </Border.Shadow>
                 <Grid BackgroundColor="Transparent">
                     <Path Data="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"
-                          Fill="#1976D2" HorizontalOptions="Center" VerticalOptions="Center" WidthRequest="24" HeightRequest="24" />
+                          Fill="#1A73E8"
+                          HorizontalOptions="Center"
+                          VerticalOptions="Center"
+                          WidthRequest="23"
+                          HeightRequest="23" />
                     <Grid.GestureRecognizers>
                         <TapGestureRecognizer Tapped="OnLocateMeClicked" />
                     </Grid.GestureRecognizers>
                 </Grid>
             </Border>
 
-            <Border Background="White" Stroke="#E0E0E0" StrokeThickness="1" WidthRequest="44" HeightRequest="92">
+            <Border Background="White" Stroke="#E6E6E6" StrokeThickness="1" WidthRequest="46" HeightRequest="94">
                 <Border.StrokeShape>
-                    <RoundRectangle CornerRadius="8" />
+                    <RoundRectangle CornerRadius="12" />
                 </Border.StrokeShape>
                 <Border.Shadow>
-                    <Shadow Brush="Black" Opacity="0.2" Offset="0,2" Radius="4" />
+                    <Shadow Brush="Black" Opacity="0.16" Offset="0,2" Radius="6" />
                 </Border.Shadow>
                 <Grid RowDefinitions="*,1,*">
-                    <Button Grid.Row="0" Text="+" FontSize="22" TextColor="#555555" BackgroundColor="Transparent" Padding="0" Clicked="OnZoomInClicked" />
-                    <BoxView Grid.Row="1" Color="#EEEEEE" />
-                    <Button Grid.Row="2" Text="-" FontSize="26" TextColor="#555555" BackgroundColor="Transparent" Padding="0" Margin="0,0,0,2" Clicked="OnZoomOutClicked" />
+                    <Button Grid.Row="0" Text="+" FontSize="20" TextColor="#3C4043" BackgroundColor="Transparent" Padding="0" Clicked="OnZoomInClicked" />
+                    <BoxView Grid.Row="1" Color="#ECECEC" />
+                    <Button Grid.Row="2" Text="−" FontSize="20" TextColor="#3C4043" BackgroundColor="Transparent" Padding="0" Clicked="OnZoomOutClicked" />
                 </Grid>
             </Border>
         </VerticalStackLayout>
 
         <Border x:Name="BottomSheet" Padding="0" Background="Transparent" VerticalOptions="End" ZIndex="10">
-            <Border Padding="16,10,16,16" Background="White" Stroke="#E0E0E0">
+            <Border Padding="16,8,16,14" Background="White" Stroke="#E6E6E6">
                 <Border.StrokeShape>
-                    <RoundRectangle CornerRadius="16,16,0,0"/>
+                    <RoundRectangle CornerRadius="18,18,0,0" />
                 </Border.StrokeShape>
+                <Border.Shadow>
+                    <Shadow Brush="Black" Opacity="0.12" Offset="0,-2" Radius="10" />
+                </Border.Shadow>
                 <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto">
                     <Grid Grid.Row="0" Grid.ColumnSpan="2" Padding="0,6,0,8">
-                        <BoxView HeightRequest="4" WidthRequest="48" HorizontalOptions="Center" BackgroundColor="#CCCCCC" CornerRadius="2"/>
+                        <BoxView HeightRequest="4" WidthRequest="46" HorizontalOptions="Center" BackgroundColor="#D0D0D0" CornerRadius="2" />
                         <Grid.GestureRecognizers>
-                            <PanGestureRecognizer PanUpdated="BottomSheet_PanUpdated"/>
-                            <TapGestureRecognizer Tapped="BottomSheet_TapHeader"/>
+                            <PanGestureRecognizer PanUpdated="BottomSheet_PanUpdated" />
+                            <TapGestureRecognizer Tapped="BottomSheet_TapHeader" />
                         </Grid.GestureRecognizers>
                     </Grid>
+
                     <VerticalStackLayout Grid.Row="1" Grid.ColumnSpan="2" Spacing="2">
-                        <Label x:Name="DetailName" FontSize="18" FontAttributes="Bold" TextColor="#0D47A1"/>
-                        <Label x:Name="DetailDesc" FontSize="14" TextColor="#444"/>
-                        <Label x:Name="DetailCoord" FontSize="12" TextColor="#888"/>
-                        <Label x:Name="DetailRadius" FontSize="12" TextColor="#888"/>
+                        <Label x:Name="DetailName" FontSize="17" FontAttributes="Bold" TextColor="#202124" />
+                        <Label x:Name="DetailDesc" FontSize="13" TextColor="#5F6368" MaxLines="3" LineBreakMode="TailTruncation" />
+                        <Label x:Name="DetailCoord" FontSize="12" TextColor="#80868B" />
+                        <Label x:Name="DetailRadius" FontSize="12" TextColor="#80868B" />
                     </VerticalStackLayout>
-                    <Border Grid.Row="2" Grid.ColumnSpan="2" Background="#00000000" Stroke="#00000000" Margin="0,8,0,8">
+
+                    <Border Grid.Row="2" Grid.ColumnSpan="2" Background="#F2F4F8" Stroke="#00000000" Margin="0,8,0,8">
                         <Border.StrokeShape>
-                            <RoundRectangle CornerRadius="10"/>
+                            <RoundRectangle CornerRadius="10" />
                         </Border.StrokeShape>
-                        <Image x:Name="PoiImage" HeightRequest="180" Aspect="AspectFill" BackgroundColor="#EEE"/>
+                        <Image x:Name="PoiImage" HeightRequest="170" Aspect="AspectFill" />
                     </Border>
-                    <HorizontalStackLayout Grid.Row="3" Grid.ColumnSpan="2" Spacing="8">
-                        <Label Text="Link:" FontSize="12" TextColor="#666"/>
-                        <Label x:Name="LblPoiLink" FontSize="12" TextColor="#1976D2" LineBreakMode="TailTruncation" MaxLines="1"/>
+
+                    <HorizontalStackLayout Grid.Row="3" Grid.ColumnSpan="2" Spacing="6">
+                        <Label Text="Liên kết:" FontSize="12" TextColor="#5F6368" />
+                        <Label x:Name="LblPoiLink" FontSize="12" TextColor="#1A73E8" LineBreakMode="TailTruncation" MaxLines="1" />
                     </HorizontalStackLayout>
-                    <Button x:Name="BtnOpenInMaps" Grid.Row="4" Grid.ColumnSpan="2" Text="🗺 Mở Google Maps" FontSize="13" Padding="12,8" BackgroundColor="#1976D2" TextColor="White" CornerRadius="8" Margin="0,12,0,0"/>
+
+                    <Button x:Name="BtnOpenInMaps"
+                            Grid.Row="4"
+                            Grid.ColumnSpan="2"
+                            Text="Mở Google Maps"
+                            FontSize="13"
+                            Padding="12,9"
+                            BackgroundColor="#1A73E8"
+                            TextColor="White"
+                            CornerRadius="10"
+                            Margin="0,10,0,0" />
                 </Grid>
             </Border>
         </Border>
-
     </Grid>
 </ContentPage>
