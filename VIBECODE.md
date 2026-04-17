@@ -1,263 +1,75 @@
-# UML Design Input - GpsGeoFenceApp
+# 📦 Đặc Tả Các Phân Hệ Chức Năng (System Modules)
 
-> Tài liệu đầu vào để vẽ UML (Use Case, Sequence, Activity, Class) theo đúng hệ thống đang chạy.
+![Status](https://img.shields.io/badge/Status-Active_Development-brightgreen)
+![Platform](https://img.shields.io/badge/Platform-.NET_MAUI-512BD4)
+![Architecture](https://img.shields.io/badge/Architecture-Shared_Backend-orange)
 
----
+> Tài liệu này liệt kê và mô tả chi tiết 9 phân hệ (modules) cấu thành nên hệ thống **GpsGeoFenceApp**. Hệ thống được thiết kế tối ưu hóa cho cả thiết bị di động (End-user) và giao diện quản trị (Admin).
 
-## 1) Mục tiêu tài liệu
-
-- Chuẩn hóa mô tả chức năng hiện có của dự án.
-- Mô tả luồng hoạt động thực tế của từng chức năng.
-- Chỉ rõ `folder/file` liên quan để truy source nhanh khi vẽ UML.
-- Dùng như "single source of truth" cho vibe code + thiết kế hệ thống.
-
-## 2) Bức tranh hệ thống hiện tại
-
-### 2.1 Thành phần chính
-
-- **Mobile App (.NET MAUI):** `Application`
-- **Backend API (ASP.NET Core Minimal API):** `MapApi`
-- **Client storage:** SQLite trên mobile (`PoiDatabase`)
-- **Server storage:** SQL Server (EF Core `AppDb`)
-- **Tích hợp ngoài:** GPS/Geofence Android, Camera QR (ZXing), TTS/Audio, Translator
-
-### 2.2 Actors chính cho UML Use Case
-
-- **Guest User** (khách vãng lai)
-- **Logged-in User** (người dùng đã đăng nhập)
-- **Admin/CMS** (quản trị dữ liệu POI/tour, qua API admin)
-- **System Services** (GPS, Geofence engine, Camera, Translator, Analytics logger)
+## 📑 Mục lục
+1. [GPS Tracking](#1-gps-tracking-theo-thời-gian-thực)
+2. [Geofence Engine](#2-geofence--kích-hoạt-điểm-thuyết-minh)
+3. [Narration Engine](#3-thuyết-minh-tự-động-narration-engine)
+4. [POI Management](#4-quản-lý-dữ-liệu-poi)
+5. [Map View](#5-map-view-giao-diện-bản-đồ)
+6. [Web CMS](#6-hệ-thống-quản-trị-nội-dung-cms)
+7. [Analytics](#7-phân-tích-dữ-liệu-analytics)
+8. [QR Code Trigger](#8-qr-kích-hoạt-nội-dung)
+9. [Core Workflow](#9-luồng-hoạt-động-cốt-lõi-workflow)
 
 ---
 
-## 3) Danh sách chức năng đang dùng (Functional Inventory)
+## 1. GPS Tracking theo thời gian thực
+Phân hệ quản lý vị trí không gian của người dùng, đóng vai trò "mắt thần" cho toàn bộ hệ thống.
+* **Cơ chế hoạt động:** Lấy vị trí người dùng liên tục ở cả trạng thái **Foreground** (ứng dụng đang mở) và **Background** (ứng dụng chạy ngầm).
+* **Tối ưu hóa:** Cân bằng giữa độ chính xác của tọa độ GPS và mức độ tiêu thụ pin của thiết bị. (Sử dụng *Fused Location Provider Client* trên Android).
 
-### F01. Xem bản đồ và POI
+## 2. Geofence / Kích hoạt điểm thuyết minh
+Phân hệ cốt lõi chịu trách nhiệm dựng "hàng rào ảo" và phát hiện các sự kiện xâm nhập vùng.
+* **Thiết lập POI (Point of Interest):** Cấu hình các điểm tham quan với Tọa độ (Lat/Lng), Bán kính kích hoạt (Radius) và Mức độ ưu tiên (Priority).
+* **Trigger Events:** Tự động kích hoạt khi người dùng đi vào vùng (Enter) hoặc đến rất gần điểm.
+* **Cơ chế Anti-Spam:** Tích hợp thuật toán `Debounce` và thời gian `Cooldown` để tránh việc thiết bị phát lại liên tục khi người dùng đứng ở ranh giới vùng.
 
-- Hiển thị map, pin, vòng geofence, chi tiết POI.
-- Cho phép reset map, locate me, zoom in/out.
-- Lọc POI theo tour.
+## 3. Thuyết minh tự động (Narration Engine)
+Phân hệ xử lý âm thanh đầu ra, mang lại trải nghiệm "Hướng dẫn viên ảo".
+* **Text-to-Speech (TTS):** Chuyển đổi văn bản thành giọng nói. Hoạt động linh hoạt, hỗ trợ đa ngôn ngữ, dung lượng siêu nhẹ (phù hợp chạy offline).
+* **Pre-recorded Audio:** Hỗ trợ phát các file Audio có sẵn với giọng đọc tự nhiên, chuyên nghiệp (yêu cầu dung lượng lưu trữ lớn hơn).
+* **Audio Queue Management:** Quản lý hàng chờ âm thanh; đảm bảo không phát trùng lặp và tự động tạm dừng (pause/stop) khi thiết bị có cuộc gọi hoặc thông báo hệ thống khác.
 
-### F02. Đồng bộ dữ liệu POI (Sync)
+## 4. Quản lý dữ liệu POI
+Cấu trúc dữ liệu tĩnh được đồng bộ từ Server xuống Local Database (SQLite). Mỗi POI bao gồm:
+* Thông tin định danh và mô tả văn bản.
+* Hình ảnh minh họa & Link bản đồ (MapLink).
+* Dữ liệu đa ngôn ngữ (File Audio MP3 hoặc Kịch bản Script TTS).
 
-- App gọi API kiểm tra version.
-- Nếu version thay đổi thì tải danh sách POI mới và upsert SQLite.
-- Auto sync định kỳ + manual sync từ toolbar.
+## 5. Map View (Giao diện bản đồ)
+Giao diện tương tác trực quan (Front-end) dành cho du khách.
+* **Live Tracking:** Hiển thị vị trí thực tế của người dùng trên bản đồ (Blue dot).
+* **POI Markers:** Hiển thị tất cả các điểm tham quan xung quanh.
+* **Smart Highlight:** Tự động làm nổi bật điểm POI đang ở gần người dùng nhất.
+* **Detail View:** Pop-up hiển thị chi tiết thông tin khi người dùng chạm vào một điểm.
 
-### F03. Geofence theo vị trí
+## 6. Hệ thống quản trị nội dung (CMS)
+Cổng thông tin (Web Admin) dành cho Ban quản lý dự án.
+* **CRUD Operations:** Quản lý toàn diện dữ liệu POI, File Audio, và các bản dịch đa ngôn ngữ.
+* **Tour Management:** Nhóm các POI riêng lẻ thành các tuyến Tour du lịch hoàn chỉnh.
+* **System Monitor:** Xem lịch sử sử dụng và giám sát hoạt động hệ thống.
 
-- Đăng ký geofence Android cho danh sách POI.
-- Nhận event `ENTER/EXIT/DWELL`, lọc bằng gate chống spam.
-- Kích hoạt highlight + narration + analytics khi event hợp lệ.
+## 7. Phân tích dữ liệu (Analytics)
+Phân hệ thu thập nhật ký (Log) để hỗ trợ ra quyết định kinh doanh.
+* **Route Tracking:** Lưu vết tuyến đường di chuyển của du khách (dữ liệu được ẩn danh hoàn toàn).
+* **Metrics:** Thống kê các điểm được nghe nhiều nhất và thời gian dừng chân trung bình tại 1 điểm.
+* **Heatmap:** Xây dựng bản đồ nhiệt để xem khu vực nào đang thu hút đông khách nhất.
 
-### F04. Narration / Audio thuyết minh
+## 8. QR kích hoạt nội dung
+Giải pháp dự phòng (Fallback) và mở rộng trải nghiệm không phụ thuộc vào GPS.
+* **Vị trí triển khai:** Các trạm dừng xe buýt cố định (VD: phường Khánh Hội, Vĩnh Hội, Xóm Chiếu).
+* **Cách thức:** Quét mã QR code bằng camera của App để lập tức tải và nghe nội dung thuyết minh.
 
-- Ưu tiên phát file audio nếu có.
-- Fallback sang TTS theo ngôn ngữ chọn.
-- Lấy nội dung narration theo `poi + lang + eventType`, có cache local.
-
-### F05. Đa ngôn ngữ hiển thị và dịch
-
-- User chọn ngôn ngữ trên map page.
-- Tên/mô tả POI có thể dịch động qua Translator client.
-- Narration backend có fallback ngôn ngữ về `vi-VN`.
-
-### F06. Quét QR
-
-- Mở camera, quét QR và parse theo nhiều format.
-- Nếu QR là POI của hệ thống -> phát narration POI.
-- Nếu QR là URL -> hỏi người dùng rồi mở browser.
-
-### F07. Đăng nhập / đăng ký
-
-- Register account mới.
-- Login nhận JWT token.
-- Lưu thông tin user trong `Preferences`.
-
-### F08. Analytics / Playback / History
-
-- Ghi log visit, route, listen duration.
-- Ghi playback/history từ hành vi nghe thuyết minh.
-
-### F09. Quản trị dữ liệu POI/Tour (API)
-
-- Endpoint admin cho danh sách/sửa/xóa mềm POI.
-- Endpoint sync tours trả về danh sách tour + poi ids.
-- Endpoint dịch hàng loạt POI đa ngôn ngữ.
-
----
-
-## 4) Luồng hoạt động chính (UML-ready)
-
-### 4.1 Luồng mở app vào bản đồ (Activity/Sequence)
-
-1. User mở `MapPage`.
-2. `MapPage.InitializeMapAsync()` khởi tạo SQLite.
-3. Gọi `PoiSyncService.SyncOnceAsync()`.
-4. Nạp POI từ local DB -> render pin + geofence circle.
-5. Nạp tours -> bind `TourPicker`.
-6. Xin quyền location.
-7. Bật tracking vị trí + đăng ký geofence.
-8. Bắt đầu auto sync định kỳ.
-
-### 4.2 Luồng geofence event -> narration (Sequence)
-
-1. Android geofence gửi transition (`ENTER/EXIT/DWELL`).
-2. `AndroidGeofenceService` map event sang `OnPoiEvent`.
-3. `MapPage.OnGeofenceEvent()` nhận event.
-4. Lấy narration text theo `poi/lang/event`.
-5. `NarrationManager.HandleAsync()` phát audio hoặc TTS.
-6. Gửi log playback + analytics visit/duration.
-
-### 4.3 Luồng QR scan (Activity/Sequence)
-
-1. User vào `QrScanPage`, camera bắt đầu detect.
-2. QR detected -> `HandleQrValueAsync(raw)`.
-3. Nhánh A: parse được `poi_id` -> load POI local -> phát narration.
-4. Nhánh B: là URL -> confirm -> mở browser.
-5. Nhánh C: invalid -> báo lỗi -> resume scan.
-
-### 4.4 Luồng sync dữ liệu POI (Sequence)
-
-1. `PoiSyncService` gọi `GET /api/v1/sync/version`.
-2. So với version local trong `Preferences`.
-3. Nếu khác -> `GET /api/v1/pois`.
-4. Upsert từng POI vào SQLite (`PoiDatabase.SaveAsync`).
-5. Lưu version mới + last sync timestamp.
-
-### 4.5 Luồng đăng nhập (Sequence)
-
-1. User nhập username/password.
-2. Mobile gọi `POST /api/v1/auth/login`.
-3. Backend verify hash BCrypt + tạo JWT.
-4. Trả token + user info.
-5. App lưu `Preferences` và cập nhật UI profile/menu.
-
----
-
-## 5) Mapping chức năng -> folder/file
-
-### 5.1 Mobile App (`Application`)
-
-
-| Chức năng                                        | Folder/File chính                                                                                                                                                                                    |
-| ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| DI, service registration, HTTP client            | `Application/MauiProgram.cs`                                                                                                                                                                         |
-| Routing shell + menu user/logout                 | `Application/AppShell.xaml`, `Application/AppShell.xaml.cs`                                                                                                                                          |
-| Bản đồ + geofence + tour + narration + analytics | `Application/Pages/MapPage.xaml`, `Application/Pages/MapPage.xaml.cs`                                                                                                                                |
-| QR scan camera                                   | `Application/Pages/QrScanPage.xaml`, `Application/Pages/QrScanPage.xaml.cs`                                                                                                                          |
-| Login/Register UI                                | `Application/Pages/LoginPage.xaml.cs`, `Application/Pages/RegisterPage.xaml.cs`                                                                                                                      |
-| SQLite POI local                                 | `Application/Data/PoiDatabase.cs`                                                                                                                                                                    |
-| Sync engine                                      | `Application/Services/Sync/PoiSyncService.cs`, `Application/Data/SyncMetadataRepository.cs`                                                                                                          |
-| Narration orchestration                          | `Application/Services/Narration/NarrationManager.cs`, `Application/Services/Narration/INarrationManager.cs`                                                                                          |
-| Audio playback/cache                             | `Application/Services/Audio/IAudioPlayer.cs`, `Application/Services/Audio/AndroidAudioPlayer.cs`, `Application/Services/Audio/AudioCache.cs`                                                         |
-| API client POI                                   | `Application/Services/Api/PoiApiClient.cs`                                                                                                                                                           |
-| API client narration                             | `Application/Services/Api/PoiNarrationApiClient.cs`                                                                                                                                                  |
-| API client auth                                  | `Application/Services/Api/AuthApiClient.cs`                                                                                                                                                          |
-| API client tour                                  | `Application/Services/Api/TourApiClient.cs`                                                                                                                                                          |
-| API client analytics/playback/translator         | `Application/Services/Api/AnalyticsClient.cs`, `Application/Services/Api/PlaybackApiClient.cs`, `Application/Services/Api/TranslatorClient.cs`                                                       |
-| Android geofence + location                      | `Application/Platforms/Android/Services/AndroidGeofenceService.cs`, `Application/Platforms/Android/Services/AndroidLocationService.cs`, `Application/Platforms/Android/GeofenceBroadcastReceiver.cs` |
-| Domain model POI/tour/dto                        | `Application/Models/POI.cs`, `Application/Models/TourDto.cs`, `Application/Models/PoiDto.cs`, `Application/Models/PoiNarrationDto.cs`                                                                |
-
-
-### 5.2 Backend API (`MapApi`)
-
-
-| Chức năng                             | Folder/File chính                                                                                                                                                                                   |
-| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Startup, middleware, endpoint mapping | `MapApi/Program.cs`                                                                                                                                                                                 |
-| EF DbContext + schema mapping         | `MapApi/Data/AppDb.cs`                                                                                                                                                                              |
-| Model chính                           | `MapApi/Models/Poi.cs`, `MapApi/Models/PoiLanguage.cs`, `MapApi/Models/PoiMedia.cs`, `MapApi/Models/Tour.cs`, `MapApi/Models/Users.cs`, `MapApi/Models/HistoryPoi.cs`, `MapApi/Models/Analytics.cs` |
-| POI management services               | `MapApi/Services/PoiManagementService.cs`                                                                                                                                                           |
-| Translation services/background       | `MapApi/Services/TranslatorClient.cs`, `MapApi/Services/TranslationBackgroundService.cs`                                                                                                            |
-| Controller bổ sung                    | `MapApi/Controllers/PoiController.cs`, `MapApi/Controllers/PoiMediaController.cs`, `MapApi/Controllers/QrController.cs`, `MapApi/Controllers/TranslatorController.cs`                               |
-| Migrations EF                         | `MapApi/Migrations/`*                                                                                                                                                                               |
-
-
----
-
-## 6) Gợi ý phạm vi cho từng UML
-
-### 6.1 Use Case Diagram (Nên vẽ trước)
-
-- **Guest User:** xem map, chọn ngôn ngữ, quét QR, nghe narration.
-- **Logged-in User:** thêm login/logout, ghi history cá nhân.
-- **Admin:** quản lý POI/tour/media, chạy dịch hàng loạt.
-- **External Systems:** GPS, Geofence, Camera, Translator API.
-
-### 6.2 Sequence Diagram ưu tiên
-
-- `MapPage init + sync + register geofence`
-- `Geofence ENTER -> narration + analytics`
-- `QR scan -> parse -> POI narration hoặc open URL`
-- `Login -> JWT`
-
-### 6.3 Activity Diagram ưu tiên
-
-- Activity "User visiting POI"
-- Activity "Sync decision by version"
-- Activity "QR handling with 3 branches"
-
-### 6.4 Class Diagram phạm vi
-
-- **Mobile domain/services:** `MapPage`, `PoiSyncService`, `NarrationManager`, `PoiDatabase`, `AndroidGeofenceService`, `PoiApiClient`, `PoiNarrationApiClient`
-- **Backend entities:** `Poi`, `PoiLanguage`, `PoiMedia`, `Tour`, `TourPoi`, `Users`, `HistoryPoi`, `Analytics`*
-- **Quan hệ chính:** `Poi 1-n PoiLanguage`, `Poi 1-n PoiMedia`, `Tour n-n Poi (qua TourPoi)`, `Users 1-n HistoryPoi`
-
----
-
-## 7) PlantUML starter snippets (để vẽ nhanh)
-
-### 7.1 Use Case Starter
-
-```plantuml
-@startuml
-left to right direction
-actor Guest
-actor User
-actor Admin
-actor "GPS/Geofence Service" as GPS
-actor "Camera Scanner" as CAM
-
-rectangle GpsGeoFenceApp {
-  usecase "View Map & POI" as UC1
-  usecase "Sync POI Data" as UC2
-  usecase "Receive Geofence Event" as UC3
-  usecase "Play Narration" as UC4
-  usecase "Scan QR" as UC5
-  usecase "Login/Register" as UC6
-  usecase "Manage POI/Tour" as UC7
-}
-@enduml
-```
-
-### 7.2 Sequence Starter (Geofence -> Narration)
-
-```plantuml
-@startuml
-actor User
-participant AndroidGeofenceService
-participant MapPage
-participant PoiNarrationApiClient
-participant NarrationManager
-participant PlaybackApiClient
-participant AnalyticsClient
-
-AndroidGeofenceService -> MapPage: OnPoiEvent(ENTER/NEAR)
-MapPage -> PoiNarrationApiClient: GetNarrationAsync(poiId, lang, eventType)
-PoiNarrationApiClient --> MapPage: NarrationText
-MapPage -> NarrationManager: HandleAsync(Announcement, overrideText)
-MapPage -> PlaybackApiClient: LogAsync()
-MapPage -> AnalyticsClient: LogVisit/LogListenDuration
-@enduml
-```
-
----
-
-## 8) Checklist khi cập nhật tài liệu UML
-
-- Chức năng mới có thêm vào mục Functional Inventory.
-- Luồng mới có cập nhật vào section Luồng hoạt động.
-- Có map file nguồn tương ứng trong bảng folder/file.
-- Diagram draft khớp với flow thực tế trong code.
-
+## 9. Luồng hoạt động cốt lõi (Workflow)
+Sự kết hợp của tất cả các module trên tạo thành một vòng lặp khép kín:
+1. **Sync:** App tải danh sách POI (Tọa độ, bán kính, ưu tiên, nội dung).
+2. **Track:** Background Service liên tục cập nhật vị trí người dùng.
+3. **Detect:** `Geofence Engine` xác định POI gần nhất lọt vào bán kính $\rightarrow$ Bắn tín hiệu Trigger.
+4. **Execute:** `Narration Engine` kiểm tra trạng thái Cooldown. Nếu hợp lệ $\rightarrow$ Phát TTS/Audio.
+5. **Log:** Hệ thống lưu lại lịch sử đã phát để khóa Cooldown và đồng bộ Analytics lên server.

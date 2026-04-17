@@ -458,10 +458,6 @@ public partial class MapPage : ContentPage
                         var started = DateTime.UtcNow;
                         var lang = LanguageService.Current;
                         var fullText = await GetNarrationTextAsync(nearest.Id, PoiEventType.Near, lang, token);
-
-                        // ĐÃ SỬA CẤU TRÚC ANNOUNCEMENT TẠI ĐÂY
-                        await _narration.HandleAsync(new Announcement(nearest, lang, PoiEventType.Near, started), overrideText: fullText, ct: token);
-
                         var dur = (int)(DateTime.UtcNow - started).TotalSeconds;
                         _ = _playback.LogAsync(nearest.Id, "NEAR", dur > 0 ? dur : null);
                     }

@@ -6,8 +6,7 @@ public sealed class TicketApiClient(HttpClient http)
 {
     public async Task<TicketScanResult?> ScanTicketAsync(string ticketCode, CancellationToken ct = default)
     {
-        var resp = await http.PostAsync($"/api/v1/tickets/{ticketCode}/scan", null, ct);
-        if (!resp.IsSuccessStatusCode) return null; // Lỗi hoặc hết hạn
+        var resp = await http.PostAsync($"/api/v1/tickets/scan/{ticketCode}", null, ct); if (!resp.IsSuccessStatusCode) return null;
         return await resp.Content.ReadFromJsonAsync<TicketScanResult>(ct);
     }
 }

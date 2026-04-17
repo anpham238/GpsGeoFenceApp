@@ -43,14 +43,13 @@ builder.Services.AddAuthorization();
 // 5) Swagger + CORS + Services
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddControllers();
 builder.Services.AddCors(opt =>
     opt.AddDefaultPolicy(p => p.AllowAnyHeader().AllowAnyMethod().AllowAnyOrigin()));
 builder.Services.AddHttpClient<TranslatorClient>();
 builder.Services.AddScoped<PoiManagementService>();
 builder.Services.AddHostedService<TranslationBackgroundService>();
-
 var app = builder.Build();
-
 app.UseCors();
 app.UseStaticFiles();
 app.UseAuthentication();
@@ -129,49 +128,6 @@ app.MapPost("/api/v1/admin/translate-all", async (
 })
 .WithName("TranslateAll")
 .WithSummary("Dịch tất cả POI đang có sang 5 ngôn ngữ (en-US, zh-Hans, ja-JP, ko-KR, de-DE)");
-
-// ============================================================
-// GET /api/v1/pois — Trả về POI kèm media đầu tiên (backward compat)
-// ============================================================
-app.MapGet("/api/v1/pois", async (AppDb db) =>
-{
-    var pois = await db.Pois.AsNoTracking()
-        .Where(p => p.IsActive)
-        .OrderBy(p => p.Name)
-        .ToListAsync();
-
-    // Join PoiMedia để lấy image/maplink đầu tiên cho mỗi POI
-    var poiIds = pois.Select(p => p.Id).ToList();
-    var mediaMap = await db.PoiMedia.AsNoTracking()
-        .Where(m => poiIds.Contains(m.IdPoi))
-        .GroupBy(m => m.IdPoi)
-        .Select(g => new { IdPoi = g.Key, g.First().Image, g.First().MapLink, g.First().Audio })
-        .ToDictionaryAsync(x => x.IdPoi);
-
-    var result = pois.Select(p => new
-    {
-        p.Id,
-        p.Name,
-        p.Description,
-        p.Latitude,
-        p.Longitude,
-        p.RadiusMeters,
-        p.CooldownSeconds,
-        p.IsActive,
-        p.UpdatedAt,
-        // Backward compat cho mobile
-        NearRadiusMeters = p.RadiusMeters * 2,
-        DebounceSeconds = 3,
-        ImageUrl  = mediaMap.TryGetValue(p.Id, out var m)  ? m.Image   : null,
-        MapLink   = mediaMap.TryGetValue(p.Id, out var m2) ? m2.MapLink : null,
-        AudioUrl  = mediaMap.TryGetValue(p.Id, out var m3) ? m3.Audio   : null,
-        Language = "vi-VN",
-        NarrationText = (string?)null  // mobile sẽ fetch qua /narration endpoint
-    });
-
-    return Results.Ok(result);
-});
-
 // ============================================================
 // GET /api/v1/pois/{id}
 // ============================================================
@@ -185,10 +141,6 @@ app.MapGet("/api/v1/pois/{id}", async (int id, AppDb db) =>
 
     return Results.Ok(new
     {
-        poi.Id,
-        poi.Name,
-        poi.Description,
-        poi.Latitude,
         poi.Longitude,
         poi.RadiusMeters,
         poi.CooldownSeconds,
@@ -519,7 +471,7 @@ app.MapGet("/api/v1/analytics/heatmap", async (AppDb db) =>
         .ToListAsync();
     return Results.Ok(points);
 });
-
+app.MapControllers();
 app.Run();
 // ─── Helpers ───────────────────────────────────────────────────────────────
 static byte ParseEventTypeByte(string? s) =>

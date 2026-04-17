@@ -5,6 +5,7 @@ public partial class AppShell : Shell
     public AppShell()
     {
         InitializeComponent();
+        Routing.RegisterRoute("register", typeof(RegisterPage));
         Routing.RegisterRoute("qrscan", typeof(Pages.QrScanPage));
     }
 
@@ -49,7 +50,7 @@ public partial class AppShell : Shell
         Shell.Current.FlyoutIsPresented = false;
 
         // Cập nhật lại thanh Menu ngay lập tức
-        MenuUserName.Text = "Khách vãng lai";
+        MenuUserName.Text = "Khách du lịch";
         MenuUserEmail.Text = "Bạn chưa đăng nhập";
 
         // Mở lại trang bản đồ để Top Bar tự làm mới (hiện lại nút Đăng Nhập)

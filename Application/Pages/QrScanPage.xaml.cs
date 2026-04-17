@@ -17,11 +17,10 @@ public partial class QrScanPage : ContentPage
     private readonly PoiDatabase _db;
     private readonly NarrationManager _narration;
     private readonly PlaybackApiClient _playback;
+    private readonly TicketApiClient _ticketApi; // Thêm API gọi vé
     private bool _isProcessing;
     private bool _torchOn;
     private CameraBarcodeReaderView? _cameraView;
-    private readonly TicketApiClient _ticketApi;
-
 
     public QrScanPage(PoiDatabase db, NarrationManager narration, PlaybackApiClient playback, TicketApiClient ticketApi)
     {
@@ -65,7 +64,7 @@ public partial class QrScanPage : ContentPage
         if (_cameraView != null)
         {
             _cameraView.IsDetecting = false;
-            _cameraView.IsTorchOn = false; // Tắt đèn khi rời khỏi trang
+            _cameraView.IsTorchOn = false;
             _torchOn = false;
         }
         base.OnDisappearing();
@@ -74,7 +73,6 @@ public partial class QrScanPage : ContentPage
     private void OnBarcodesDetected(object? sender, BarcodeDetectionEventArgs e)
     {
         if (_isProcessing) return;
-
         var raw = e.Results?.FirstOrDefault()?.Value;
         if (string.IsNullOrWhiteSpace(raw)) return;
 
@@ -94,9 +92,9 @@ public partial class QrScanPage : ContentPage
             // =========================================================
             var extractedData = ExtractQrData(raw);
 
+            // Nếu đây là mã Vé (có giới hạn số lần quét)
             if (!string.IsNullOrEmpty(extractedData.TicketId))
             {
-                // Gọi API để kiểm tra vé
                 var result = await _ticketApi.ScanTicketAsync(extractedData.TicketId);
                 if (result == null)
                 {
@@ -106,18 +104,18 @@ public partial class QrScanPage : ContentPage
                     return;
                 }
 
-                // Nếu vé còn hạn, phát âm thanh
                 var poi = await _db.GetByIdAsync(result.PoiId);
                 if (poi != null)
                 {
                     LblStatus.Text = $"✓ {poi.Name} (Còn {result.Remaining} lần)";
                     await _narration.HandleAsync(new Announcement(poi, result.Language, PoiEventType.Tap, DateTime.UtcNow));
-                    await DisplayAlertAsync("Thành công", $"Đang phát thuyết minh...\n(Vé còn {result.Remaining} lần quét)", "OK");
+                    await DisplayAlertAsync("Thành công", $"Đang phát thuyết minh...\n(Vé của bạn còn {result.Remaining} lần quét)", "OK");
                     await CloseAsync();
                     return;
                 }
             }
-            else if (extractedData.PoiId.HasValue) // Mã quét kiểu ID cổ điển
+            // Nếu là QR quét ID địa điểm bình thường (không giới hạn)
+            else if (extractedData.PoiId.HasValue)
             {
                 var poi = await _db.GetByIdAsync(extractedData.PoiId.Value);
                 if (poi != null)
@@ -132,32 +130,20 @@ public partial class QrScanPage : ContentPage
             }
 
             // =========================================================
-            // TRƯỜNG HỢP 2: KIỂM TRA XEM CÓ PHẢI LÀ ĐƯỜNG LINK (URL) KHÔNG
+            // TRƯỜNG HỢP 2: KIỂM TRA LINK WEB
             // =========================================================
-            if (Uri.TryCreate(raw, UriKind.Absolute, out Uri? uriResult)
-                && (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps))
+            if (Uri.TryCreate(raw, UriKind.Absolute, out Uri? uriResult) && (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps))
             {
                 LblStatus.Text = "Đang mở trình duyệt...";
-
-                // Hỏi người dùng xem có muốn mở trình duyệt ngoài không
-                bool openLink = await DisplayAlertAsync("Quét được liên kết (Link)", $"Bạn có muốn mở trang web này không?\n\n{raw}", "Mở", "Hủy");
-
-                if (openLink)
-                {
-                    await Launcher.Default.OpenAsync(uriResult);
-                }
-
-                await ResumeScanAsync(); // Quét xong cho phép quét tiếp
-                return; // Kết thúc
+                bool openLink = await DisplayAlertAsync("Quét được liên kết", $"Bạn có muốn mở trang web này không?\n\n{raw}", "Mở", "Hủy");
+                if (openLink) await Launcher.Default.OpenAsync(uriResult);
+                await ResumeScanAsync();
+                return;
             }
 
-            // =========================================================
-            // TRƯỜNG HỢP 3: MÃ KHÔNG HỢP LỆ (KHÔNG PHẢI POI, KHÔNG PHẢI LINK)
-            // =========================================================
             LblStatus.Text = "Mã QR không hợp lệ";
-            await DisplayAlertAsync("Lỗi quét mã", "Mã QR này không thuộc hệ thống ứng dụng và cũng không phải là một đường dẫn hợp lệ.", "Quét lại");
-
-            await ResumeScanAsync(); // Bật lại camera cho người dùng quét mã khác
+            await DisplayAlertAsync("Lỗi quét mã", "Mã QR này không thuộc hệ thống ứng dụng.", "Quét lại");
+            await ResumeScanAsync();
         }
         catch (Exception ex)
         {
@@ -165,28 +151,32 @@ public partial class QrScanPage : ContentPage
             await ResumeScanAsync();
         }
     }
+
+    // Hàm bóc tách ID hoặc Ticket từ JSON
     private static (string? TicketId, int? PoiId) ExtractQrData(string raw)
     {
+        const string prefix = "smarttourism://poi/";
+        if (raw.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+        {
+            if (int.TryParse(raw[prefix.Length..].Trim('/'), out int id)) return (null, id);
+        }
         try
         {
             using var doc = JsonDocument.Parse(raw);
             if (doc.RootElement.TryGetProperty("ticket_id", out var ticketIdElement))
-            {
                 return (ticketIdElement.GetString(), null);
-            }
+
             if (doc.RootElement.TryGetProperty("poi_id", out var poiIdElement))
             {
-                int? id = poiIdElement.ValueKind == JsonValueKind.Number ? poiIdElement.GetInt32() : int.Parse(poiIdElement.GetString() ?? "0");
-                return (null, id);
+                int? id = poiIdElement.ValueKind == JsonValueKind.Number ? poiIdElement.GetInt32() : int.Parse(poiIdElement.GetString() ?? "0"); return (null, id);
             }
         }
         catch { }
 
-        if (int.TryParse(raw.Trim(), out var directId))
-            return (null, directId);
-
+        if (int.TryParse(raw.Trim(), out var directId)) return (null, directId);
         return (null, null);
     }
+
     private async Task ResumeScanAsync()
     {
         _isProcessing = false;
@@ -197,18 +187,8 @@ public partial class QrScanPage : ContentPage
 
     private void OnToggleTorchClicked(object? sender, EventArgs e)
     {
-        try
-        {
-            _torchOn = !_torchOn;
-            if (_cameraView != null)
-            {
-                _cameraView.IsTorchOn = _torchOn;
-            }
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[Flash Error] {ex.Message}");
-        }
+        _torchOn = !_torchOn;
+        if (_cameraView != null) _cameraView.IsTorchOn = _torchOn;
     }
 
     private async void OnCloseClicked(object? sender, EventArgs e) => await CloseAsync();
@@ -218,21 +198,13 @@ public partial class QrScanPage : ContentPage
         try
         {
             if (_isProcessing) return;
-
             _isProcessing = true;
             if (_cameraView != null) _cameraView.IsDetecting = false;
             LblStatus.Text = "Đang chọn ảnh...";
 
-            var photos = await MediaPicker.Default.PickPhotosAsync(new MediaPickerOptions
-            {
-                Title = "Chọn ảnh chứa QR"
-            });
+            var photos = await MediaPicker.Default.PickPhotosAsync(new MediaPickerOptions { Title = "Chọn ảnh chứa QR" });
             var photo = photos?.FirstOrDefault();
-            if (photo is null)
-            {
-                await ResumeScanAsync();
-                return;
-            }
+            if (photo is null) { await ResumeScanAsync(); return; }
 
             LblStatus.Text = "Đang đọc QR từ ảnh...";
             var raw = await DecodeQrFromImageAsync(photo);
@@ -242,13 +214,11 @@ public partial class QrScanPage : ContentPage
                 await ResumeScanAsync();
                 return;
             }
-
             await HandleQrValueAsync(raw.Trim());
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            System.Diagnostics.Debug.WriteLine($"[QR Pick Image Error] {ex.Message}");
-            await DisplayAlertAsync("Lỗi chọn ảnh", "Không thể đọc ảnh QR. Vui lòng thử lại.", "OK");
+            await DisplayAlertAsync("Lỗi", "Không thể đọc ảnh QR.", "OK");
             await ResumeScanAsync();
         }
     }
@@ -263,7 +233,6 @@ public partial class QrScanPage : ContentPage
         int height = bitmap.Height;
         var pixels = new int[width * height];
         bitmap.GetPixels(pixels, 0, width, 0, 0, width, height);
-
         var rgba = new byte[width * height * 4];
         for (int i = 0; i < pixels.Length; i++)
         {
@@ -274,28 +243,12 @@ public partial class QrScanPage : ContentPage
             rgba[offset + 2] = (byte)(color & 0xFF);          // B
             rgba[offset + 3] = (byte)((color >> 24) & 0xFF);  // A
         }
-
-        var source = new RGBLuminanceSource(
-            rgba,
-            width,
-            height,
-            RGBLuminanceSource.BitmapFormat.RGBA32);
-        var reader = new BarcodeReaderGeneric
-        {
-            AutoRotate = true,
-            Options = new DecodingOptions
-            {
-                TryHarder = true,
-                PossibleFormats = [ZXing.BarcodeFormat.QR_CODE]
-            }
-        };
-
-        var result = reader.Decode(source);
-        return result?.Text;
+        var source = new RGBLuminanceSource(rgba, width, height, RGBLuminanceSource.BitmapFormat.RGBA32);
+        var reader = new BarcodeReaderGeneric { AutoRotate = true, Options = new DecodingOptions { TryHarder = true, PossibleFormats = [ZXing.BarcodeFormat.QR_CODE] } };
+        return reader.Decode(source)?.Text;
     }
 #else
-    private static Task<string?> DecodeQrFromImageAsync(FileResult photo)
-        => Task.FromResult<string?>(null);
+    private static Task<string?> DecodeQrFromImageAsync(FileResult photo) => Task.FromResult<string?>(null);
 #endif
 
     private Task CloseAsync() => Shell.Current!.GoToAsync("..");

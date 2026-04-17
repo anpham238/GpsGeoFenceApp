@@ -7,6 +7,7 @@ using MauiApp1.Platforms.Android.Services;
 using MauiApp1.Services;
 using MauiApp1.Services.Api;
 using MauiApp1.Services.Audio;
+using MauiApp1.Services.Guest;
 using MauiApp1.Services.Narration;
 using MauiApp1.Services.Sync;
 using ZXing.Net.Maui.Controls;
@@ -47,7 +48,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<PoiDatabase>();
         builder.Services.AddSingleton<SyncMetadataRepository>();
         builder.Services.AddSingleton<PoiNarrationCache>();
-        string apiBaseUrl = "http://192.168.1.121:5150";
+        string apiBaseUrl = "http://192.168.31.212:5150";
         builder.Services.AddHttpClient<PoiApiClient>(http =>
         {
             http.BaseAddress = new Uri(apiBaseUrl);
@@ -90,6 +91,14 @@ public static class MauiProgram
             http.BaseAddress = new Uri(apiBaseUrl);
             http.Timeout = TimeSpan.FromSeconds(15);
         });
+        builder.Services.AddHttpClient<GuestDeviceApiClient>(http =>
+        {
+            http.BaseAddress = new Uri(apiBaseUrl);
+            http.Timeout = TimeSpan.FromSeconds(10);
+        });
+        // ── Guest tracking (ẩn danh) ──────────────────────────────────
+        builder.Services.AddSingleton<GuestDeviceService>();
+        builder.Services.AddSingleton<GuestHeartbeatService>();
         // ── Sync engine ───────────────────────────────────────────────
         builder.Services.AddSingleton<PoiSyncService>();
         // ── Pages ─────────────────────────────────────────────────────

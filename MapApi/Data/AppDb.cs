@@ -12,9 +12,11 @@ public sealed class AppDb(DbContextOptions<AppDb> options) : DbContext(options)
     public DbSet<HistoryPoi> HistoryPoi => Set<HistoryPoi>();
     public DbSet<Tour> Tours => Set<Tour>();
     public DbSet<TourPoi> TourPois => Set<TourPoi>();
+    public DbSet<PoiTicket> PoiTickets => Set<PoiTicket>();
     public DbSet<AnalyticsVisit> AnalyticsVisits => Set<AnalyticsVisit>();
     public DbSet<AnalyticsRoute> AnalyticsRoutes => Set<AnalyticsRoute>();
     public DbSet<AnalyticsListenDuration> AnalyticsListenDurations => Set<AnalyticsListenDuration>();
+    public DbSet<GuestDevice> GuestDevices => Set<GuestDevice>();
     protected override void OnModelCreating(ModelBuilder b)
     {
         b.Entity<Poi>(e =>
@@ -110,9 +112,30 @@ public sealed class AppDb(DbContextOptions<AppDb> options) : DbContext(options)
             e.Property(x => x.SortOrder).HasDefaultValue(0);
             e.HasOne<Poi>().WithMany().HasForeignKey(x => x.PoiId).OnDelete(DeleteBehavior.Cascade);
         });
-
+        b.Entity<PoiTicket>(e =>
+        {
+            e.ToTable("PoiTickets");
+            e.HasKey(x => x.TicketCode);
+            e.Property(x => x.MaxUses).HasDefaultValue(5);
+            e.Property(x => x.CurrentUses).HasDefaultValue(0);
+            e.Property(x => x.CreatedAt).HasDefaultValueSql("SYSUTCDATETIME()");
+        });
         b.Entity<AnalyticsVisit>(e =>      { e.ToTable("Analytics_Visit"); e.HasKey(x => x.Id); });
         b.Entity<AnalyticsRoute>(e =>      { e.ToTable("Analytics_Route"); e.HasKey(x => x.Id); });
         b.Entity<AnalyticsListenDuration>(e => { e.ToTable("Analytics_ListenDuration"); e.HasKey(x => x.Id); });
+
+        b.Entity<GuestDevice>(e =>
+        {
+            e.ToTable("GuestDevices");
+            e.HasKey(x => x.DeviceId);
+            e.Property(x => x.DeviceId).HasMaxLength(100).IsRequired();
+            e.Property(x => x.Platform).HasMaxLength(20);
+            e.Property(x => x.AppVersion).HasMaxLength(20);
+            e.Property(x => x.FirstSeenAt).HasDefaultValueSql("SYSUTCDATETIME()");
+            e.Property(x => x.LastActiveAt).HasDefaultValueSql("SYSUTCDATETIME()");
+            e.HasIndex(x => x.LastActiveAt)
+             .IsDescending()
+             .HasDatabaseName("IX_GuestDevices_LastActive");
+        });
     }
 }

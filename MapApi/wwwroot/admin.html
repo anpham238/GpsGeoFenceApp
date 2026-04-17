@@ -1,288 +1,287 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-        <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
-        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-        <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Smart Tourism — Web Admin</title>
-        <style>
-            * {
-                box-sizing: border-box;
-                margin: 0;
-                padding: 0;
-            }
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Smart Tourism — Web Admin</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
-            body {
-                font-family: 'Segoe UI', sans-serif;
-                background: #0f1117;
-                color: #e0e0e0;
-                display: flex;
-                height: 100vh;
-                overflow: hidden;
-            }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #0f1117;
+            color: #e0e0e0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
 
-            /* Sidebar */
-            #sidebar {
-                width: 220px;
-                background: #13151f;
-                border-right: 1px solid #222;
-                display: flex;
-                flex-direction: column;
-            }
+        /* Sidebar */
+        #sidebar {
+            width: 220px;
+            background: #13151f;
+            border-right: 1px solid #222;
+            display: flex;
+            flex-direction: column;
+        }
 
-                #sidebar h1 {
-                    font-size: 1rem;
-                    color: #90caf9;
-                    padding: 20px 16px 12px;
-                    border-bottom: 1px solid #222;
-                }
-
-                #sidebar nav a {
-                    display: block;
-                    padding: 12px 16px;
-                    color: #bbb;
-                    text-decoration: none;
-                    cursor: pointer;
-                    font-size: 0.9rem;
-                }
-
-                    #sidebar nav a:hover, #sidebar nav a.active {
-                        background: #1a1d27;
-                        color: #fff;
-                        border-left: 3px solid #1976D2;
-                    }
-
-                #sidebar .user-box {
-                    margin-top: auto;
-                    padding: 12px 16px;
-                    border-top: 1px solid #222;
-                    font-size: 0.8rem;
-                    color: #777;
-                }
-
-            #logoutBtn {
-                background: none;
-                border: 1px solid #444;
-                color: #ccc;
-                padding: 4px 10px;
-                border-radius: 4px;
-                cursor: pointer;
-                margin-top: 6px;
-            }
-
-            /* Main */
-            #main {
-                flex: 1;
-                display: flex;
-                flex-direction: column;
-                overflow: hidden;
-            }
-
-            #topbar {
-                background: #1a1d27;
-                padding: 12px 20px;
+            #sidebar h1 {
+                font-size: 1rem;
+                color: #90caf9;
+                padding: 20px 16px 12px;
                 border-bottom: 1px solid #222;
-                display: flex;
-                align-items: center;
-                gap: 10px;
             }
 
-                #topbar h2 {
-                    font-size: 1.05rem;
-                    color: #90caf9;
-                    flex: 1;
-                }
-
-            #content {
-                flex: 1;
-                overflow-y: auto;
-                padding: 20px;
-            }
-
-            /* Login */
-            #loginBox {
-                max-width: 360px;
-                margin: 80px auto;
-                background: #1a1d27;
-                border-radius: 10px;
-                padding: 32px;
-            }
-
-                #loginBox h2 {
-                    color: #90caf9;
-                    margin-bottom: 20px;
-                }
-
-            /* Forms */
-            .form-row {
-                margin-bottom: 14px;
-            }
-
-            label {
+            #sidebar nav a {
                 display: block;
+                padding: 12px 16px;
+                color: #bbb;
+                text-decoration: none;
+                font-size: 0.9rem;
+            }
+
+                #sidebar nav a:hover, #sidebar nav a.active {
+                    background: #1a1d27;
+                    color: #fff;
+                    border-left: 3px solid #1976D2;
+                }
+
+            #sidebar .user-box {
+                margin-top: auto;
+                padding: 12px 16px;
+                border-top: 1px solid #222;
                 font-size: 0.8rem;
+                color: #777;
+            }
+
+        #logoutBtn {
+            background: none;
+            border: 1px solid #444;
+            color: #ccc;
+            padding: 4px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 6px;
+        }
+
+        /* Main */
+        #main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        #topbar {
+            background: #1a1d27;
+            padding: 12px 20px;
+            border-bottom: 1px solid #222;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+            #topbar h2 {
+                font-size: 1.05rem;
                 color: #90caf9;
-                margin-bottom: 4px;
+                flex: 1;
             }
 
-            input, textarea, select {
-                width: 100%;
-                background: #0f1117;
-                border: 1px solid #333;
-                color: #e0e0e0;
-                padding: 8px 10px;
-                border-radius: 6px;
-                font-size: 0.875rem;
+        #content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        /* Login */
+        #loginBox {
+            max-width: 360px;
+            margin: 80px auto;
+            background: #1a1d27;
+            border-radius: 10px;
+            padding: 32px;
+        }
+
+            #loginBox h2 {
+                color: #90caf9;
+                margin-bottom: 20px;
             }
 
-            textarea {
-                resize: vertical;
-                min-height: 70px;
+        /* Forms */
+        .form-row {
+            margin-bottom: 14px;
+        }
+
+        label {
+            display: block;
+            font-size: 0.8rem;
+            color: #90caf9;
+            margin-bottom: 4px;
+        }
+
+        input, textarea, select {
+            width: 100%;
+            background: #0f1117;
+            border: 1px solid #333;
+            color: #e0e0e0;
+            padding: 8px 10px;
+            border-radius: 6px;
+            font-size: 0.875rem;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 70px;
+        }
+
+            input:focus, textarea:focus, select:focus {
+                outline: none;
+                border-color: #1976D2;
             }
 
-                input:focus, textarea:focus, select:focus {
-                    outline: none;
-                    border-color: #1976D2;
-                }
+        /* Buttons */
+        .btn {
+            padding: 8px 18px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.875rem;
+        }
 
-            /* Buttons */
-            .btn {
-                padding: 8px 18px;
-                border: none;
-                border-radius: 6px;
-                cursor: pointer;
-                font-size: 0.875rem;
+        .btn-primary {
+            background: #1976D2;
+            color: #fff;
+        }
+
+            .btn-primary:hover {
+                background: #1565C0;
             }
 
-            .btn-primary {
-                background: #1976D2;
-                color: #fff;
+        .btn-danger {
+            background: #c62828;
+            color: #fff;
+        }
+
+            .btn-danger:hover {
+                background: #b71c1c;
             }
 
-                .btn-primary:hover {
-                    background: #1565C0;
-                }
+        .btn-warn {
+            background: #f57c00;
+            color: #fff;
+        }
 
-            .btn-danger {
+            .btn-warn:hover {
+                background: #e65100;
+            }
+
+        .btn-sm {
+            padding: 4px 10px;
+            font-size: 0.8rem;
+        }
+
+        /* Table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+        }
+
+        th {
+            text-align: left;
+            padding: 10px 8px;
+            color: #90caf9;
+            border-bottom: 2px solid #333;
+        }
+
+        td {
+            padding: 9px 8px;
+            border-bottom: 1px solid #1a1d27;
+            vertical-align: middle;
+        }
+
+        tr:hover td {
+            background: #1a1d27;
+        }
+
+        .badge-on {
+            background: #1b5e20;
+            color: #a5d6a7;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+        }
+
+        .badge-off {
+            background: #3e2723;
+            color: #ef9a9a;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+        }
+
+        /* Card */
+        .card {
+            background: #1a1d27;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+            .card h3 {
+                color: #90caf9;
+                margin-bottom: 14px;
+                font-size: 0.95rem;
+            }
+
+        .grid2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        /* Toast */
+        #toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: #1976D2;
+            color: #fff;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 9999;
+        }
+
+            #toast.show {
+                opacity: 1;
+            }
+
+            #toast.error {
                 background: #c62828;
-                color: #fff;
             }
 
-                .btn-danger:hover {
-                    background: #b71c1c;
-                }
+        /* Section visibility */
+        .section {
+            display: none;
+        }
 
-            .btn-warn {
-                background: #f57c00;
-                color: #fff;
+            .section.active {
+                display: block;
             }
-
-                .btn-warn:hover {
-                    background: #e65100;
-                }
-
-            .btn-sm {
-                padding: 4px 10px;
-                font-size: 0.8rem;
-            }
-
-            /* Table */
-            table {
-                width: 100%;
-                border-collapse: collapse;
-                font-size: 0.875rem;
-            }
-
-            th {
-                text-align: left;
-                padding: 10px 8px;
-                color: #90caf9;
-                border-bottom: 2px solid #333;
-            }
-
-            td {
-                padding: 9px 8px;
-                border-bottom: 1px solid #1a1d27;
-                vertical-align: middle;
-            }
-
-            tr:hover td {
-                background: #1a1d27;
-            }
-
-            .badge-on {
-                background: #1b5e20;
-                color: #a5d6a7;
-                padding: 2px 8px;
-                border-radius: 10px;
-                font-size: 0.75rem;
-            }
-
-            .badge-off {
-                background: #3e2723;
-                color: #ef9a9a;
-                padding: 2px 8px;
-                border-radius: 10px;
-                font-size: 0.75rem;
-            }
-
-            /* Card */
-            .card {
-                background: #1a1d27;
-                border-radius: 10px;
-                padding: 20px;
-                margin-bottom: 16px;
-            }
-
-                .card h3 {
-                    color: #90caf9;
-                    margin-bottom: 14px;
-                    font-size: 0.95rem;
-                }
-
-            .grid2 {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 12px;
-            }
-
-            /* Toast */
-            #toast {
-                position: fixed;
-                bottom: 24px;
-                right: 24px;
-                background: #1976D2;
-                color: #fff;
-                padding: 12px 20px;
-                border-radius: 8px;
-                font-size: 0.875rem;
-                opacity: 0;
-                transition: opacity 0.3s;
-                z-index: 9999;
-            }
-
-                #toast.show {
-                    opacity: 1;
-                }
-
-                #toast.error {
-                    background: #c62828;
-                }
-
-            /* Section visibility */
-            .section {
-                display: none;
-            }
-
-                .section.active {
-                    display: block;
-                }
-        </style>
-    </head>
+    </style>
+</head>
 <body>
 
 <!-- LOGIN -->
@@ -749,33 +748,43 @@ async function loadHeatmap() {
         select.innerHTML = pois.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
     }
     async function createLimitedQr() {
-    const poiId = document.getElementById('qrPoiSelect').value;
-    const lang = document.getElementById('qrLangSelect').value;
+        const poiId = document.getElementById('qrPoiSelect').value;
+        const lang = document.getElementById('qrLangSelect').value;
 
-    // GỌI API BACKEND ĐỂ TẠO VÉ VÀ LƯU VÀO DB
-    const res = await authFetch('/api/v1/tickets/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ poiId: parseInt(poiId), language: lang, maxUses: 5 })
-    });
+        toast("Đang tạo QR...", false); // Hiện thông báo đang xử lý
 
-    if (!res) {
-        toast("Lỗi khi tạo vé trên hệ thống!", true);
-        return;
+        try {
+            const res = await authFetch('/api/v1/tickets/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ poiId: parseInt(poiId), language: lang, maxUses: 5 })
+            });
+
+            // NÂNG CẤP: Kiểm tra nếu Backend báo lỗi 404 hoặc 500
+            if (!res || !res.ok) {
+                toast("Lỗi Server! Chưa có API hoặc lỗi Database.", true);
+                return;
+            }
+
+            const data = await res.json();
+            const ticketCode = data.ticketCode;
+            const qrContent = JSON.stringify({ ticket_id: ticketCode });
+            const canvas = document.getElementById('qrCanvas');
+
+            if (!qrInstance) {
+                qrInstance = new QRious({ element: canvas, size: 250, background: 'white', foreground: 'black' });
+            }
+            qrInstance.value = qrContent;
+
+            document.getElementById('qrTicketInfo').textContent = `Mã vé: ${ticketCode}`;
+            document.getElementById('qrResult').style.display = 'block';
+            document.getElementById('btnDownloadQr').style.display = 'block';
+            toast('Tạo QR thành công!');
+        } catch (error) {
+            console.error("Lỗi JS:", error);
+            toast("Lỗi xử lý hệ thống!", true);
+        }
     }
-    const data = await res.json();
-    const ticketCode = data.ticketCode; // Lấy mã do BE trả về
-    const qrContent = JSON.stringify({ ticket_id: ticketCode });
-    const canvas = document.getElementById('qrCanvas');
-    if (!qrInstance) {
-        qrInstance = new QRious({ element: canvas, size: 250, background: 'white', foreground: 'black' });
-    }
-    qrInstance.value = qrContent;
-    document.getElementById('qrTicketInfo').textContent = `Mã vé: ${ticketCode}`;
-    document.getElementById('qrResult').style.display = 'block';
-    document.getElementById('btnDownloadQr').style.display = 'block';
-    toast('Tạo QR thành công!');
-}
     function downloadQr() {
         const canvas = document.getElementById('qrCanvas');
         const image = canvas.toDataURL("image/png").replace("image/png", "image/octet-stream");
