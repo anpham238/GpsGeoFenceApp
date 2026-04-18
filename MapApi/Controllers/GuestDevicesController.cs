@@ -59,6 +59,7 @@ public class GuestDevicesController : ControllerBase
         await _db.SaveChangesAsync(ct);
         return Ok(new { ok = true });
     }
+    [HttpGet("online")]
     public async Task<IActionResult> GetOnline(CancellationToken ct)
     {
         var threshold = DateTime.UtcNow.AddSeconds(-90);

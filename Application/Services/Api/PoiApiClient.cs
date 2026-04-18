@@ -6,6 +6,7 @@ namespace MauiApp1.Services.Api;
 public sealed class PoiApiClient
 {
     private readonly HttpClient _http;
+    public string BaseUrl => _http.BaseAddress?.ToString() ?? "http://192.168.31.212:5150";
 
     public PoiApiClient(HttpClient http) => _http = http;
 
@@ -35,5 +36,16 @@ public sealed class PoiApiClient
         catch { return null; }
     }
 
+    public async Task<List<string>> GetImagesAsync(int poiId, CancellationToken ct = default)
+    {
+        try
+        {
+            var data = await _http.GetFromJsonAsync<List<PoiImageItemDto>>($"/api/v1/pois/{poiId}/images", ct);
+            return data?.Select(x => x.ImageUrl).ToList() ?? [];
+        }
+        catch { return []; }
+    }
+
     private sealed record SyncVersionDto(string Version, int Count);
+    private sealed record PoiImageItemDto(long Id, string ImageUrl, int SortOrder);
 }

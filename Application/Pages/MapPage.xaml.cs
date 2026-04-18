@@ -19,6 +19,7 @@ public partial class MapPage : ContentPage
     private readonly TranslatorClient _translator;
     private readonly AnalyticsClient _analytics;
     private readonly TourApiClient _tourApi;
+    private readonly PoiApiClient _poiApi;
     private List<TourDto> _tours = [];
     private TourDto? _selectedTour;
     private string _currentLang = LanguageService.Current;
@@ -46,7 +47,8 @@ public partial class MapPage : ContentPage
         PoiNarrationCache narrationCache,
         TranslatorClient translator,
         AnalyticsClient analytics,
-        TourApiClient tourApi)
+        TourApiClient tourApi,
+        PoiApiClient poiApi)
     {
         InitializeComponent();
         _geofence = geofence ?? throw new ArgumentNullException(nameof(geofence));
@@ -60,6 +62,7 @@ public partial class MapPage : ContentPage
         _translator = translator ?? throw new ArgumentNullException(nameof(translator));
         _analytics = analytics ?? throw new ArgumentNullException(nameof(analytics));
         _tourApi = tourApi ?? throw new ArgumentNullException(nameof(tourApi));
+        _poiApi = poiApi ?? throw new ArgumentNullException(nameof(poiApi));
         // Toolbar
         ToolbarItems.Add(new ToolbarItem
         {
@@ -491,20 +494,15 @@ public partial class MapPage : ContentPage
         DetailCoord.Text = $"📍 {poi.Latitude:F6}, {poi.Longitude:F6}";
         DetailRadius.Text = $"🔵 Bán kính: {poi.RadiusMeters}m";
 
-        if (!string.IsNullOrWhiteSpace(poi.ImageUrl))
-        {
-            string imageUrl = poi.ImageUrl;
-            if (!imageUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
-            {
-                string baseUrl = "http://192.168.1.121:5150/";
-                imageUrl = baseUrl + imageUrl.TrimStart('/');
-            }
-            PoiImage.Source = ImageSource.FromUri(new Uri(imageUrl));
-        }
-        else
-        {
-            PoiImage.Source = null;
-        }
+        // Reset image area
+        PoiImage.Source = null;
+        PoiImage.IsVisible = true;
+        PoiImageCarousel.ItemsSource = null;
+        PoiImageCarousel.IsVisible = false;
+        PoiImageIndicator.IsVisible = false;
+
+        // Load images async (không block UI)
+        _ = LoadPoiImagesAsync(poi);
 
         var lang = LanguageService.Current;
         var translatedName = lang == "vi-VN" ? poi.Name : await TranslateTextAsync(poi.Name, "vi-VN", lang);
@@ -515,6 +513,47 @@ public partial class MapPage : ContentPage
 
         var link = !string.IsNullOrWhiteSpace(poi.MapLink) ? poi.MapLink : $"https://www.google.com/maps/search/?api=1&query={poi.Latitude},{poi.Longitude}";
         LblPoiLink.Text = link;
+    }
+
+    private async Task LoadPoiImagesAsync(Poi poi)
+    {
+        try
+        {
+            if (Connectivity.Current.NetworkAccess != NetworkAccess.None)
+            {
+                var imageUrls = await _poiApi.GetImagesAsync(poi.Id);
+                if (imageUrls.Count > 0)
+                {
+                    var fullUrls = imageUrls.Select(ToAbsoluteUrl).ToList();
+                    await MainThread.InvokeOnMainThreadAsync(() =>
+                    {
+                        PoiImageCarousel.ItemsSource = fullUrls;
+                        PoiImageCarousel.IsVisible = true;
+                        PoiImageIndicator.IsVisible = fullUrls.Count > 1;
+                        PoiImage.IsVisible = false;
+                    });
+                    return;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[PoiImages] {ex.Message}");
+        }
+
+        // Fallback: ảnh đơn từ PoiMedia
+        if (!string.IsNullOrWhiteSpace(poi.ImageUrl))
+        {
+            await MainThread.InvokeOnMainThreadAsync(() =>
+                PoiImage.Source = ImageSource.FromUri(new Uri(ToAbsoluteUrl(poi.ImageUrl!))));
+        }
+    }
+
+    private string ToAbsoluteUrl(string url)
+    {
+        if (url.StartsWith("http", StringComparison.OrdinalIgnoreCase)) return url;
+        var baseUrl = _poiApi.BaseUrl.TrimEnd('/');
+        return $"{baseUrl}/{url.TrimStart('/')}";
     }
 
     private async Task OpenMapsAsync(Poi? poi)

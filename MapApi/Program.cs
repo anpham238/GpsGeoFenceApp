@@ -221,44 +221,77 @@ app.MapGet("/api/v1/pois/{id}/narration", async (
     });
 });
 // ============================================================
-// POST /api/v1/auth/register
+// POST /api/v1/auth/register  (multipart/form-data)
 // ============================================================
-app.MapPost("/api/v1/auth/register", async (RegisterRequest req, AppDb db) =>
-{
-    if (string.IsNullOrWhiteSpace(req.Username) ||
-        string.IsNullOrWhiteSpace(req.Mail) ||
-        string.IsNullOrWhiteSpace(req.Password))
+app.MapPost("/api/v1/auth/register", async (HttpContext ctx, AppDb db, IWebHostEnvironment env) => {
+    var request = ctx.Request; // Thêm dòng này vào để bóc request ra
+    if (!request.HasFormContentType)
+        return Results.BadRequest(new { error = "Yêu cầu multipart/form-data" });
+    var form = await request.ReadFormAsync();
+    var username = form["Username"].ToString().Trim();
+    var mail     = form["Mail"].ToString().Trim().ToLowerInvariant();
+    var password = form["Password"].ToString();
+    var phone    = form["PhoneNumber"].ToString().Trim();
+
+    if (string.IsNullOrWhiteSpace(username) ||
+        string.IsNullOrWhiteSpace(mail) ||
+        string.IsNullOrWhiteSpace(password))
         return Results.BadRequest(new { error = "Username, Mail và Password là bắt buộc" });
-    if (await db.Users.AnyAsync(u => u.Username == req.Username))
+
+    if (await db.Users.AnyAsync(u => u.Username == username))
         return Results.Conflict(new { error = "Username đã tồn tại" });
-    if (await db.Users.AnyAsync(u => u.Mail == req.Mail))
+    if (await db.Users.AnyAsync(u => u.Mail == mail))
         return Results.Conflict(new { error = "Email đã được đăng ký" });
+
+    var avatarUrl = "default-avatar.png";
+    var avatarFile = form.Files.GetFile("Avatar");
+    if (avatarFile is { Length: > 0 })
+    {
+        var ext = Path.GetExtension(avatarFile.FileName).ToLowerInvariant();
+        if (ext is ".jpg" or ".jpeg" or ".png")
+        {
+            var dir = Path.Combine(env.WebRootPath, "avatars");
+            Directory.CreateDirectory(dir);
+            var safeName = $"{Guid.NewGuid():N}{ext}";
+            await using var fs = System.IO.File.Create(Path.Combine(dir, safeName));
+            await avatarFile.CopyToAsync(fs);
+            avatarUrl = $"/avatars/{safeName}";
+        }
+    }
+
     var user = new Users
     {
-        UserId = Guid.NewGuid(),
-        Username = req.Username.Trim(),
-        Mail = req.Mail.Trim().ToLowerInvariant(),
-        PasswordHash = BCrypt.Net.BCrypt.HashPassword(req.Password),
-        IsActive = true,
-        CreatedAt = DateTime.UtcNow
+        UserId       = Guid.NewGuid(),
+        Username     = username,
+        Mail         = mail,
+        PhoneNumber  = string.IsNullOrWhiteSpace(phone) ? null : phone,
+        PasswordHash = BCrypt.Net.BCrypt.HashPassword(password),
+        AvatarUrl    = avatarUrl,
+        IsActive     = true,
+        CreatedAt    = DateTime.UtcNow
     };
 
     db.Users.Add(user);
     await db.SaveChangesAsync();
 
-    return Results.Ok(new { user.UserId, user.Username, user.Mail });
+    return Results.Created($"/api/v1/auth/me", new { user.UserId, user.Username, user.Mail, user.AvatarUrl });
 });
 
 // ============================================================
-// POST /api/v1/auth/login
+// POST /api/v1/auth/login  — Smart Login (Username hoặc Email)
 // ============================================================
 app.MapPost("/api/v1/auth/login", async (LoginRequest req, AppDb db) =>
 {
-    if (string.IsNullOrWhiteSpace(req.Username) || string.IsNullOrWhiteSpace(req.Password))
-        return Results.BadRequest(new { error = "Username và Password là bắt buộc" });
+    if (string.IsNullOrWhiteSpace(req.Identifier) || string.IsNullOrWhiteSpace(req.Password))
+        return Results.BadRequest(new { error = "Identifier và Password là bắt buộc" });
 
-    var user = await db.Users.FirstOrDefaultAsync(
-        u => u.Username == req.Username && u.IsActive);
+    var identifier = req.Identifier.Trim();
+    Users? user;
+
+    if (identifier.Contains('@'))
+        user = await db.Users.FirstOrDefaultAsync(u => u.Mail == identifier.ToLowerInvariant() && u.IsActive);
+    else
+        user = await db.Users.FirstOrDefaultAsync(u => u.Username == identifier && u.IsActive);
 
     if (user is null || !BCrypt.Net.BCrypt.Verify(req.Password, user.PasswordHash))
         return Results.Unauthorized();
@@ -267,13 +300,37 @@ app.MapPost("/api/v1/auth/login", async (LoginRequest req, AppDb db) =>
 
     return Results.Ok(new
     {
-        Token = token,
-        UserId = user.UserId,
+        Token     = token,
+        UserId    = user.UserId,
         user.Username,
         user.Mail,
+        user.AvatarUrl,
         ExpiresAt = DateTime.UtcNow.AddHours(24)
     });
 });
+
+// ============================================================
+// GET /api/v1/auth/me  — Lấy profile từ JWT
+// ============================================================
+app.MapGet("/api/v1/auth/me", async (HttpContext ctx, AppDb db) =>
+{
+    var idClaim = ctx.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    if (!Guid.TryParse(idClaim, out var userId))
+        return Results.Unauthorized();
+
+    var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.UserId == userId && u.IsActive);
+    if (user is null) return Results.NotFound(new { error = "User not found" });
+
+    return Results.Ok(new
+    {
+        user.UserId,
+        user.Username,
+        user.Mail,
+        user.PhoneNumber,
+        user.AvatarUrl,
+        user.CreatedAt
+    });
+}).RequireAuthorization();
 
 // ============================================================
 // POST /api/v1/history — Ghi lịch sử ghé thăm (thay /api/v1/playback)
@@ -499,8 +556,7 @@ static string GenerateJwtToken(Users user, SymmetricSecurityKey key)
 }
 
 // ─── Request DTOs ───────────────────────────────────────────────────────────
-public sealed record RegisterRequest(string Username, string Mail, string Password);
-public sealed record LoginRequest(string Username, string Password);
+public sealed record LoginRequest(string Identifier, string Password);
 public sealed class HistoryRequest
 {
     public int PoiId { get; set; }

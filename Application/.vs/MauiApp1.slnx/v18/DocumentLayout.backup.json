@@ -3,15 +3,24 @@
   "WorkspaceRootPath": "C:\\Users\\lhnhan\\source\\repos\\GpsGeoFenceApp\\Application\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{FF97AEE2-D891-4561-9F92-207C3B005769}|..\\MapApi\\MapApi.csproj|c:\\users\\lhnhan\\source\\repos\\gpsgeofenceapp\\mapapi\\wwwroot\\admin.html||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{FF97AEE2-D891-4561-9F92-207C3B005769}|..\\MapApi\\MapApi.csproj|c:\\users\\lhnhan\\source\\repos\\gpsgeofenceapp\\mapapi\\controllers\\guestdevicescontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{046B9634-E645-0B60-C3EC-B93245F8AD4B}|MauiApp1.csproj|c:\\users\\lhnhan\\source\\repos\\gpsgeofenceapp\\application\\services\\guest\\guestdeviceservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{046B9634-E645-0B60-C3EC-B93245F8AD4B}|MauiApp1.csproj|solutionrelative:services\\guest\\guestdeviceservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{FF97AEE2-D891-4561-9F92-207C3B005769}|..\\MapApi\\MapApi.csproj|c:\\users\\lhnhan\\source\\repos\\gpsgeofenceapp\\mapapi\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{046B9634-E645-0B60-C3EC-B93245F8AD4B}|MauiApp1.csproj|c:\\users\\lhnhan\\source\\repos\\gpsgeofenceapp\\application\\mauiprogram.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{046B9634-E645-0B60-C3EC-B93245F8AD4B}|MauiApp1.csproj|solutionrelative:mauiprogram.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{FF97AEE2-D891-4561-9F92-207C3B005769}|..\\MapApi\\MapApi.csproj|c:\\users\\lhnhan\\source\\repos\\gpsgeofenceapp\\mapapi\\controllers\\ticketscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{046B9634-E645-0B60-C3EC-B93245F8AD4B}|MauiApp1.csproj|c:\\users\\lhnhan\\source\\repos\\gpsgeofenceapp\\application\\services\\guest\\guestdeviceservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{046B9634-E645-0B60-C3EC-B93245F8AD4B}|MauiApp1.csproj|solutionrelative:services\\guest\\guestdeviceservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{046B9634-E645-0B60-C3EC-B93245F8AD4B}|MauiApp1.csproj|c:\\users\\lhnhan\\source\\repos\\gpsgeofenceapp\\application\\services\\guest\\guestheartbeatservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -29,15 +38,6 @@
     },
     {
       "AbsoluteMoniker": "D:0:0:{FF97AEE2-D891-4561-9F92-207C3B005769}|..\\MapApi\\MapApi.csproj|c:\\users\\lhnhan\\source\\repos\\gpsgeofenceapp\\mapapi\\data\\appdb.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{FF97AEE2-D891-4561-9F92-207C3B005769}|..\\MapApi\\MapApi.csproj|c:\\users\\lhnhan\\source\\repos\\gpsgeofenceapp\\mapapi\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{FF97AEE2-D891-4561-9F92-207C3B005769}|..\\MapApi\\MapApi.csproj|c:\\users\\lhnhan\\source\\repos\\gpsgeofenceapp\\mapapi\\controllers\\ticketscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{FF97AEE2-D891-4561-9F92-207C3B005769}|..\\MapApi\\MapApi.csproj|c:\\users\\lhnhan\\source\\repos\\gpsgeofenceapp\\mapapi\\wwwroot\\admin.html||{40D31677-CBC0-4297-A9EF-89D907823A98}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{046B9634-E645-0B60-C3EC-B93245F8AD4B}|MauiApp1.csproj|c:\\users\\lhnhan\\source\\repos\\gpsgeofenceapp\\application\\pages\\mappage.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -61,11 +61,11 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 7,
+          "SelectedChildIndex": 15,
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 9,
               "Title": "QrScanPage.xaml.cs",
               "DocumentMoniker": "C:\\Users\\lhnhan\\source\\repos\\GpsGeoFenceApp\\Application\\Pages\\QrScanPage.xaml.cs",
               "RelativeDocumentMoniker": "Pages\\QrScanPage.xaml.cs",
@@ -97,34 +97,38 @@
               "Name": "ST:0:0:{1c64b9c2-e352-428e-a56d-0ace190b99a6}"
             },
             {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{aa2115a1-9712-457b-9047-dbb71ca2cdd2}"
+            },
+            {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 3,
               "Title": "MauiProgram.cs",
               "DocumentMoniker": "C:\\Users\\lhnhan\\source\\repos\\GpsGeoFenceApp\\Application\\MauiProgram.cs",
               "RelativeDocumentMoniker": "MauiProgram.cs",
               "ToolTip": "C:\\Users\\lhnhan\\source\\repos\\GpsGeoFenceApp\\Application\\MauiProgram.cs",
               "RelativeToolTip": "MauiProgram.cs",
-              "ViewState": "AgIAAAkAAAAAAAAAAAAqwDIAAAAzAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAFsAAAA0AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-04-17T07:20:47.34Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 1,
               "Title": "GuestDevicesController.cs",
               "DocumentMoniker": "C:\\Users\\lhnhan\\source\\repos\\GpsGeoFenceApp\\MapApi\\Controllers\\GuestDevicesController.cs",
               "RelativeDocumentMoniker": "..\\MapApi\\Controllers\\GuestDevicesController.cs",
               "ToolTip": "C:\\Users\\lhnhan\\source\\repos\\GpsGeoFenceApp\\MapApi\\Controllers\\GuestDevicesController.cs",
               "RelativeToolTip": "..\\MapApi\\Controllers\\GuestDevicesController.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAADcAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAADYAAAAAAAAAAAAAAEUAAAANAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-04-17T05:30:46.495Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 6,
               "Title": "GuestHeartbeatService.cs",
               "DocumentMoniker": "C:\\Users\\lhnhan\\source\\repos\\GpsGeoFenceApp\\Application\\Services\\Guest\\GuestHeartbeatService.cs",
               "RelativeDocumentMoniker": "Services\\Guest\\GuestHeartbeatService.cs",
@@ -132,12 +136,11 @@
               "RelativeToolTip": "Services\\Guest\\GuestHeartbeatService.cs",
               "ViewState": "AgIAAAUAAAAAAAAAAAAAwAwAAAAdAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-17T05:29:45.683Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-04-17T05:29:45.683Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 5,
               "Title": "GuestDeviceService.cs",
               "DocumentMoniker": "C:\\Users\\lhnhan\\source\\repos\\GpsGeoFenceApp\\Application\\Services\\Guest\\GuestDeviceService.cs",
               "RelativeDocumentMoniker": "Services\\Guest\\GuestDeviceService.cs",
@@ -145,24 +148,23 @@
               "RelativeToolTip": "Services\\Guest\\GuestDeviceService.cs",
               "ViewState": "AgIAACsAAAAAAAAAAAAAAB0AAAANAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-17T05:01:03.294Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-04-17T05:01:03.294Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 9,
+              "DocumentIndex": 4,
               "Title": "TicketsController.cs",
               "DocumentMoniker": "C:\\Users\\lhnhan\\source\\repos\\GpsGeoFenceApp\\MapApi\\Controllers\\TicketsController.cs",
               "RelativeDocumentMoniker": "..\\MapApi\\Controllers\\TicketsController.cs",
               "ToolTip": "C:\\Users\\lhnhan\\source\\repos\\GpsGeoFenceApp\\MapApi\\Controllers\\TicketsController.cs",
               "RelativeToolTip": "..\\MapApi\\Controllers\\TicketsController.cs",
-              "ViewState": "AgIAAAQAAAAAAAAAAAAcwBgAAAAmAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABkAAAAoAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-04-16T11:21:57.483Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 10,
               "Title": "AppDb.cs",
               "DocumentMoniker": "C:\\Users\\lhnhan\\source\\repos\\GpsGeoFenceApp\\MapApi\\Data\\AppDb.cs",
               "RelativeDocumentMoniker": "..\\MapApi\\Data\\AppDb.cs",
@@ -174,7 +176,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 7,
               "Title": "PoiTicket.cs",
               "DocumentMoniker": "C:\\Users\\lhnhan\\source\\repos\\GpsGeoFenceApp\\MapApi\\Models\\PoiTicket.cs",
               "RelativeDocumentMoniker": "..\\MapApi\\Models\\PoiTicket.cs",
@@ -182,8 +184,7 @@
               "RelativeToolTip": "..\\MapApi\\Models\\PoiTicket.cs",
               "ViewState": "AgIAAAcAAAAAAAAAAAAUwBEAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-16T11:20:40.206Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-04-16T11:20:40.206Z"
             },
             {
               "$type": "Document",
@@ -199,15 +200,16 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 10,
+              "DocumentIndex": 0,
               "Title": "admin.html",
               "DocumentMoniker": "C:\\Users\\lhnhan\\source\\repos\\GpsGeoFenceApp\\MapApi\\wwwroot\\admin.html",
               "RelativeDocumentMoniker": "..\\MapApi\\wwwroot\\admin.html",
               "ToolTip": "C:\\Users\\lhnhan\\source\\repos\\GpsGeoFenceApp\\MapApi\\wwwroot\\admin.html",
               "RelativeToolTip": "..\\MapApi\\wwwroot\\admin.html",
-              "ViewState": "AgIAAOECAAAAAAAAAAAgwBMDAAAFAAAAAAAAAA==",
+              "ViewState": "AgIAAMkBAAAAAAAAAAAuwN0BAAA6AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001512|",
-              "WhenOpened": "2026-04-15T17:50:12.002Z"
+              "WhenOpened": "2026-04-15T17:50:12.002Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
@@ -223,19 +225,20 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 8,
+              "DocumentIndex": 2,
               "Title": "Program.cs",
               "DocumentMoniker": "C:\\Users\\lhnhan\\source\\repos\\GpsGeoFenceApp\\MapApi\\Program.cs",
               "RelativeDocumentMoniker": "..\\MapApi\\Program.cs",
               "ToolTip": "C:\\Users\\lhnhan\\source\\repos\\GpsGeoFenceApp\\MapApi\\Program.cs",
               "RelativeToolTip": "..\\MapApi\\Program.cs",
-              "ViewState": "AgIAAJQAAAAAAAAAAAAAAIEAAABeAAAAAAAAAA==",
+              "ViewState": "AgIAAMIAAAAAAAAAAAAjwNsAAAAnAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-15T09:31:21.991Z"
+              "WhenOpened": "2026-04-15T09:31:21.991Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 8,
               "Title": "appsettings.json",
               "DocumentMoniker": "C:\\Users\\lhnhan\\source\\repos\\GpsGeoFenceApp\\MapApi\\appsettings.json",
               "RelativeDocumentMoniker": "..\\MapApi\\appsettings.json",
@@ -243,8 +246,7 @@
               "RelativeToolTip": "..\\MapApi\\appsettings.json",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAwAAAAfAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
-              "WhenOpened": "2026-04-15T09:31:06.106Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-04-15T09:31:06.106Z"
             },
             {
               "$type": "Document",

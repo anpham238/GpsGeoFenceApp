@@ -23,10 +23,10 @@
                     <Label Text="Smart Tourism" FontSize="28" FontAttributes="Bold" TextColor="#1976D2" HorizontalOptions="Center" Margin="0,0,0,8" />
                     <Label Text="Khám phá thành phố theo cách của bạn" FontSize="14" TextColor="#666" HorizontalOptions="Center" Margin="0,0,0,24" />
 
-                    <Label Text="Tên đăng nhập" FontSize="14" FontAttributes="Bold" TextColor="#333" />
+                    <Label Text="Tên đăng nhập hoặc Email" FontSize="14" FontAttributes="Bold" TextColor="#333" />
                     <Border Background="#F9F9F9" Stroke="#E0E0E0" StrokeThickness="1">
                         <Border.StrokeShape><RoundRectangle CornerRadius="8"/></Border.StrokeShape>
-                        <Entry x:Name="UsernameEntry" Placeholder="Nhập tài khoản" Margin="8,0" ReturnType="Next" />
+                        <Entry x:Name="UsernameEntry" Placeholder="Nhập tài khoản hoặc email" Margin="8,0" ReturnType="Next" Keyboard="Email" />
                     </Border>
 
                     <Label Text="Mật khẩu" FontSize="14" FontAttributes="Bold" TextColor="#333" Margin="0,8,0,0"/>

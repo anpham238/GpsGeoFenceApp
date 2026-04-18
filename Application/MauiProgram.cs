@@ -48,7 +48,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<PoiDatabase>();
         builder.Services.AddSingleton<SyncMetadataRepository>();
         builder.Services.AddSingleton<PoiNarrationCache>();
-        string apiBaseUrl = "http://192.168.31.212:5150";
+        string apiBaseUrl = "https://242c0x8k-7286.asse.devtunnels.ms";
         builder.Services.AddHttpClient<PoiApiClient>(http =>
         {
             http.BaseAddress = new Uri(apiBaseUrl);

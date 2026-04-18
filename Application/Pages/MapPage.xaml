@@ -189,7 +189,31 @@
                         <Border.StrokeShape>
                             <RoundRectangle CornerRadius="10" />
                         </Border.StrokeShape>
-                        <Image x:Name="PoiImage" HeightRequest="170" Aspect="AspectFill" />
+                        <Grid HeightRequest="170">
+                            <!-- Carousel: hiện khi POI có nhiều ảnh -->
+                            <CarouselView x:Name="PoiImageCarousel"
+                                          IndicatorView="PoiImageIndicator"
+                                          IsVisible="False"
+                                          Loop="False"
+                                          HeightRequest="170">
+                                <CarouselView.ItemTemplate>
+                                    <DataTemplate>
+                                        <Image Source="{Binding .}"
+                                               Aspect="AspectFill"
+                                               HeightRequest="170" />
+                                    </DataTemplate>
+                                </CarouselView.ItemTemplate>
+                            </CarouselView>
+                            <IndicatorView x:Name="PoiImageIndicator"
+                                           IndicatorColor="#80FFFFFF"
+                                           SelectedIndicatorColor="White"
+                                           HorizontalOptions="Center"
+                                           VerticalOptions="End"
+                                           Margin="0,0,0,6"
+                                           IsVisible="False" />
+                            <!-- Fallback: ảnh đơn (tương thích ngược) -->
+                            <Image x:Name="PoiImage" HeightRequest="170" Aspect="AspectFill" />
+                        </Grid>
                     </Border>
 
                     <HorizontalStackLayout Grid.Row="3" Grid.ColumnSpan="2" Spacing="6">

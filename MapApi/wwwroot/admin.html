@@ -475,8 +475,7 @@ async function doLogin() {
   const res = await fetch(`${API}/api/v1/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username: u, password: p })
-  });
+      body: JSON.stringify({ identifier: u, password: p })  });
   if (!res.ok) { document.getElementById('lErr').textContent = 'Sai tên đăng nhập hoặc mật khẩu.'; return; }
 
   const data = await res.json();
@@ -692,6 +691,18 @@ function toast(msg, isError = false) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => el.className = '', 3500);
 }
+    let formData = new FormData();
+    formData.append("Username", "admin");
+    formData.append("Mail", "admin@gmail.com");
+    formData.append("Password", "123");
+
+    fetch("/api/v1/auth/register", {
+        method: "POST",
+        body: formData
+    })
+        .then(res => res.json())
+        .then(data => console.log("TẠO THÀNH CÔNG! Dữ liệu:", data))
+        .catch(err => console.error("LỖI:", err));
 // ── Dashboard ─────────────────────────────────────────────────────
 let visitChart, durChart, leafletMap, heatLayer;
 

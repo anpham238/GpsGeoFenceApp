@@ -17,6 +17,7 @@ public sealed class AppDb(DbContextOptions<AppDb> options) : DbContext(options)
     public DbSet<AnalyticsRoute> AnalyticsRoutes => Set<AnalyticsRoute>();
     public DbSet<AnalyticsListenDuration> AnalyticsListenDurations => Set<AnalyticsListenDuration>();
     public DbSet<GuestDevice> GuestDevices => Set<GuestDevice>();
+    public DbSet<PoiImage> PoiImages => Set<PoiImage>();
     protected override void OnModelCreating(ModelBuilder b)
     {
         b.Entity<Poi>(e =>
@@ -68,7 +69,9 @@ public sealed class AppDb(DbContextOptions<AppDb> options) : DbContext(options)
             e.Property(x => x.UserId).HasDefaultValueSql("NEWID()");
             e.Property(x => x.Username).HasMaxLength(100).IsRequired();
             e.Property(x => x.Mail).HasMaxLength(200).IsRequired();
+            e.Property(x => x.PhoneNumber).HasMaxLength(20);
             e.Property(x => x.PasswordHash).HasMaxLength(256).IsRequired();
+            e.Property(x => x.AvatarUrl).HasMaxLength(1000).HasDefaultValue("GpsGeoFenceApp/Application/Resources/Image/default-avatar.png");
             e.Property(x => x.IsActive).HasDefaultValue(true);
             e.Property(x => x.CreatedAt).HasDefaultValueSql("SYSUTCDATETIME()");
             e.HasIndex(x => x.Username).IsUnique().HasDatabaseName("UX_Users_Username");
@@ -123,6 +126,18 @@ public sealed class AppDb(DbContextOptions<AppDb> options) : DbContext(options)
         b.Entity<AnalyticsVisit>(e =>      { e.ToTable("Analytics_Visit"); e.HasKey(x => x.Id); });
         b.Entity<AnalyticsRoute>(e =>      { e.ToTable("Analytics_Route"); e.HasKey(x => x.Id); });
         b.Entity<AnalyticsListenDuration>(e => { e.ToTable("Analytics_ListenDuration"); e.HasKey(x => x.Id); });
+
+        b.Entity<PoiImage>(e =>
+        {
+            e.ToTable("PoiImages");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).ValueGeneratedOnAdd();
+            e.Property(x => x.ImageUrl).HasMaxLength(1000).IsRequired();
+            e.Property(x => x.SortOrder).HasDefaultValue(0);
+            e.Property(x => x.CreatedAt).HasDefaultValueSql("SYSUTCDATETIME()");
+            e.HasOne<Poi>().WithMany()
+             .HasForeignKey(x => x.IdPoi).OnDelete(DeleteBehavior.Cascade);
+        });
 
         b.Entity<GuestDevice>(e =>
         {

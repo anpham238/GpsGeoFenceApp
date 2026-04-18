@@ -6,48 +6,118 @@
     Title="Đăng ký tài khoản">
 
     <ScrollView>
-        <VerticalStackLayout Padding="32" Spacing="14" VerticalOptions="Center">
+        <VerticalStackLayout Padding="24" Spacing="0" VerticalOptions="Center">
+            <Border Background="White" StrokeThickness="0" Padding="24,28" Margin="0,16">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="16" />
+                </Border.StrokeShape>
+                <Border.Shadow>
+                    <Shadow Brush="Black" Opacity="0.1" Offset="0,4" Radius="10" />
+                </Border.Shadow>
 
-            <Label Text="Tạo tài khoản" FontSize="24" FontAttributes="Bold"
-                   HorizontalOptions="Center" Margin="0,0,0,16" />
+                <VerticalStackLayout Spacing="14">
+                    <Label Text="Tạo tài khoản" FontSize="24" FontAttributes="Bold"
+                           HorizontalOptions="Center" TextColor="#1976D2" Margin="0,0,0,8" />
 
-            <Label Text="Tên đăng nhập" FontSize="14" />
-            <Entry x:Name="UsernameEntry" Placeholder="Tối thiểu 3 ký tự" ReturnType="Next" />
+                    <!-- Avatar -->
+                    <VerticalStackLayout HorizontalOptions="Center" Spacing="6">
+                        <Border x:Name="AvatarBorder"
+                                WidthRequest="90" HeightRequest="90"
+                                Background="#E3F2FD" Stroke="#1976D2" StrokeThickness="2">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="45" />
+                            </Border.StrokeShape>
+                            <Image x:Name="AvatarPreview"
+                                   Source="default_avatar.png"
+                                   Aspect="AspectFill"
+                                   WidthRequest="90" HeightRequest="90" />
+                        </Border>
+                        <Button Text="Chọn ảnh đại diện"
+                                Clicked="OnPickAvatarClicked"
+                                BackgroundColor="Transparent"
+                                TextColor="#1976D2"
+                                FontSize="13"
+                                Padding="0" />
+                    </VerticalStackLayout>
 
-            <Label Text="Email" FontSize="14" />
-            <Entry x:Name="MailEntry" Placeholder="example@email.com"
-                   Keyboard="Email" ReturnType="Next" />
+                    <!-- Tên đăng nhập -->
+                    <Label Text="Tên đăng nhập" FontSize="14" FontAttributes="Bold" TextColor="#333" />
+                    <Border Background="#F9F9F9" Stroke="#E0E0E0" StrokeThickness="1">
+                        <Border.StrokeShape><RoundRectangle CornerRadius="8"/></Border.StrokeShape>
+                        <Entry x:Name="UsernameEntry" Placeholder="Tối thiểu 3 ký tự, không dấu" Margin="8,0" ReturnType="Next" />
+                    </Border>
 
-            <Label Text="Mật khẩu" FontSize="14" />
-            <Entry x:Name="PasswordEntry" Placeholder="Tối thiểu 6 ký tự"
-                   IsPassword="True" ReturnType="Next" />
+                    <!-- Email -->
+                    <Label Text="Email" FontSize="14" FontAttributes="Bold" TextColor="#333" />
+                    <Border Background="#F9F9F9" Stroke="#E0E0E0" StrokeThickness="1">
+                        <Border.StrokeShape><RoundRectangle CornerRadius="8"/></Border.StrokeShape>
+                        <Entry x:Name="MailEntry" Placeholder="example@email.com"
+                               Keyboard="Email" Margin="8,0" ReturnType="Next" />
+                    </Border>
 
-            <Label Text="Xác nhận mật khẩu" FontSize="14" />
-            <Entry x:Name="ConfirmEntry" Placeholder="Nhập lại mật khẩu"
-                   IsPassword="True" ReturnType="Done" />
+                    <!-- Số điện thoại -->
+                    <Label Text="Số điện thoại (tùy chọn)" FontSize="14" FontAttributes="Bold" TextColor="#333" />
+                    <Border Background="#F9F9F9" Stroke="#E0E0E0" StrokeThickness="1">
+                        <Border.StrokeShape><RoundRectangle CornerRadius="8"/></Border.StrokeShape>
+                        <Entry x:Name="PhoneEntry" Placeholder="0901234567"
+                               Keyboard="Telephone" Margin="8,0" ReturnType="Next" />
+                    </Border>
 
-            <Label x:Name="ErrorLabel" TextColor="Red" FontSize="13"
-                   IsVisible="False" HorizontalOptions="Center" />
+                    <!-- Mật khẩu -->
+                    <Label Text="Mật khẩu" FontSize="14" FontAttributes="Bold" TextColor="#333" />
+                    <Border Background="#F9F9F9" Stroke="#E0E0E0" StrokeThickness="1">
+                        <Border.StrokeShape><RoundRectangle CornerRadius="8"/></Border.StrokeShape>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Entry x:Name="PasswordEntry" Placeholder="Tối thiểu 6 ký tự"
+                                   IsPassword="True" Margin="8,0" ReturnType="Next" />
+                            <Button Grid.Column="1" x:Name="BtnShowPass"
+                                    Text="👁" BackgroundColor="Transparent"
+                                    FontSize="16" Padding="8,0"
+                                    Clicked="OnTogglePasswordClicked" />
+                        </Grid>
+                    </Border>
 
-            <Button x:Name="RegisterBtn"
-                    Text="Đăng ký"
-                    Clicked="OnRegisterClicked"
-                    Margin="0,8,0,0"
-                    HeightRequest="48" />
+                    <!-- Xác nhận mật khẩu -->
+                    <Label Text="Xác nhận mật khẩu" FontSize="14" FontAttributes="Bold" TextColor="#333" />
+                    <Border Background="#F9F9F9" Stroke="#E0E0E0" StrokeThickness="1">
+                        <Border.StrokeShape><RoundRectangle CornerRadius="8"/></Border.StrokeShape>
+                        <Entry x:Name="ConfirmEntry" Placeholder="Nhập lại mật khẩu"
+                               IsPassword="True" Margin="8,0" ReturnType="Done" />
+                    </Border>
 
-            <Button Text="Đã có tài khoản? Đăng nhập"
-                    Clicked="OnBackToLoginClicked"
-                    BackgroundColor="Transparent"
-                    TextColor="{StaticResource Primary}" />
+                    <Label x:Name="ErrorLabel" TextColor="#D32F2F" FontSize="13"
+                           IsVisible="False" HorizontalOptions="Center" Margin="0,4,0,0" />
 
+                    <Button x:Name="RegisterBtn"
+                            Text="Tạo tài khoản"
+                            Clicked="OnRegisterClicked"
+                            BackgroundColor="#1976D2"
+                            TextColor="White"
+                            CornerRadius="8"
+                            HeightRequest="48"
+                            FontAttributes="Bold"
+                            Margin="0,8,0,0" />
+
+                    <ActivityIndicator x:Name="LoadingIndicator"
+                                       IsRunning="False" IsVisible="False"
+                                       HorizontalOptions="Center" Color="#1976D2" />
+                </VerticalStackLayout>
+            </Border>
+
+            <HorizontalStackLayout HorizontalOptions="Center" Spacing="4">
+                <Label Text="Đã có tài khoản?" VerticalOptions="Center" TextColor="#666" />
+                <Label Text="Đăng nhập" TextColor="#1976D2" FontAttributes="Bold" VerticalOptions="Center">
+                    <Label.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnBackToLoginClicked" />
+                    </Label.GestureRecognizers>
+                </Label>
+            </HorizontalStackLayout>
             <Button Text="Về bản đồ"
                     Clicked="OnBackToMapClicked"
+                    Margin="0,8,0,0"
                     BackgroundColor="Transparent"
-                    TextColor="{StaticResource Primary}" />
-
-            <ActivityIndicator x:Name="LoadingIndicator"
-                               IsRunning="False" IsVisible="False"
-                               HorizontalOptions="Center" />
+                    TextColor="#1976D2"
+                    FontAttributes="Bold" />
         </VerticalStackLayout>
     </ScrollView>
 </ContentPage>

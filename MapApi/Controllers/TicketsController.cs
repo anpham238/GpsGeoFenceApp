@@ -26,20 +26,17 @@ namespace MapApi.Controllers
             await db.SaveChangesAsync();
             return Ok(new { TicketCode = ticketCode });
         }
-
         [HttpPost("scan/{ticketCode}")]
         public async Task<IActionResult> ScanTicket(string ticketCode)
         {
             var ticket = await db.PoiTickets.FirstOrDefaultAsync(t => t.TicketCode == ticketCode);
             if (ticket == null) return NotFound(new { message = "Mã QR không tồn tại!" });
             if (ticket.CurrentUses >= ticket.MaxUses) return StatusCode(403, new { message = "Vé đã hết hạn!" });
-
             ticket.CurrentUses += 1;
             await db.SaveChangesAsync();
             return Ok(new { PoiId = ticket.IdPoi, Language = ticket.LanguageTag, Remaining = ticket.MaxUses - ticket.CurrentUses });
         }
     }
-
     public class CreateTicketReq
     {
         public int PoiId { get; set; }
