@@ -305,6 +305,8 @@ app.MapPost("/api/v1/auth/login", async (LoginRequest req, AppDb db) =>
         user.Username,
         user.Mail,
         user.AvatarUrl,
+        user.PlanType,
+        user.ProExpiryDate,
         ExpiresAt = DateTime.UtcNow.AddHours(24)
     });
 });
@@ -328,8 +330,156 @@ app.MapGet("/api/v1/auth/me", async (HttpContext ctx, AppDb db) =>
         user.Mail,
         user.PhoneNumber,
         user.AvatarUrl,
+        user.PlanType,
+        user.ProExpiryDate,
         user.CreatedAt
     });
+}).RequireAuthorization();
+
+// ============================================================
+// PUT /api/v1/profile — Cập nhật thông tin cá nhân
+// ============================================================
+app.MapPut("/api/v1/profile", async (HttpContext ctx, AppDb db, IWebHostEnvironment env) =>
+{
+    var idClaim = ctx.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    if (!Guid.TryParse(idClaim, out var userId)) return Results.Unauthorized();
+
+    var user = await db.Users.FirstOrDefaultAsync(u => u.UserId == userId && u.IsActive);
+    if (user is null) return Results.NotFound(new { error = "User not found" });
+
+    if (!ctx.Request.HasFormContentType)
+        return Results.BadRequest(new { error = "Yêu cầu multipart/form-data" });
+
+    var form = await ctx.Request.ReadFormAsync();
+    var username = form["Username"].ToString().Trim();
+    var phone    = form["PhoneNumber"].ToString().Trim();
+
+    if (!string.IsNullOrWhiteSpace(username) && username != user.Username)
+    {
+        if (await db.Users.AnyAsync(u => u.Username == username && u.UserId != userId))
+            return Results.Conflict(new { error = "Username đã tồn tại" });
+        user.Username = username;
+    }
+
+    if (!string.IsNullOrWhiteSpace(phone))
+        user.PhoneNumber = phone;
+
+    var avatarFile = form.Files.GetFile("Avatar");
+    if (avatarFile is { Length: > 0 })
+    {
+        var ext = Path.GetExtension(avatarFile.FileName).ToLowerInvariant();
+        if (ext is ".jpg" or ".jpeg" or ".png")
+        {
+            var dir = Path.Combine(env.WebRootPath, "avatars");
+            Directory.CreateDirectory(dir);
+            var safeName = $"{Guid.NewGuid():N}{ext}";
+            await using var fs = System.IO.File.Create(Path.Combine(dir, safeName));
+            await avatarFile.CopyToAsync(fs);
+            user.AvatarUrl = $"/avatars/{safeName}";
+        }
+    }
+
+    await db.SaveChangesAsync();
+    return Results.Ok(new { user.UserId, user.Username, user.Mail, user.PhoneNumber, user.AvatarUrl, user.PlanType });
+}).RequireAuthorization();
+
+// ============================================================
+// GET /api/v1/profile/history — Lịch sử tham quan POI của user
+// ============================================================
+app.MapGet("/api/v1/profile/history", async (HttpContext ctx, AppDb db) =>
+{
+    var idClaim = ctx.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    if (!Guid.TryParse(idClaim, out var userId)) return Results.Unauthorized();
+
+    var history = await db.HistoryPoi.AsNoTracking()
+        .Where(h => h.IdUser == userId)
+        .OrderByDescending(h => h.LastVisitedAt)
+        .Take(50)
+        .Select(h => new
+        {
+            h.Id, h.IdPoi, h.PoiName, h.Quantity,
+            h.LastVisitedAt, h.TotalDurationSeconds
+        })
+        .ToListAsync();
+
+    return Results.Ok(history);
+}).RequireAuthorization();
+
+// ============================================================
+// GET /api/v1/profile/travel-history?sessionId=... — Nhật ký hành trình (PRO)
+// ============================================================
+app.MapGet("/api/v1/profile/travel-history", async (
+    HttpContext ctx, string? sessionId, AppDb db) =>
+{
+    var idClaim = ctx.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    if (!Guid.TryParse(idClaim, out var userId)) return Results.Unauthorized();
+
+    var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.UserId == userId);
+    if (user is null) return Results.NotFound();
+
+    if (user.PlanType != "PRO")
+        return Results.Json(new { error = "Tính năng này chỉ dành cho Gói PRO", requirePro = true },
+            statusCode: StatusCodes.Status403Forbidden);
+
+    IQueryable<AnalyticsRoute> query = db.AnalyticsRoutes.AsNoTracking();
+
+    if (Guid.TryParse(sessionId, out var sid))
+        query = query.Where(r => r.SessionId == sid);
+    else
+        query = query.Where(r => false);
+
+    var points = await query
+        .OrderBy(r => r.RecordedAt)
+        .Select(r => new { r.Latitude, r.Longitude, r.RecordedAt })
+        .ToListAsync();
+
+    return Results.Ok(points);
+}).RequireAuthorization();
+
+// ============================================================
+// GET /api/v1/pois/{id}/directions — Chỉ đường tới POI (PRO only)
+// ============================================================
+app.MapGet("/api/v1/pois/{id}/directions", async (
+    int id, HttpContext ctx, AppDb db) =>
+{
+    var idClaim = ctx.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    if (!Guid.TryParse(idClaim, out var userId)) return Results.Unauthorized();
+
+    var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.UserId == userId);
+    if (user is null) return Results.NotFound();
+
+    if (user.PlanType != "PRO")
+        return Results.Json(new { error = "Chỉ đường chỉ dành cho Gói PRO", requirePro = true },
+            statusCode: StatusCodes.Status403Forbidden);
+
+    var poi = await db.Pois.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id && p.IsActive);
+    if (poi is null) return Results.NotFound(new { error = "POI not found" });
+
+    return Results.Ok(new
+    {
+        PoiId     = poi.Id,
+        PoiName   = poi.Name,
+        Latitude  = poi.Latitude,
+        Longitude = poi.Longitude
+    });
+}).RequireAuthorization();
+
+// ============================================================
+// POST /api/v1/profile/upgrade — Nâng cấp lên PRO (demo: +30 ngày)
+// ============================================================
+app.MapPost("/api/v1/profile/upgrade", async (HttpContext ctx, AppDb db) =>
+{
+    var idClaim = ctx.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    if (!Guid.TryParse(idClaim, out var userId)) return Results.Unauthorized();
+
+    var user = await db.Users.FirstOrDefaultAsync(u => u.UserId == userId && u.IsActive);
+    if (user is null) return Results.NotFound();
+
+    user.PlanType = "PRO";
+    user.ProExpiryDate = DateTime.UtcNow.AddDays(30);
+    await db.SaveChangesAsync();
+
+    return Results.Ok(new { ok = true, PlanType = user.PlanType, ProExpiryDate = user.ProExpiryDate });
 }).RequireAuthorization();
 
 // ============================================================
@@ -528,6 +678,102 @@ app.MapGet("/api/v1/analytics/heatmap", async (AppDb db) =>
         .ToListAsync();
     return Results.Ok(points);
 });
+// ============================================================
+// GET /api/v1/admin/stats — Dashboard: 4 số liệu tổng quan
+// ============================================================
+app.MapGet("/api/v1/admin/stats", async (AppDb db) =>
+{
+    var timeout = DateTime.UtcNow.AddMinutes(-5);
+    var totalDevices  = await db.GuestDevices.CountAsync();
+    var onlineDevices = await db.GuestDevices.CountAsync(d => d.LastActiveAt >= timeout);
+    var totalUsers    = await db.Users.CountAsync();
+    var totalPro      = await db.Users.CountAsync(u => u.PlanType == "PRO");
+
+    return Results.Ok(new
+    {
+        TotalDevices         = totalDevices,
+        OnlineDevices        = onlineDevices,
+        TotalRegisteredUsers = totalUsers,
+        TotalProRevenue      = totalPro * 50000
+    });
+});
+
+// ============================================================
+// GET /api/v1/admin/users — Danh sách người dùng (tìm kiếm, phân trang)
+// ============================================================
+app.MapGet("/api/v1/admin/users", async (string? search, int? page, int? pageSize, AppDb db) =>
+{
+    var q = db.Users.AsNoTracking().AsQueryable();
+    if (!string.IsNullOrWhiteSpace(search))
+    {
+        var s = search.Trim().ToLower();
+        q = q.Where(u => u.Username.ToLower().Contains(s)
+                      || u.Mail.ToLower().Contains(s)
+                      || (u.PhoneNumber != null && u.PhoneNumber.Contains(s)));
+    }
+    var total = await q.CountAsync();
+    var p  = Math.Max(1, page ?? 1);
+    var ps = Math.Clamp(pageSize ?? 20, 1, 100);
+    var items = await q
+        .OrderByDescending(u => u.CreatedAt)
+        .Skip((p - 1) * ps)
+        .Take(ps)
+        .Select(u => new
+        {
+            u.UserId, u.Username, u.Mail, u.PhoneNumber,
+            u.AvatarUrl, u.IsActive, u.CreatedAt,
+            u.PlanType, u.ProExpiryDate
+        })
+        .ToListAsync();
+    return Results.Ok(new { total, page = p, pageSize = ps, items });
+});
+
+// ============================================================
+// PUT /api/v1/admin/users/{id}/lock — Khóa / Mở khóa tài khoản
+// ============================================================
+app.MapPut("/api/v1/admin/users/{id:guid}/lock", async (Guid id, AppDb db) =>
+{
+    var user = await db.Users.FirstOrDefaultAsync(u => u.UserId == id);
+    if (user is null) return Results.NotFound();
+    user.IsActive = !user.IsActive;
+    await db.SaveChangesAsync();
+    return Results.Ok(new { ok = true, isActive = user.IsActive });
+});
+
+// ============================================================
+// PUT /api/v1/admin/users/{id} — Sửa thông tin người dùng
+// ============================================================
+app.MapPut("/api/v1/admin/users/{id:guid}", async (Guid id, AdminUserUpdateRequest req, AppDb db) =>
+{
+    var user = await db.Users.FirstOrDefaultAsync(u => u.UserId == id);
+    if (user is null) return Results.NotFound();
+    if (req.PhoneNumber is not null) user.PhoneNumber = req.PhoneNumber;
+    if (req.PlanType is not null)
+        user.PlanType = req.PlanType == "PRO" || req.PlanType == "FREE" ? req.PlanType : user.PlanType;
+    if (req.ProExpiryDate.HasValue) user.ProExpiryDate = req.ProExpiryDate;
+    await db.SaveChangesAsync();
+    return Results.Ok(new { ok = true });
+});
+
+// ============================================================
+// GET /api/v1/admin/devices — Danh sách thiết bị + trạng thái Online/Offline
+// ============================================================
+app.MapGet("/api/v1/admin/devices", async (AppDb db) =>
+{
+    var timeout = DateTime.UtcNow.AddMinutes(-5);
+    var devices = await db.GuestDevices.AsNoTracking()
+        .OrderByDescending(d => d.LastActiveAt)
+        .Select(d => new
+        {
+            d.DeviceId, d.Platform, d.AppVersion,
+            d.LastLatitude, d.LastLongitude,
+            d.FirstSeenAt, d.LastActiveAt,
+            IsOnline = d.LastActiveAt >= timeout
+        })
+        .ToListAsync();
+    return Results.Ok(devices);
+});
+
 app.MapControllers();
 app.Run();
 // ─── Helpers ───────────────────────────────────────────────────────────────
@@ -575,3 +821,4 @@ public sealed class PoiUpdateRequest
 public sealed record AnalyticsVisitRequest(Guid SessionId, int PoiId, string Action);
 public sealed record AnalyticsRouteRequest(Guid SessionId, double Latitude, double Longitude);
 public sealed record AnalyticsListenRequest(Guid SessionId, int PoiId, int DurationSeconds);
+public sealed record AdminUserUpdateRequest(string? PhoneNumber, string? PlanType, DateTime? ProExpiryDate);

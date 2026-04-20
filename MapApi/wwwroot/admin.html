@@ -249,6 +249,478 @@
             gap: 12px;
         }
 
+        /* User management */
+        .users-hero {
+            background: linear-gradient(135deg, rgba(25, 118, 210, 0.18) 0%, rgba(19, 23, 34, 0.96) 45%, rgba(16, 20, 32, 0.98) 100%);
+            border: 1px solid #263246;
+            border-radius: 18px;
+            padding: 24px 26px;
+            margin-bottom: 18px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .users-hero::after {
+            content: "";
+            position: absolute;
+            width: 220px;
+            height: 220px;
+            right: -70px;
+            top: -90px;
+            background: radial-gradient(circle, rgba(144, 202, 249, 0.16) 0%, rgba(144, 202, 249, 0) 72%);
+            pointer-events: none;
+        }
+
+        .users-hero h3 {
+            margin-bottom: 8px;
+            font-size: 1.25rem;
+            color: #eaf4ff;
+        }
+
+        .users-hero p {
+            max-width: 720px;
+            color: #b7c3d7;
+            line-height: 1.65;
+            font-size: 0.92rem;
+        }
+
+        .users-hero-meta {
+            margin-top: 14px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .hero-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            border: 1px solid rgba(144, 202, 249, 0.2);
+            background: rgba(17, 24, 39, 0.72);
+            color: #d8e7f8;
+            font-size: 0.8rem;
+        }
+
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .toolbar-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .search-input {
+            min-width: 260px;
+            max-width: 360px;
+            background: #111722;
+            border-color: #2c3648;
+            padding-left: 12px;
+        }
+
+        .table-wrap {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        .users-table {
+            min-width: 880px;
+            background: rgba(12, 16, 24, 0.55);
+            border: 1px solid #263042;
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        .user-name {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .user-cell {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 220px;
+        }
+
+        .user-avatar {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #1e88e5 0%, #0d47a1 100%);
+            color: #fff;
+            font-weight: 700;
+            font-size: 0.95rem;
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+            flex-shrink: 0;
+        }
+
+        .user-name strong {
+            color: #fff;
+            font-size: 0.92rem;
+        }
+
+        .subtle-text {
+            color: #8b93a7;
+            font-size: 0.78rem;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            white-space: nowrap;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .badge-role-admin {
+            background: rgba(25, 118, 210, 0.18);
+            color: #90caf9;
+        }
+
+        .badge-role-editor {
+            background: rgba(245, 124, 0, 0.18);
+            color: #ffcc80;
+        }
+
+        .badge-role-viewer {
+            background: rgba(102, 187, 106, 0.18);
+            color: #a5d6a7;
+        }
+
+        .badge-status-active {
+            background: rgba(67, 160, 71, 0.18);
+            color: #a5d6a7;
+        }
+
+        .badge-status-locked {
+            background: rgba(198, 40, 40, 0.18);
+            color: #ef9a9a;
+        }
+
+        .table-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .table-action-btn {
+            min-width: 88px;
+            justify-content: center;
+            display: inline-flex;
+            align-items: center;
+            font-weight: 600;
+            border: 1px solid transparent;
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04);
+        }
+
+        .table-action-btn.btn-primary {
+            background: linear-gradient(135deg, #1e88e5 0%, #1565c0 100%);
+        }
+
+        .table-action-btn.btn-warn {
+            background: linear-gradient(135deg, #fb8c00 0%, #ef6c00 100%);
+        }
+
+        .empty-state {
+            padding: 34px 22px;
+            text-align: center;
+            color: #8b93a7;
+            font-size: 0.9rem;
+            border: 1px dashed #2d3343;
+            border-radius: 16px;
+            background: linear-gradient(180deg, rgba(20, 24, 36, 0.96) 0%, rgba(15, 18, 28, 0.98) 100%);
+        }
+
+        .empty-state strong {
+            display: block;
+            color: #edf5ff;
+            font-size: 1rem;
+            margin-bottom: 6px;
+        }
+
+        .empty-state p {
+            margin: 0;
+            line-height: 1.6;
+        }
+
+        .users-summary {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .summary-tile {
+            background: linear-gradient(145deg, #182030 0%, #111521 100%);
+            border: 1px solid #273247;
+            border-radius: 16px;
+            padding: 18px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .summary-tile::before {
+            content: "";
+            position: absolute;
+            inset: 0 auto auto 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, rgba(144, 202, 249, 0.95), rgba(66, 165, 245, 0.2));
+        }
+
+        .summary-tile .label {
+            color: #8b93a7;
+            font-size: 0.78rem;
+            margin-bottom: 6px;
+        }
+
+        .summary-tile .value {
+            color: #fff;
+            font-size: 1.4rem;
+            font-weight: 700;
+        }
+
+        .summary-tile .meta {
+            margin-top: 8px;
+            color: #95a6be;
+            font-size: 0.76rem;
+        }
+
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(6, 10, 18, 0.72);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            z-index: 9998;
+        }
+
+        .modal-backdrop.show {
+            display: flex;
+        }
+
+        .modal-card {
+            width: 100%;
+            max-width: 640px;
+            background: linear-gradient(180deg, #171b27 0%, #121723 100%);
+            border: 1px solid #293043;
+            border-radius: 14px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+            overflow: hidden;
+        }
+
+        .modal-header,
+        .modal-footer {
+            padding: 16px 20px;
+            background: #131722;
+            border-bottom: 1px solid #23293a;
+        }
+
+        .modal-footer {
+            border-bottom: none;
+            border-top: 1px solid #23293a;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            color: #90caf9;
+            font-size: 1rem;
+        }
+
+        .modal-subtitle {
+            margin-top: 6px;
+            color: #98a8bf;
+            font-size: 0.82rem;
+            line-height: 1.55;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .modal-close {
+            background: transparent;
+            border: 1px solid #3a4358;
+            color: #cbd5e1;
+            border-radius: 6px;
+            padding: 6px 10px;
+            cursor: pointer;
+        }
+
+        .field-hint {
+            margin-top: 5px;
+            color: #73809b;
+            font-size: 0.76rem;
+        }
+
+        .user-form-section {
+            margin-bottom: 16px;
+            padding: 16px;
+            background: rgba(15, 19, 30, 0.68);
+            border: 1px solid #242d40;
+            border-radius: 14px;
+        }
+
+        .user-form-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .user-form-section h4 {
+            margin-bottom: 12px;
+            color: #e6f2ff;
+            font-size: 0.92rem;
+        }
+
+        .field-error {
+            margin-top: 6px;
+            color: #ffb4b4;
+            font-size: 0.75rem;
+            min-height: 18px;
+        }
+
+        .field-invalid {
+            border-color: #d65a5a !important;
+            box-shadow: 0 0 0 1px rgba(214, 90, 90, 0.16);
+        }
+
+        .status-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-height: 42px;
+            padding: 0 14px;
+            border-radius: 10px;
+            background: #111722;
+            border: 1px solid #2c3648;
+        }
+
+        .status-toggle input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: #1976D2;
+            flex: 0 0 auto;
+        }
+
+        .status-toggle span {
+            color: #dbe7f6;
+            font-size: 0.86rem;
+        }
+
+        .users-panel {
+            padding: 22px;
+            border: 1px solid #243145;
+            border-radius: 18px;
+            background: linear-gradient(180deg, rgba(24, 29, 42, 0.96) 0%, rgba(18, 22, 33, 0.98) 100%);
+        }
+
+        .users-table thead th {
+            background: #121a27;
+            color: #ddecff;
+            text-transform: uppercase;
+            font-size: 0.73rem;
+            letter-spacing: 0.08em;
+            border-bottom: 1px solid #2a3448;
+            padding-top: 14px;
+            padding-bottom: 14px;
+        }
+
+        .users-table tbody tr {
+            transition: background 0.2s ease, transform 0.2s ease;
+        }
+
+        .users-table tbody tr:hover td {
+            background: rgba(23, 31, 46, 0.96);
+        }
+
+        @media (max-width: 900px) {
+            #sidebar {
+                width: 200px;
+            }
+
+            .users-summary {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 720px) {
+            body {
+                flex-direction: column;
+                height: auto;
+                min-height: 100vh;
+                overflow: auto;
+            }
+
+            #sidebar {
+                width: 100%;
+                border-right: none;
+                border-bottom: 1px solid #222;
+            }
+
+            #main {
+                min-height: 0;
+            }
+
+            #topbar {
+                padding: 12px 16px;
+                flex-wrap: wrap;
+            }
+
+            #content {
+                padding: 16px;
+            }
+
+            .search-input {
+                min-width: 100%;
+                max-width: none;
+            }
+
+            .toolbar,
+            .toolbar-actions {
+                width: 100%;
+            }
+
+            .toolbar-actions .btn {
+                width: 100%;
+            }
+
+            .users-summary {
+                grid-template-columns: 1fr;
+            }
+
+            .grid2 {
+                grid-template-columns: 1fr;
+            }
+
+            .modal-card {
+                max-height: calc(100vh - 40px);
+                overflow-y: auto;
+            }
+        }
+
         /* Toast */
         #toast {
             position: fixed;
@@ -280,6 +752,67 @@
             .section.active {
                 display: block;
             }
+
+        /* Plan badges */
+        .badge-plan-free {
+            background: rgba(100,100,100,0.25);
+            color: #bbb;
+        }
+
+        .badge-plan-pro {
+            background: rgba(255,193,7,0.22);
+            color: #ffd54f;
+            border-color: rgba(255,193,7,0.3);
+        }
+
+        /* Device section */
+        .devices-summary {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .device-online { color: #a5d6a7; }
+        .device-offline { color: #8b93a7; }
+
+        /* Location popup */
+        #locationPopup {
+            position: fixed;
+            inset: 0;
+            background: rgba(6,10,18,0.75);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            z-index: 9997;
+        }
+        #locationPopup.show { display: flex; }
+        #locationPopupCard {
+            width: 100%;
+            max-width: 680px;
+            background: #171b27;
+            border: 1px solid #293043;
+            border-radius: 14px;
+            overflow: hidden;
+        }
+        #locationPopupHeader {
+            padding: 14px 18px;
+            background: #131722;
+            border-bottom: 1px solid #23293a;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        #locationPopupHeader h3 { color: #90caf9; margin: 0; font-size: 0.95rem; }
+        #locationMap { height: 380px; }
+
+        @media (max-width: 900px) {
+            .devices-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+        @media (max-width: 600px) {
+            .devices-summary { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
@@ -306,6 +839,8 @@
         <a onclick="showSection('secTranslate')" id="navTranslate">🌍 Dịch tự động</a>
         <a onclick="showSection('secQrCode')" id="navQrCode">🔲 Tạo mã QR</a>
         <a onclick="showSection('secDashboard')" id="navDashboard">📊 Analytics Dashboard</a>
+        <a onclick="showSection('secUsers')" id="navUsers">👥 Người dùng & Doanh thu</a>
+        <a onclick="showSection('secDevices')" id="navDevices">📱 Quản lý thiết bị</a>
     </nav>
     <div class="user-box">
       <div id="userLabel">Đã đăng nhập</div>
@@ -385,6 +920,128 @@
                 <button id="btnDownloadQr" class="btn btn-warn" style="display:none; width: 100%; margin-top: 12px;" onclick="downloadQr()">⬇️ Tải ảnh QR về máy</button>
             </div>
         </div>
+        <div id="secUsers" class="section">
+            <div class="users-hero">
+                <h3>Người dùng & Doanh thu — All-in-One Dashboard</h3>
+                <p>Giám sát toàn cảnh: lượng thiết bị tải App, thiết bị đang Online, tổng tài khoản đã đăng ký và doanh thu từ gói PRO. Dữ liệu thật từ database, tự làm mới mỗi 30 giây.</p>
+                <div class="users-hero-meta">
+                    <span class="hero-chip">Real-time từ SQL Server</span>
+                    <span class="hero-chip">Tự làm mới 30 giây</span>
+                    <span class="hero-chip">Khóa / Mở khóa tức thì</span>
+                </div>
+            </div>
+            <!-- 4 Stat tiles -->
+            <div class="users-summary">
+                <div class="summary-tile">
+                    <div class="label">📱 Tổng thiết bị</div>
+                    <div class="value" id="statTotalDevices">—</div>
+                    <div class="meta">Lượt tải App (kể cả không đăng ký)</div>
+                </div>
+                <div class="summary-tile">
+                    <div class="label">🟢 Đang Online</div>
+                    <div class="value" id="statOnlineDevices">—</div>
+                    <div class="meta">Hoạt động trong 5 phút gần nhất</div>
+                </div>
+                <div class="summary-tile">
+                    <div class="label">👤 Tổng người dùng</div>
+                    <div class="value" id="statTotalUsers">—</div>
+                    <div class="meta">Tài khoản đã đăng ký chính thức</div>
+                </div>
+                <div class="summary-tile" style="--tile-accent: #ffd54f;">
+                    <div class="label">💰 Doanh thu gói PRO</div>
+                    <div class="value" id="statProRevenue" style="color:#ffd54f;">—</div>
+                    <div class="meta">Ước tính (50.000 VNĐ / tài khoản)</div>
+                </div>
+            </div>
+            <!-- User table -->
+            <div class="card users-panel">
+                <div class="toolbar">
+                    <div>
+                        <h3 style="margin-bottom:4px;">Danh sách tài khoản người dùng</h3>
+                        <p class="subtle-text">Tra cứu theo tên, email hoặc số điện thoại.</p>
+                    </div>
+                    <div class="toolbar-actions">
+                        <input id="userSearchInput" class="search-input" type="text" placeholder="Tìm theo tên, email, SĐT..." oninput="onUserSearch()" />
+                    </div>
+                </div>
+                <div class="table-wrap">
+                    <table class="users-table">
+                        <thead>
+                            <tr>
+                                <th>Tài khoản</th>
+                                <th>Email / SĐT</th>
+                                <th>Gói</th>
+                                <th>Trạng thái</th>
+                                <th>Ngày tham gia</th>
+                                <th>Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tblUsers"></tbody>
+                    </table>
+                </div>
+                <div id="usersEmptyState" class="empty-state" style="display:none;margin-top:14px;">
+                    <strong>Không tìm thấy người dùng phù hợp</strong>
+                    <p>Thử đổi từ khóa hoặc xóa bộ lọc để xem toàn bộ danh sách.</p>
+                </div>
+                <div id="usersPagination" style="margin-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;"></div>
+            </div>
+        </div>
+
+        <!-- DEVICES -->
+        <div id="secDevices" class="section">
+            <div class="users-hero">
+                <h3>Quản lý &amp; Giám sát Thiết bị</h3>
+                <p>Thống kê tổng số thiết bị tải App, theo dõi trạng thái Online/Offline theo cơ chế Timeout 5 phút và xem vị trí cuối cùng trên bản đồ.</p>
+                <div class="users-hero-meta">
+                    <span class="hero-chip">Timeout 5 phút</span>
+                    <span class="hero-chip">Ping mỗi 3 phút</span>
+                    <span class="hero-chip">Tự làm mới 30 giây</span>
+                </div>
+            </div>
+            <div class="devices-summary">
+                <div class="summary-tile">
+                    <div class="label">📲 Tổng thiết bị đã tải App</div>
+                    <div class="value" id="devStatTotal">—</div>
+                    <div class="meta">Từng mở ứng dụng ít nhất 1 lần</div>
+                </div>
+                <div class="summary-tile">
+                    <div class="label">🟢 Đang trực tuyến</div>
+                    <div class="value" id="devStatOnline" style="color:#a5d6a7;">—</div>
+                    <div class="meta">Hoạt động trong 5 phút gần nhất</div>
+                </div>
+                <div class="summary-tile">
+                    <div class="label">⚪ Ngoại tuyến</div>
+                    <div class="value" id="devStatOffline" style="color:#8b93a7;">—</div>
+                    <div class="meta">Không có tín hiệu &gt; 5 phút</div>
+                </div>
+            </div>
+            <div class="card users-panel">
+                <div class="toolbar">
+                    <h3>Danh sách thiết bị</h3>
+                    <button class="btn btn-primary btn-sm" onclick="loadDevices()">🔄 Làm mới</button>
+                </div>
+                <div class="table-wrap">
+                    <table class="users-table">
+                        <thead>
+                            <tr>
+                                <th>Mã thiết bị</th>
+                                <th>Nền tảng</th>
+                                <th>Phiên bản App</th>
+                                <th>Hoạt động cuối</th>
+                                <th>Trạng thái</th>
+                                <th>Vị trí</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tblDevices"></tbody>
+                    </table>
+                </div>
+                <div id="devicesEmptyState" class="empty-state" style="display:none;margin-top:14px;">
+                    <strong>Chưa có thiết bị nào</strong>
+                    <p>Dữ liệu sẽ xuất hiện khi có thiết bị kết nối và gửi heartbeat.</p>
+                </div>
+            </div>
+        </div>
+
         <!-- CREATE POI -->
         <div id="secCreate" class="section">
             <div class="card" style="max-width:680px;">
@@ -459,12 +1116,77 @@
 </div>
 
 <div id="toast"></div>
+<div id="userModal" class="modal-backdrop" onclick="handleUserModalBackdrop(event)">
+    <div class="modal-card" onclick="event.stopPropagation()">
+        <div class="modal-header" style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+            <div>
+                <h3 id="userModalTitle">Sửa thông tin người dùng</h3>
+                <div class="modal-subtitle">Cập nhật số điện thoại và gói cước. Username và Email không thể thay đổi tại đây.</div>
+            </div>
+            <button class="modal-close" type="button" onclick="closeUserModal()">Đóng</button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="userId" />
+            <div class="user-form-section">
+                <h4>Thông tin tài khoản</h4>
+                <div class="grid2">
+                    <div class="form-row">
+                        <label>Tên đăng nhập</label>
+                        <input id="userUsername" type="text" readonly style="opacity:.6;cursor:not-allowed;" />
+                    </div>
+                    <div class="form-row">
+                        <label>Email</label>
+                        <input id="userEmail" type="email" readonly style="opacity:.6;cursor:not-allowed;" />
+                    </div>
+                </div>
+                <div class="form-row">
+                    <label>Số điện thoại</label>
+                    <input id="userPhone" type="text" placeholder="0901234567" />
+                </div>
+            </div>
+            <div class="user-form-section">
+                <h4>Gói cước</h4>
+                <div class="form-row">
+                    <label>Loại gói</label>
+                    <select id="userPlanType" onchange="toggleProExpiryField()">
+                        <option value="FREE">FREE</option>
+                        <option value="PRO">PRO</option>
+                    </select>
+                </div>
+                <div class="form-row" id="proExpiryRow" style="display:none;">
+                    <label>Ngày hết hạn PRO</label>
+                    <input id="userProExpiry" type="date" />
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn" type="button" style="background:#333;color:#fff;" onclick="closeUserModal()">Hủy</button>
+            <button class="btn btn-primary" type="button" onclick="saveUser()">Lưu thay đổi</button>
+        </div>
+    </div>
+</div>
+
+<!-- LOCATION POPUP -->
+<div id="locationPopup" onclick="if(event.target.id==='locationPopup')closeLocationPopup()">
+    <div id="locationPopupCard">
+        <div id="locationPopupHeader">
+            <h3 id="locationPopupTitle">Vị trí thiết bị</h3>
+            <button class="modal-close" onclick="closeLocationPopup()">Đóng</button>
+        </div>
+        <div id="locationMap"></div>
+    </div>
+</div>
 
 <script>
 const API = '';
 let token = localStorage.getItem('admin_token') || '';
 let currentUser = localStorage.getItem('admin_user') || '';
 let currentSection = 'secPois';
+// state cho user management
+let _usersCurrentPage = 1;
+let _usersSearchTimer = null;
+let _statsRefreshTimer = null;
+let _devicesRefreshTimer = null;
 
 // ── Auth ──────────────────────────────────────────────────────────
 async function doLogin() {
@@ -475,7 +1197,7 @@ async function doLogin() {
   const res = await fetch(`${API}/api/v1/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ identifier: u, password: p })  });
+    body: JSON.stringify({ identifier: u, password: p })  });
   if (!res.ok) { document.getElementById('lErr').textContent = 'Sai tên đăng nhập hoặc mật khẩu.'; return; }
 
   const data = await res.json();
@@ -488,6 +1210,8 @@ async function doLogin() {
 
 function doLogout() {
   token = ''; currentUser = '';
+  clearTimeout(_statsRefreshTimer);
+  clearTimeout(_devicesRefreshTimer);
   localStorage.removeItem('admin_token');
   localStorage.removeItem('admin_user');
   document.getElementById('appShell').style.display = 'none';
@@ -507,11 +1231,10 @@ function startApp() {
         document.querySelectorAll('#sidebar nav a').forEach(a => a.classList.remove('active'));
         document.getElementById(id).classList.add('active');
         // THÊM TIÊU ĐỀ CHO DASHBOARD
-        const titles = { secPois: 'Danh sách POI', secCreate: 'Thêm POI mới', secTours: 'Quản lý Tour', secTranslate: 'Dịch tự động', secDashboard: 'Analytics Dashboard' };
+        const titles = { secPois: 'Danh sách POI', secCreate: 'Thêm POI mới', secTours: 'Quản lý Tour', secTranslate: 'Dịch tự động', secQrCode: 'QR Code', secDashboard: 'Analytics Dashboard', secUsers: 'Người dùng & Doanh thu', secDevices: 'Quản lý thiết bị' };
         document.getElementById('topTitle').textContent = titles[id] || '';
         currentSection = id;
-        // THÊM ID NÚT DASHBOARD
-        const navMap = { secPois: 'navPois', secCreate: 'navCreate', secTours: 'navTours', secTranslate: 'navTranslate', secDashboard: 'navDashboard' };
+        const navMap = { secPois: 'navPois', secCreate: 'navCreate', secTours: 'navTours', secTranslate: 'navTranslate', secQrCode: 'navQrCode', secDashboard: 'navDashboard', secUsers: 'navUsers', secDevices: 'navDevices' };
         if (navMap[id]) document.getElementById(navMap[id]).classList.add('active');
         loadSection(id);
     }
@@ -520,9 +1243,11 @@ function refreshCurrent() { loadSection(currentSection); }
 function loadSection(id) {
         if (id === 'secPois') loadPois();
         if (id === 'secTours') loadTours();
-    if (id === 'secTranslate') loadTranslateStatus();
-    if (id === 'secQrCode') loadPoiForQr();
+        if (id === 'secTranslate') loadTranslateStatus();
+        if (id === 'secQrCode') loadPoiForQr();
         if (id === 'secDashboard') { loadDashboard(); loadHeatmap(); }
+        if (id === 'secUsers') { loadAdminStats(); loadUsers(1); }
+        if (id === 'secDevices') loadDevices();
     }
 
 // ── POI List ──────────────────────────────────────────────────────
@@ -673,6 +1398,249 @@ async function runTranslate() {
   loadTranslateStatus();
 }
 
+// ── User Management (Real API) ────────────────────────────────────
+
+async function loadAdminStats() {
+  const res = await authFetch('/api/v1/admin/stats');
+  if (!res) return;
+  const d = await res.json();
+  document.getElementById('statTotalDevices').textContent = d.totalDevices ?? '—';
+  document.getElementById('statOnlineDevices').textContent = d.onlineDevices ?? '—';
+  document.getElementById('statTotalUsers').textContent = d.totalRegisteredUsers ?? '—';
+  document.getElementById('statProRevenue').textContent =
+    d.totalProRevenue != null ? d.totalProRevenue.toLocaleString('vi-VN') + ' ₫' : '—';
+  clearTimeout(_statsRefreshTimer);
+  _statsRefreshTimer = setTimeout(loadAdminStats, 30000);
+}
+
+async function loadUsers(page = 1) {
+  _usersCurrentPage = page;
+  const search = document.getElementById('userSearchInput')?.value?.trim() || '';
+  const qs = new URLSearchParams({ page, pageSize: 20 });
+  if (search) qs.set('search', search);
+  const res = await authFetch(`/api/v1/admin/users?${qs}`);
+  if (!res) return;
+  const data = await res.json();
+  renderUsersTable(data.items || []);
+  renderUsersPagination(data.total, data.page, data.pageSize);
+}
+
+function renderUsersTable(items) {
+  const tbody = document.getElementById('tblUsers');
+  const empty = document.getElementById('usersEmptyState');
+  if (!items.length) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+  tbody.innerHTML = items.map(u => `
+    <tr>
+      <td>
+        <div class="user-cell">
+          <div class="user-avatar">${getUserInitials(u.username)}</div>
+          <div class="user-name">
+            <strong>${escapeHtml(u.username)}</strong>
+            <span class="subtle-text">${escapeHtml(u.userId.slice(0,8))}…</span>
+          </div>
+        </div>
+      </td>
+      <td>
+        <div class="user-name">
+          <strong>${escapeHtml(u.mail)}</strong>
+          <span class="subtle-text">${escapeHtml(u.phoneNumber || 'Chưa cập nhật')}</span>
+        </div>
+      </td>
+      <td>${buildPlanBadge(u.planType, u.proExpiryDate)}</td>
+      <td>${buildStatusBadge(u.isActive)}</td>
+      <td><span class="subtle-text">${formatDate(u.createdAt)}</span></td>
+      <td>
+        <div class="table-actions">
+          <button class="btn btn-primary btn-sm table-action-btn" onclick="openUserModal('${u.userId}','${escapeHtml(u.username)}','${escapeHtml(u.mail)}','${escapeHtml(u.phoneNumber||'')}','${u.planType}','${u.proExpiryDate||''}')">Sửa</button>
+          <button class="btn ${u.isActive ? 'btn-warn' : 'btn-primary'} btn-sm table-action-btn" onclick="toggleUserLock('${u.userId}',${u.isActive})">${u.isActive ? 'Khóa' : 'Mở khóa'}</button>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+function renderUsersPagination(total, page, pageSize) {
+  const pages = Math.ceil(total / pageSize);
+  const el = document.getElementById('usersPagination');
+  if (pages <= 1) { el.innerHTML = `<span class="subtle-text">Tổng: ${total} người dùng</span>`; return; }
+  let html = `<span class="subtle-text">Tổng: ${total} |</span>`;
+  for (let i = 1; i <= pages; i++) {
+    html += `<button class="btn btn-sm${i === page ? ' btn-primary' : ''}" style="${i !== page ? 'background:#222;color:#ccc;' : ''}" onclick="loadUsers(${i})">${i}</button>`;
+  }
+  el.innerHTML = html;
+}
+
+function onUserSearch() {
+  clearTimeout(_usersSearchTimer);
+  _usersSearchTimer = setTimeout(() => loadUsers(1), 400);
+}
+
+function openUserModal(userId, username, mail, phone, planType, proExpiry) {
+  document.getElementById('userId').value = userId;
+  document.getElementById('userUsername').value = username;
+  document.getElementById('userEmail').value = mail;
+  document.getElementById('userPhone').value = phone;
+  document.getElementById('userPlanType').value = planType || 'FREE';
+  document.getElementById('userProExpiry').value = proExpiry ? proExpiry.slice(0,10) : '';
+  document.getElementById('userModalTitle').textContent = `Sửa thông tin: ${username}`;
+  toggleProExpiryField();
+  document.getElementById('userModal').classList.add('show');
+}
+
+function closeUserModal() {
+  document.getElementById('userModal').classList.remove('show');
+}
+
+function handleUserModalBackdrop(event) {
+  if (event.target.id === 'userModal') closeUserModal();
+}
+
+function toggleProExpiryField() {
+  const plan = document.getElementById('userPlanType').value;
+  const row = document.getElementById('proExpiryRow');
+  if (row) row.style.display = plan === 'PRO' ? '' : 'none';
+}
+
+async function saveUser() {
+  const userId = document.getElementById('userId').value;
+  const phone = document.getElementById('userPhone').value.trim();
+  const planType = document.getElementById('userPlanType').value;
+  const proExpiry = document.getElementById('userProExpiry').value;
+
+  const body = { phoneNumber: phone || null, planType };
+  if (planType === 'PRO' && proExpiry) body.proExpiryDate = new Date(proExpiry).toISOString();
+  else body.proExpiryDate = null;
+
+  const res = await authFetch(`/api/v1/admin/users/${userId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  if (!res || !res.ok) { toast('Cập nhật thất bại', true); return; }
+  toast('Đã cập nhật người dùng');
+  closeUserModal();
+  loadUsers(_usersCurrentPage);
+  loadAdminStats();
+}
+
+async function toggleUserLock(userId, isCurrentlyActive) {
+  const action = isCurrentlyActive ? 'khóa' : 'mở khóa';
+  if (!confirm(`Xác nhận ${action} tài khoản này?`)) return;
+  const res = await authFetch(`/api/v1/admin/users/${userId}/lock`, { method: 'PUT' });
+  if (!res || !res.ok) { toast('Thao tác thất bại', true); return; }
+  toast(`Đã ${action} tài khoản`);
+  loadUsers(_usersCurrentPage);
+}
+
+function buildPlanBadge(planType, proExpiry) {
+  if (planType === 'PRO') {
+    const exp = proExpiry ? ` · HH: ${formatDate(proExpiry)}` : '';
+    return `<span class="badge badge-plan-pro">🌟 PRO${exp}</span>`;
+  }
+  return `<span class="badge badge-plan-free">FREE</span>`;
+}
+
+function buildStatusBadge(isActive) {
+  return isActive
+    ? `<span class="badge badge-status-active">🟢 Active</span>`
+    : `<span class="badge badge-status-locked">🔴 Locked</span>`;
+}
+
+function formatDate(value) {
+  if (!value) return '--';
+  const d = new Date(value);
+  if (isNaN(d)) return '--';
+  return d.toLocaleDateString('vi-VN');
+}
+
+function formatDateTime(value) {
+  if (!value) return '--';
+  const d = new Date(value);
+  if (isNaN(d)) return '--';
+  return d.toLocaleString('vi-VN', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function getUserInitials(name) {
+  return String(name || '').trim().split(/\s+/).filter(Boolean)
+    .slice(0, 2).map(w => w[0].toUpperCase()).join('') || 'U';
+}
+
+// ── Device Management ─────────────────────────────────────────────
+
+let _locationMap = null;
+let _locationMarker = null;
+
+async function loadDevices() {
+  const res = await authFetch('/api/v1/admin/devices');
+  if (!res) return;
+  const devices = await res.json();
+
+  const online = devices.filter(d => d.isOnline).length;
+  const offline = devices.length - online;
+  document.getElementById('devStatTotal').textContent = devices.length;
+  document.getElementById('devStatOnline').textContent = online;
+  document.getElementById('devStatOffline').textContent = offline;
+
+  const tbody = document.getElementById('tblDevices');
+  const empty = document.getElementById('devicesEmptyState');
+  if (!devices.length) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+
+  tbody.innerHTML = devices.map(d => `
+    <tr>
+      <td><code style="font-size:0.8rem;color:#90caf9;">${d.deviceId.slice(0,8)}…</code></td>
+      <td>${buildPlatformIcon(d.platform)} ${escapeHtml(d.platform || '—')}</td>
+      <td><span class="subtle-text">${escapeHtml(d.appVersion || '—')}</span></td>
+      <td><span class="subtle-text">${formatDateTime(d.lastActiveAt)}</span></td>
+      <td>${d.isOnline
+        ? '<span class="badge badge-status-active">🟢 Online</span>'
+        : '<span class="badge" style="background:rgba(80,80,80,.2);color:#aaa;">⚪ Offline</span>'}</td>
+      <td>${(d.lastLatitude && d.lastLongitude)
+        ? `<button class="btn btn-primary btn-sm" onclick="showLocation(${d.lastLatitude},${d.lastLongitude},'${escapeHtml(d.deviceId.slice(0,8))}')">🗺 Xem vị trí</button>`
+        : '<span class="subtle-text">Chưa có</span>'}</td>
+    </tr>`).join('');
+
+  clearTimeout(_devicesRefreshTimer);
+  _devicesRefreshTimer = setTimeout(loadDevices, 30000);
+}
+
+function buildPlatformIcon(platform) {
+  if (!platform) return '';
+  const p = platform.toLowerCase();
+  if (p.includes('android')) return '🤖';
+  if (p.includes('ios')) return '🍏';
+  return '💻';
+}
+
+function showLocation(lat, lng, label) {
+  document.getElementById('locationPopup').classList.add('show');
+  document.getElementById('locationPopupTitle').textContent = `Vị trí thiết bị: ${label}…`;
+  setTimeout(() => {
+    if (!_locationMap) {
+      _locationMap = L.map('locationMap').setView([lat, lng], 15);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM' }).addTo(_locationMap);
+      _locationMarker = L.marker([lat, lng]).addTo(_locationMap);
+    } else {
+      _locationMap.setView([lat, lng], 15);
+      _locationMarker.setLatLng([lat, lng]);
+    }
+    _locationMap.invalidateSize();
+  }, 100);
+}
+
+function closeLocationPopup() {
+  document.getElementById('locationPopup').classList.remove('show');
+}
+
 // ── Helpers ───────────────────────────────────────────────────────
 async function authFetch(url, opts = {}) {
   opts.headers = { ...(opts.headers || {}), Authorization: `Bearer ${token}` };
@@ -691,18 +1659,6 @@ function toast(msg, isError = false) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => el.className = '', 3500);
 }
-    let formData = new FormData();
-    formData.append("Username", "admin");
-    formData.append("Mail", "admin@gmail.com");
-    formData.append("Password", "123");
-
-    fetch("/api/v1/auth/register", {
-        method: "POST",
-        body: formData
-    })
-        .then(res => res.json())
-        .then(data => console.log("TẠO THÀNH CÔNG! Dữ liệu:", data))
-        .catch(err => console.error("LỖI:", err));
 // ── Dashboard ─────────────────────────────────────────────────────
 let visitChart, durChart, leafletMap, heatLayer;
 

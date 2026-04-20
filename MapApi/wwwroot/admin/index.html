@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GpsGeoFenceApp Admin</title>
+  <link rel="stylesheet" href="/admin/styles.css" />
+</head>
+<body>
+  <div id="loginScreen" class="screen">
+    <div class="login-card card">
+      <div class="eyebrow">GpsGeoFenceApp</div>
+      <h1>Admin Console</h1>
+      <p class="muted">
+        Dang nhap bang tai khoan admin de quan ly POI, media, narration va xem log co ban.
+      </p>
+      <form id="loginForm" class="stack">
+        <label>
+          <span>Username</span>
+          <input id="loginUsername" type="text" placeholder="admin" required />
+        </label>
+        <label>
+          <span>Password</span>
+          <input id="loginPassword" type="password" placeholder="••••••••" required />
+        </label>
+        <button type="submit" class="btn primary">Dang nhap</button>
+      </form>
+      <p id="loginError" class="error"></p>
+      <p class="hint">
+        Meo: role admin hien duoc suy ra tu config backend. Trong moi truong demo, tai khoan co username
+        <code>admin</code> se duoc xem la admin.
+      </p>
+    </div>
+  </div>
+
+  <div id="appShell" class="screen hidden">
+    <aside class="sidebar">
+      <div>
+        <div class="eyebrow">GpsGeoFenceApp</div>
+        <h2>Admin Web</h2>
+        <p id="currentUserLabel" class="muted small"></p>
+      </div>
+      <nav class="nav">
+        <button class="nav-link active" data-route="dashboard">Dashboard</button>
+        <button class="nav-link" data-route="pois">POI List</button>
+        <button class="nav-link" data-route="form">POI Form</button>
+        <button class="nav-link" data-route="logs">Logs</button>
+      </nav>
+      <div class="sidebar-footer">
+        <button id="logoutBtn" class="btn subtle">Dang xuat</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h1 id="pageTitle">Dashboard</h1>
+          <p id="pageSubtitle" class="muted"></p>
+        </div>
+        <div class="topbar-actions">
+          <button id="refreshBtn" class="btn subtle">Lam moi</button>
+          <button id="newPoiBtn" class="btn primary">Tao POI</button>
+        </div>
+      </header>
+
+      <section id="globalStatus" class="status hidden"></section>
+
+      <section id="dashboardView" class="view">
+        <div class="metrics" id="dashboardMetrics"></div>
+        <div class="grid two">
+          <div class="card">
+            <div class="section-title">Top POI theo muc do kich hoat</div>
+            <div id="dashboardTopPois"></div>
+          </div>
+          <div class="card">
+            <div class="section-title">Phu ngon ngu hien co</div>
+            <div id="dashboardLanguages"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="poisView" class="view hidden">
+        <div class="card toolbar-card">
+          <div class="toolbar">
+            <input id="poiSearchInput" type="search" placeholder="Tim theo ten hoac mo ta..." />
+            <select id="poiFilterActive">
+              <option value="">Tat ca trang thai</option>
+              <option value="true">Dang active</option>
+              <option value="false">Dang inactive</option>
+            </select>
+            <button id="poiSearchBtn" class="btn subtle">Tim</button>
+          </div>
+        </div>
+        <div class="card">
+          <div id="poiListLoading" class="muted hidden">Dang tai danh sach POI...</div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Ten</th>
+                  <th>Toa do</th>
+                  <th>Trang thai</th>
+                  <th>Media</th>
+                  <th>Ngon ngu</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="poiTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="formView" class="view hidden">
+        <form id="poiForm" class="stack large">
+          <div class="grid two">
+            <div class="card stack">
+              <div class="section-title">POI Form</div>
+              <input id="poiIdInput" type="hidden" />
+              <label>
+                <span>Ten POI</span>
+                <input id="poiNameInput" type="text" required />
+              </label>
+              <label>
+                <span>Mo ta</span>
+                <textarea id="poiDescriptionInput" rows="4"></textarea>
+              </label>
+              <label>
+                <span>Narration goc (vi-VN)</span>
+                <textarea id="poiNarrationInput" rows="4"></textarea>
+              </label>
+              <div class="grid two compact">
+                <label>
+                  <span>Latitude</span>
+                  <input id="poiLatitudeInput" type="number" step="any" required />
+                </label>
+                <label>
+                  <span>Longitude</span>
+                  <input id="poiLongitudeInput" type="number" step="any" required />
+                </label>
+              </div>
+              <div class="grid three compact">
+                <label>
+                  <span>Radius (m)</span>
+                  <input id="poiRadiusInput" type="number" min="30" value="120" />
+                </label>
+                <label>
+                  <span>Near Radius (m)</span>
+                  <input id="poiNearRadiusInput" type="number" min="30" value="240" />
+                </label>
+                <label>
+                  <span>Cooldown (s)</span>
+                  <input id="poiCooldownInput" type="number" min="0" value="30" />
+                </label>
+              </div>
+              <label class="switch">
+                <input id="poiIsActiveInput" type="checkbox" checked />
+                <span>POI dang active</span>
+              </label>
+              <div class="actions">
+                <button type="submit" class="btn primary">Luu POI</button>
+                <button type="button" id="poiResetBtn" class="btn subtle">Reset form</button>
+              </div>
+            </div>
+
+            <div class="stack large">
+              <div class="card stack">
+                <div class="section-title">Narration / Language</div>
+                <div class="grid two compact">
+                  <label>
+                    <span>Language Tag</span>
+                    <input id="languageTagInput" type="text" placeholder="en-US" />
+                  </label>
+                  <label>
+                    <span>Text To Speech</span>
+                    <textarea id="languageTextInput" rows="3"></textarea>
+                  </label>
+                </div>
+                <div class="actions">
+                  <button type="button" id="saveLanguageBtn" class="btn subtle">Luu ngon ngu</button>
+                </div>
+                <div id="languageList" class="list"></div>
+              </div>
+
+              <div class="card stack">
+                <div class="section-title">Media</div>
+                <div class="grid two compact">
+                  <label>
+                    <span>Upload anh</span>
+                    <input id="imageUploadInput" type="file" accept=".jpg,.jpeg,.png" />
+                  </label>
+                  <label>
+                    <span>Upload audio</span>
+                    <input id="audioUploadInput" type="file" accept=".mp3,.wav,.m4a" />
+                  </label>
+                </div>
+                <div class="grid three compact">
+                  <label>
+                    <span>Image URL</span>
+                    <input id="mediaImageUrlInput" type="url" placeholder="https://..." />
+                  </label>
+                  <label>
+                    <span>Audio URL</span>
+                    <input id="mediaAudioUrlInput" type="url" placeholder="https://..." />
+                  </label>
+                  <label>
+                    <span>Map Link</span>
+                    <input id="mediaMapLinkInput" type="url" placeholder="https://maps..." />
+                  </label>
+                </div>
+                <div class="actions">
+                  <button type="button" id="saveMediaLinksBtn" class="btn subtle">Luu media links</button>
+                </div>
+                <div id="mediaPreview" class="media-preview"></div>
+              </div>
+
+              <div class="card stack">
+                <div class="section-title">QR Preview</div>
+                <div id="qrPreviewWrap" class="qr-wrap muted">Luu POI de xem QR.</div>
+              </div>
+            </div>
+          </div>
+        </form>
+      </section>
+
+      <section id="logsView" class="view hidden">
+        <div class="card toolbar-card">
+          <div class="toolbar">
+            <select id="logsPoiSelect"></select>
+            <button id="loadLogsBtn" class="btn subtle">Tai logs</button>
+          </div>
+        </div>
+        <div class="grid two">
+          <div class="card">
+            <div class="section-title">Tong quan log POI</div>
+            <div id="logsSummary"></div>
+          </div>
+          <div class="card">
+            <div class="section-title">Chi tiet log</div>
+            <div id="logsTable"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/admin/app.js"></script>
+</body>
+</html>

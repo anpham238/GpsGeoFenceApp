@@ -29,13 +29,12 @@ public partial class MapPage : ContentPage
     private Poi? _nearestPoi;
     private Location? _userLocation;
     private static readonly Location _hcmCenter = new(10.776889, 106.700806);
-
     double _sheetCollapsedOffset = -1;
     readonly double _sheetExpandedOffset = 0;
     double _sheetStartPanY = 0;
     bool _sheetReady = false;
     const double SheetPeekHeight = 140;
-
+    private readonly ProfileApiClient _profileApi; // 👈 1. THÊM DÒNG NÀY
     public MapPage(
         IGeofenceService geofence,
         ILocationService location,
@@ -48,7 +47,8 @@ public partial class MapPage : ContentPage
         TranslatorClient translator,
         AnalyticsClient analytics,
         TourApiClient tourApi,
-        PoiApiClient poiApi)
+        PoiApiClient poiApi,
+        ProfileApiClient profileApi)
     {
         InitializeComponent();
         _geofence = geofence ?? throw new ArgumentNullException(nameof(geofence));
@@ -61,8 +61,9 @@ public partial class MapPage : ContentPage
         _narrationCache = narrationCache ?? throw new ArgumentNullException(nameof(narrationCache));
         _translator = translator ?? throw new ArgumentNullException(nameof(translator));
         _analytics = analytics ?? throw new ArgumentNullException(nameof(analytics));
-        _tourApi = tourApi ?? throw new ArgumentNullException(nameof(tourApi));
+        _geofence = geofence ?? throw new ArgumentNullException(nameof(geofence));
         _poiApi = poiApi ?? throw new ArgumentNullException(nameof(poiApi));
+        _profileApi = profileApi;
         // Toolbar
         ToolbarItems.Add(new ToolbarItem
         {
@@ -133,7 +134,53 @@ public partial class MapPage : ContentPage
 
     private async void OnTopLoginClicked(object sender, EventArgs e)
     {
-        await Shell.Current.GoToAsync("//login");
+        if (AuthApiClient.IsLoggedIn())
+        {
+            // Đã đăng nhập thì mở trang Profile
+            await Shell.Current.GoToAsync("//profile");
+        }
+        else
+        {
+            // Chưa đăng nhập thì mở trang Login
+            await Shell.Current.GoToAsync("//login");
+        }
+    }
+    private async void OnQrButtonClicked(object? sender, TappedEventArgs e)
+    {
+        try
+        {
+            var camStatus = await Permissions.CheckStatusAsync<Permissions.Camera>();
+            if (camStatus != PermissionStatus.Granted)
+                camStatus = await Permissions.RequestAsync<Permissions.Camera>();
+
+            if (camStatus == PermissionStatus.Granted)
+                await Shell.Current!.GoToAsync("qrscan");
+            else
+                await this.DisplayAlertAsync("Từ chối", "Bạn cần cấp quyền Camera để sử dụng tính năng này.", "OK");
+        }
+        catch (Exception ex)
+        {
+            await this.DisplayAlertAsync("Lỗi QR", ex.Message, "OK");
+        }
+    }
+
+    /// <summary>
+    /// Cập nhật avatar: hiển thị chữ viết tắt tên user hoặc "?" nếu chưa đăng nhập.
+    /// Gọi sau khi đăng nhập/đăng xuất thành công.
+    /// </summary>
+    private void UpdateAvatarLabel(string? displayName)
+    {
+        if (string.IsNullOrWhiteSpace(displayName))
+        {
+            AvatarLabel.Text = "?";
+            AvatarBorder.BackgroundColor = Color.FromArgb("#9E9E9E");
+        }
+        else
+        {
+            // Lấy chữ cái đầu tiên của tên
+            AvatarLabel.Text = displayName.Trim()[0].ToString().ToUpper();
+            AvatarBorder.BackgroundColor = Color.FromArgb("#5C6BC0");
+        }
     }
 
     private async void OnGeofenceEvent(Poi poi, string type)
@@ -227,11 +274,40 @@ public partial class MapPage : ContentPage
         _currentLang = LanguageService.Current;
         RefreshLangBar();
 
-        var currentUser = Preferences.Get("Username", "");
-        bool isLoggedIn = !string.IsNullOrEmpty(currentUser);
+        var currentUser = Preferences.Get("auth_username", Preferences.Get("Username", ""));
+        bool isLoggedIn = AuthApiClient.IsLoggedIn();
 
-        BtnTopLogin.IsVisible = !isLoggedIn;
-        TopTitle.Text = isLoggedIn ? $"Xin chào, {currentUser}" : "Khách vãng lai";
+        if (isLoggedIn)
+        {
+            // Lấy link Avatar từ bộ nhớ
+            var avatarUrl = Preferences.Get("auth_avatar_url", "");
+            if (!string.IsNullOrWhiteSpace(avatarUrl))
+            {
+                // Có ảnh -> Ẩn chữ, hiện ảnh
+                AvatarLabel.IsVisible = false;
+                ImgAvatar.IsVisible = true;
+
+                // ✅ Lấy BaseUrl từ _poiApi (Dùng chung cho toàn app)
+                var baseUrl = _poiApi.BaseUrl.TrimEnd('/');
+                ImgAvatar.Source = avatarUrl.StartsWith("http")
+                    ? ImageSource.FromUri(new Uri(avatarUrl))
+                    : ImageSource.FromUri(new Uri(baseUrl + "/" + avatarUrl.TrimStart('/')));
+            }
+            else
+            {
+                // Không có ảnh -> Ẩn ảnh, hiện chữ cái đầu
+                ImgAvatar.IsVisible = false;
+                AvatarLabel.IsVisible = true;
+                UpdateAvatarLabel(currentUser);
+            }
+        }
+        else
+        {
+            // Chưa đăng nhập -> Hiện dấu hỏi chấm
+            ImgAvatar.IsVisible = false;
+            AvatarLabel.IsVisible = true;
+            UpdateAvatarLabel(null);
+        }
 
         MyMap.MoveToRegion(MapSpan.FromCenterAndRadius(_hcmCenter, Distance.FromKilometers(3)));
         if (!_isInitialized)

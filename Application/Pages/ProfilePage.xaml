@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage x:Class="MauiApp1.Pages.ProfilePage"
+             xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             Title=""
+             BackgroundColor="#F5F7FA"
+             Shell.NavBarIsVisible="False">
+
+    <ScrollView>
+        <Grid>
+            <BoxView Color="#1976D2" HeightRequest="300" VerticalOptions="Start" />
+
+            <VerticalStackLayout Spacing="0">
+                <Grid Padding="16,40,16,0" ColumnDefinitions="Auto,*,Auto">
+                    <Label Grid.Column="0" Text="←" FontSize="28" TextColor="White" VerticalOptions="Center" FontAttributes="Bold">
+                        <Label.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnBackTapped"/>
+                        </Label.GestureRecognizers>
+                    </Label>
+                    <Label Grid.Column="1" Text="Trang cá nhân" TextColor="White" FontSize="18" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center" />
+                </Grid>
+
+                <VerticalStackLayout HorizontalOptions="Center" Spacing="12" Margin="0,30,0,30">
+                    <Border WidthRequest="100" HeightRequest="100" Stroke="White" StrokeThickness="3" StrokeShape="RoundRectangle 50" BackgroundColor="#E0E0E0" HorizontalOptions="Center">
+                        <Grid>
+                            <Image x:Name="AvatarImage" Source="default_avatar.png" Aspect="AspectFill" WidthRequest="100" HeightRequest="100">
+                                <Image.Clip>
+                                    <EllipseGeometry Center="50,50" RadiusX="50" RadiusY="50" />
+                                </Image.Clip>
+                            </Image>
+                            <Border WidthRequest="30" HeightRequest="30" BackgroundColor="#F5F5F5" Stroke="White" StrokeThickness="2" StrokeShape="RoundRectangle 15" HorizontalOptions="End" VerticalOptions="End">
+                                <Label Text="📷" FontSize="14" HorizontalOptions="Center" VerticalOptions="Center" />
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Tapped="OnPickAvatarTapped" />
+                                </Border.GestureRecognizers>
+                            </Border>
+                        </Grid>
+                    </Border>
+
+                    <Label x:Name="LblGreeting" Text="Xin chào!" TextColor="White" FontSize="22" FontAttributes="Bold" HorizontalOptions="Center" />
+                    <Label x:Name="LblEmail" Text="email@example.com" TextColor="#DDEEFF" FontSize="14" HorizontalOptions="Center" Margin="0,-8,0,0" />
+
+                    <Border x:Name="BadgeBorder" BackgroundColor="White" Padding="16,8" StrokeShape="RoundRectangle 20" HorizontalOptions="Center" Margin="0,10,0,0">
+                        <Label x:Name="LblPlanBadge" Text="Tài khoản Miễn phí" TextColor="#3C4043" FontSize="14" FontAttributes="Bold" />
+                    </Border>
+                </VerticalStackLayout>
+
+                <Border x:Name="UpgradeBanner" Margin="16,0,16,24" Padding="20,24" Stroke="Transparent">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="16" />
+                    </Border.StrokeShape>
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                            <GradientStop Color="#1565C0" Offset="0.0" />
+                            <GradientStop Color="#42A5F5" Offset="1.0" />
+                        </LinearGradientBrush>
+                    </Border.Background>
+                    <Grid ColumnDefinitions="*,Auto">
+                        <VerticalStackLayout Grid.Column="0" Spacing="4" VerticalOptions="Center">
+                            <Label Text="Nâng cấp Gói PRO" FontSize="16" FontAttributes="Bold" TextColor="White" />
+                            <Label Text="Trải nghiệm du lịch không giới hạn!" FontSize="13" TextColor="#E3F2FD" />
+                        </VerticalStackLayout>
+                        <Button Grid.Column="1" Text="Xem ngay" BackgroundColor="White" TextColor="#1565C0" FontAttributes="Bold" CornerRadius="10" Padding="14,0" HeightRequest="40" Clicked="OnUpgradeClicked" />
+                    </Grid>
+                </Border>
+
+                <Label Text="Lịch sử &amp; Hoạt động" Margin="24,0,24,8" FontSize="15" FontAttributes="Bold" TextColor="#5F6368" />
+                <Border Margin="16,0,16,24" BackgroundColor="White" Stroke="#F0F0F0" StrokeThickness="1">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="16" />
+                    </Border.StrokeShape>
+                    <VerticalStackLayout>
+                        <Grid Padding="20,16" ColumnDefinitions="Auto,*,Auto">
+                            <Grid.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnHistoryTapped" />
+                            </Grid.GestureRecognizers>
+                            <Label Grid.Column="0" Text="📍" FontSize="20" TextColor="#EA4335" VerticalOptions="Center" Margin="0,0,16,0" />
+                            <VerticalStackLayout Grid.Column="1" VerticalOptions="Center">
+                                <Label Text="Lịch sử tham quan" FontSize="15" TextColor="#202124" />
+                                <Label x:Name="LblHistoryCount" Text="Xem các địa điểm đã ghé thăm" FontSize="13" TextColor="#80868B" />
+                            </VerticalStackLayout>
+                            <Label Grid.Column="2" Text="›" FontSize="24" TextColor="#BDBDBD" VerticalOptions="Center" />
+                        </Grid>
+                        <BoxView HeightRequest="1" Color="#F5F5F5" Margin="20,0" />
+                        <Grid Padding="20,16" ColumnDefinitions="Auto,*,Auto">
+                            <Grid.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnTravelHistoryTapped" />
+                            </Grid.GestureRecognizers>
+                            <Label Grid.Column="0" Text="🗺️" FontSize="20" VerticalOptions="Center" Margin="0,0,16,0" />
+                            <VerticalStackLayout Grid.Column="1" VerticalOptions="Center">
+                                <HorizontalStackLayout Spacing="8">
+                                    <Label Text="Nhật ký hành trình" FontSize="15" TextColor="#202124" />
+                                    <Border Padding="6,2" BackgroundColor="#FFC107" Stroke="Transparent" VerticalOptions="Center">
+                                        <Border.StrokeShape>
+                                            <RoundRectangle CornerRadius="6" />
+                                        </Border.StrokeShape>
+                                        <Label Text="PRO" FontSize="10" FontAttributes="Bold" TextColor="#4A3000" />
+                                    </Border>
+                                </HorizontalStackLayout>
+                                <Label Text="Xem lại tuyến đường đã đi" FontSize="13" TextColor="#80868B" />
+                            </VerticalStackLayout>
+                            <Label Grid.Column="2" Text="›" FontSize="24" TextColor="#BDBDBD" VerticalOptions="Center" />
+                        </Grid>
+                    </VerticalStackLayout>
+                </Border>
+
+                <Label Text="Thiết lập" Margin="24,0,24,8" FontSize="15" FontAttributes="Bold" TextColor="#5F6368" />
+                <Border Margin="16,0,16,40" BackgroundColor="White" Stroke="#F0F0F0" StrokeThickness="1">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="16" />
+                    </Border.StrokeShape>
+                    <VerticalStackLayout>
+                        <Grid Padding="20,16" ColumnDefinitions="Auto,*,Auto">
+                            <Grid.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnEditProfileTapped" />
+                            </Grid.GestureRecognizers>
+                            <Label Grid.Column="0" Text="✏️" FontSize="20" VerticalOptions="Center" Margin="0,0,16,0" />
+                            <Label Grid.Column="1" Text="Cập nhật thông tin" FontSize="15" TextColor="#202124" VerticalOptions="Center" />
+                            <Label Grid.Column="2" Text="›" FontSize="24" TextColor="#BDBDBD" VerticalOptions="Center" />
+                        </Grid>
+
+                        <VerticalStackLayout x:Name="EditFormPanel" IsVisible="False" Padding="20,0,20,20" Spacing="10">
+                            <Entry x:Name="EntryUsername" Placeholder="Tên hiển thị mới" FontSize="14" BackgroundColor="#F5F7FA" />
+                            <Entry x:Name="EntryPhone" Placeholder="Số điện thoại" Keyboard="Telephone" FontSize="14" BackgroundColor="#F5F7FA" />
+                            <Label x:Name="LblAvatarPicked" Text="" FontSize="12" TextColor="#1A73E8" />
+                            <Grid ColumnDefinitions="*,*" ColumnSpacing="10" Margin="0,10,0,0">
+                                <Button Grid.Column="0" Text="Hủy" BackgroundColor="#EEEEEE" TextColor="#3C4043" CornerRadius="8" Clicked="OnCancelEditClicked" />
+                                <Button Grid.Column="1" Text="Lưu" BackgroundColor="#1A73E8" TextColor="White" CornerRadius="8" Clicked="OnSaveProfileClicked" />
+                            </Grid>
+                        </VerticalStackLayout>
+
+                        <BoxView HeightRequest="1" Color="#F5F5F5" Margin="20,0" />
+                        <Grid Padding="20,16" ColumnDefinitions="Auto,*">
+                            <Grid.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnLogoutTapped" />
+                            </Grid.GestureRecognizers>
+                            <Label Grid.Column="0" Text="🚪" FontSize="20" VerticalOptions="Center" Margin="0,0,16,0" />
+                            <Label Grid.Column="1" Text="Đăng xuất" FontSize="15" TextColor="#D32F2F" VerticalOptions="Center" />
+                        </Grid>
+                    </VerticalStackLayout>
+                </Border>
+
+            </VerticalStackLayout>
+        </Grid>
+    </ScrollView>
+</ContentPage>

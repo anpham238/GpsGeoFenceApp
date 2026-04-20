@@ -74,6 +74,8 @@ public sealed class AppDb(DbContextOptions<AppDb> options) : DbContext(options)
             e.Property(x => x.AvatarUrl).HasMaxLength(1000).HasDefaultValue("GpsGeoFenceApp/Application/Resources/Image/default-avatar.png");
             e.Property(x => x.IsActive).HasDefaultValue(true);
             e.Property(x => x.CreatedAt).HasDefaultValueSql("SYSUTCDATETIME()");
+            e.Property(x => x.PlanType).HasMaxLength(20).HasDefaultValue("FREE");
+            e.Property(x => x.ProExpiryDate).IsRequired(false);
             e.HasIndex(x => x.Username).IsUnique().HasDatabaseName("UX_Users_Username");
             e.HasIndex(x => x.Mail).IsUnique().HasDatabaseName("UX_Users_Mail");
         });

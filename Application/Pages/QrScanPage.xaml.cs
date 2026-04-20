@@ -65,8 +65,11 @@ public partial class QrScanPage : ContentPage
         {
             _cameraView.IsDetecting = false;
             _cameraView.IsTorchOn = false;
-            _torchOn = false;
+            _cameraView.BarcodesDetected -= OnBarcodesDetected;
+            CameraContainer.Content = null;
+            _cameraView = null;
         }
+        _torchOn = false;
         base.OnDisappearing();
     }
 

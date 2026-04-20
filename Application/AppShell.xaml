@@ -7,9 +7,10 @@
     FlyoutBehavior="Flyout">
 
     <Shell.FlyoutHeader>
-        <Grid HeightRequest="160" BackgroundColor="#1976D2" Padding="20">
+        <Grid HeightRequest="170" BackgroundColor="#1976D2" Padding="20">
             <Grid.RowDefinitions>
                 <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
@@ -18,11 +19,12 @@
                 <Border.StrokeShape>
                     <RoundRectangle CornerRadius="30" />
                 </Border.StrokeShape>
-                <Image Source="dotnet_bot.png" Aspect="AspectFill" BackgroundColor="#E0E0E0"/>
+                <Image x:Name="MenuAvatarImage" Source="dotnet_bot.png" Aspect="AspectFill" BackgroundColor="#E0E0E0"/>
             </Border>
 
             <Label x:Name="MenuUserName" Grid.Row="1" Text="Khách vãng lai" FontSize="18" FontAttributes="Bold" TextColor="White" Margin="0,10,0,0" />
             <Label x:Name="MenuUserEmail" Grid.Row="2" Text="Bạn chưa đăng nhập" FontSize="14" TextColor="#E3F2FD" />
+            <Label x:Name="MenuPlanBadge" Grid.Row="3" Text="" FontSize="12" TextColor="#FFC107" FontAttributes="Bold" Margin="0,2,0,0" />
         </Grid>
     </Shell.FlyoutHeader>
 
@@ -30,9 +32,11 @@
         <ShellContent Route="map" ContentTemplate="{DataTemplate pages:MapPage}" />
     </FlyoutItem>
 
+    <FlyoutItem Title="Trang cá nhân" Icon="map_icon.png">
+        <ShellContent Route="profile" ContentTemplate="{DataTemplate pages:ProfilePage}" />
+    </FlyoutItem>
+
     <ShellContent Route="login" ContentTemplate="{DataTemplate pages:LoginPage}" FlyoutItemIsVisible="False" />
 
-    <MenuItem Text="📍 Lịch sử điểm đã qua" Clicked="OnHistoryClicked" />
-    <MenuItem Text="🔒 Thay đổi mật khẩu" Clicked="OnChangePasswordClicked" />
     <MenuItem Text="🚪 Đăng xuất" Clicked="OnLogoutClicked" />
 </Shell>

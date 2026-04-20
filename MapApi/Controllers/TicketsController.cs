@@ -1,7 +1,9 @@
 ﻿using MapApi.Data;
 using MapApi.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace MapApi.Controllers
 {
@@ -26,15 +28,36 @@ namespace MapApi.Controllers
             await db.SaveChangesAsync();
             return Ok(new { TicketCode = ticketCode });
         }
+
         [HttpPost("scan/{ticketCode}")]
         public async Task<IActionResult> ScanTicket(string ticketCode)
         {
             var ticket = await db.PoiTickets.FirstOrDefaultAsync(t => t.TicketCode == ticketCode);
             if (ticket == null) return NotFound(new { message = "Mã QR không tồn tại!" });
-            if (ticket.CurrentUses >= ticket.MaxUses) return StatusCode(403, new { message = "Vé đã hết hạn!" });
+
+            // Kiểm tra nếu user là PRO thì bỏ qua giới hạn MaxUses
+            bool isPro = false;
+            var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (Guid.TryParse(idClaim, out var userId))
+            {
+                var user = await db.Users.AsNoTracking()
+                    .FirstOrDefaultAsync(u => u.UserId == userId);
+                isPro = user?.PlanType == "PRO" &&
+                        (user.ProExpiryDate == null || user.ProExpiryDate > DateTime.UtcNow);
+            }
+
+            if (!isPro && ticket.CurrentUses >= ticket.MaxUses)
+                return StatusCode(403, new { message = "Vé đã hết hạn!" });
+
             ticket.CurrentUses += 1;
             await db.SaveChangesAsync();
-            return Ok(new { PoiId = ticket.IdPoi, Language = ticket.LanguageTag, Remaining = ticket.MaxUses - ticket.CurrentUses });
+            return Ok(new
+            {
+                PoiId     = ticket.IdPoi,
+                Language  = ticket.LanguageTag,
+                Remaining = isPro ? int.MaxValue : ticket.MaxUses - ticket.CurrentUses,
+                IsProScan = isPro
+            });
         }
     }
     public class CreateTicketReq

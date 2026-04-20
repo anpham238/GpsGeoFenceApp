@@ -9,4 +9,6 @@ public sealed class Users
     public string AvatarUrl { get; set; } = "default-avatar.png";
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public string PlanType { get; set; } = "FREE";
+    public DateTime? ProExpiryDate { get; set; }
 }

@@ -96,6 +96,11 @@ public static class MauiProgram
             http.BaseAddress = new Uri(apiBaseUrl);
             http.Timeout = TimeSpan.FromSeconds(10);
         });
+        builder.Services.AddHttpClient<ProfileApiClient>(http =>
+        {
+            http.BaseAddress = new Uri(apiBaseUrl);
+            http.Timeout = TimeSpan.FromSeconds(15);
+        });
         // ── Guest tracking (ẩn danh) ──────────────────────────────────
         builder.Services.AddSingleton<GuestDeviceService>();
         builder.Services.AddSingleton<GuestHeartbeatService>();
@@ -106,6 +111,9 @@ public static class MauiProgram
         builder.Services.AddTransient<QrScanPage>();
         builder.Services.AddTransient<LoginPage>();
         builder.Services.AddTransient<RegisterPage>();
+        builder.Services.AddTransient<ProfilePage>();
+        builder.Services.AddTransient<ProUpgradePage>();
+        builder.Services.AddTransient<TravelHistoryPage>();
         return builder.Build();
     }
 }

@@ -1,13 +1,20 @@
 using System.Net.Http.Json;
+using Microsoft.Maui.Storage;
 
 namespace MauiApp1.Services.Api;
 
 public sealed class AnalyticsClient
 {
     private readonly HttpClient _http;
-    public readonly Guid SessionId = Guid.NewGuid();
+    public readonly Guid SessionId;
 
-    public AnalyticsClient(HttpClient http) => _http = http;
+    public AnalyticsClient(HttpClient http)
+    {
+        _http = http;
+        var stored = Preferences.Get("analytics_session_id", "");
+        SessionId = Guid.TryParse(stored, out var g) ? g : Guid.NewGuid();
+        Preferences.Set("analytics_session_id", SessionId.ToString());
+    }
 
     public Task LogVisitAsync(int poiId, string action) =>
         PostSilentAsync("/api/v1/analytics/visit",

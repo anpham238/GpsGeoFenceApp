@@ -1,59 +1,62 @@
-﻿namespace MauiApp1;
+using MauiApp1.Pages;
+using MauiApp1.Services.Api;
+
+namespace MauiApp1;
 
 public partial class AppShell : Shell
 {
     public AppShell()
     {
         InitializeComponent();
-        Routing.RegisterRoute("register", typeof(RegisterPage));
-        Routing.RegisterRoute("qrscan", typeof(Pages.QrScanPage));
+        Routing.RegisterRoute("register",      typeof(RegisterPage));
+        Routing.RegisterRoute("qrscan",        typeof(Pages.QrScanPage));
+        Routing.RegisterRoute("proupgrade",    typeof(ProUpgradePage));
+        Routing.RegisterRoute("travelhistory", typeof(TravelHistoryPage));
+
+        // ProfilePage được mở như modal (GoToAsync("profile")) từ avatar trên MapPage
+        Routing.RegisterRoute("profile", typeof(ProfilePage));
     }
 
-    // Hàm này tự chạy mỗi khi chuyển màn hình để cập nhật lại tên trên Menu
     protected override void OnNavigated(ShellNavigatedEventArgs args)
     {
         base.OnNavigated(args);
 
-        // Lấy tên tài khoản đã lưu
-        var name = Preferences.Get("Username", "");
-        var email = Preferences.Get("Email", ""); // Tùy chọn nếu API của bạn trả về Email
+        var name = AuthApiClient.GetCurrentUsername();
+        if (string.IsNullOrEmpty(name))
+            name = Preferences.Get("Username", "");
+
+        var email = AuthApiClient.GetCurrentMail();
+        if (string.IsNullOrEmpty(email))
+            email = Preferences.Get("Email", "");
+
+        var planType = AuthApiClient.GetCurrentPlanType();
 
         if (!string.IsNullOrEmpty(name))
         {
-            MenuUserName.Text = name;
+            MenuUserName.Text  = name;
             MenuUserEmail.Text = string.IsNullOrEmpty(email) ? "Thành viên Smart Tourism" : email;
+            MenuPlanBadge.Text = planType == "PRO" ? "🌟 Gói PRO" : "";
         }
         else
         {
-            MenuUserName.Text = "Khách vãng lai";
+            MenuUserName.Text  = "Khách vãng lai";
             MenuUserEmail.Text = "Bạn chưa đăng nhập";
+            MenuPlanBadge.Text = "";
         }
-    }
-
-    private void OnHistoryClicked(object sender, EventArgs e)
-    {
-        // await Shell.Current.GoToAsync("history");
-    }
-
-    private void OnChangePasswordClicked(object sender, EventArgs e)
-    {
-        // await Shell.Current.GoToAsync("changepassword");
     }
 
     private async void OnLogoutClicked(object sender, EventArgs e)
     {
-        // Xóa thông tin đăng nhập trong máy
+        AuthApiClient.ClearSession();
         Preferences.Remove("Username");
         Preferences.Remove("Email");
 
-        // Đóng Menu lại
         Shell.Current.FlyoutIsPresented = false;
 
-        // Cập nhật lại thanh Menu ngay lập tức
-        MenuUserName.Text = "Khách du lịch";
+        MenuUserName.Text  = "Khách du lịch";
         MenuUserEmail.Text = "Bạn chưa đăng nhập";
+        MenuPlanBadge.Text = "";
 
-        // Mở lại trang bản đồ để Top Bar tự làm mới (hiện lại nút Đăng Nhập)
         await Shell.Current.GoToAsync("//map");
     }
 }

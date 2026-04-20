@@ -5,33 +5,9 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:maps="clr-namespace:Microsoft.Maui.Controls.Maps;assembly=Microsoft.Maui.Controls.Maps"
     Title="">
+    <!-- Ẩn TitleView mặc định vì ta tự vẽ header trong Grid -->
     <Shell.TitleView>
-        <Border BackgroundColor="White" Stroke="#E6E6E6" StrokeThickness="1" Padding="12,8" Margin="0,4,10,4">
-            <Border.StrokeShape>
-                <RoundRectangle CornerRadius="18" />
-            </Border.StrokeShape>
-            <Border.Shadow>
-                <Shadow Brush="Black" Opacity="0.12" Offset="0,2" Radius="8" />
-            </Border.Shadow>
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                <Label x:Name="TopTitle"
-                       Text="Khách vãng lai"
-                       VerticalOptions="Center"
-                       FontSize="15"
-                       FontAttributes="Bold"
-                       TextColor="#2B2B2B"
-                       LineBreakMode="TailTruncation" />
-                <Button x:Name="BtnTopLogin"
-                        Grid.Column="1"
-                        Text="Đăng nhập"
-                        BackgroundColor="Transparent"
-                        TextColor="#1976D2"
-                        FontAttributes="Bold"
-                        FontSize="14"
-                        Clicked="OnTopLoginClicked"
-                        Padding="0" />
-            </Grid>
-        </Border>
+        <ContentView />
     </Shell.TitleView>
 
     <Grid RowDefinitions="*" ColumnDefinitions="*">
@@ -41,85 +17,166 @@
                   IsScrollEnabled="True"
                   IsZoomEnabled="True" />
 
-        <Border Margin="12,10,12,0"
-                Padding="10,8"
-                VerticalOptions="Start"
-                HorizontalOptions="Fill"
-                BackgroundColor="#F8FFFFFF"
-                Stroke="#E6E6E6"
-                StrokeThickness="1"
-                ZIndex="6">
-            <Border.StrokeShape>
-                <RoundRectangle CornerRadius="14" />
-            </Border.StrokeShape>
-            <Border.Shadow>
-                <Shadow Brush="Black" Opacity="0.14" Offset="0,2" Radius="8" />
-            </Border.Shadow>
-            <VerticalStackLayout Spacing="8">
-                <HorizontalStackLayout x:Name="LangBar" Spacing="6">
-                    <Border x:Name="BtnVi" Padding="8,4" Background="#1976D2" Stroke="#00000000">
-                        <Border.StrokeShape>
-                            <RoundRectangle CornerRadius="8" />
-                        </Border.StrokeShape>
-                        <Label Text="🇻🇳" FontSize="15" />
-                        <Border.GestureRecognizers>
-                            <TapGestureRecognizer Tapped="OnLangTapped" CommandParameter="vi-VN" />
-                        </Border.GestureRecognizers>
-                    </Border>
-                    <Border x:Name="BtnEn" Padding="8,4" Background="#333333" Stroke="#00000000">
-                        <Border.StrokeShape>
-                            <RoundRectangle CornerRadius="8" />
-                        </Border.StrokeShape>
-                        <Label Text="🇺🇸" FontSize="15" />
-                        <Border.GestureRecognizers>
-                            <TapGestureRecognizer Tapped="OnLangTapped" CommandParameter="en-US" />
-                        </Border.GestureRecognizers>
-                    </Border>
-                    <Border x:Name="BtnJa" Padding="8,4" Background="#333333" Stroke="#00000000">
-                        <Border.StrokeShape>
-                            <RoundRectangle CornerRadius="8" />
-                        </Border.StrokeShape>
-                        <Label Text="🇯🇵" FontSize="15" />
-                        <Border.GestureRecognizers>
-                            <TapGestureRecognizer Tapped="OnLangTapped" CommandParameter="ja-JP" />
-                        </Border.GestureRecognizers>
-                    </Border>
-                    <Border x:Name="BtnKo" Padding="8,4" Background="#333333" Stroke="#00000000">
-                        <Border.StrokeShape>
-                            <RoundRectangle CornerRadius="8" />
-                        </Border.StrokeShape>
-                        <Label Text="🇰🇷" FontSize="15" />
-                        <Border.GestureRecognizers>
-                            <TapGestureRecognizer Tapped="OnLangTapped" CommandParameter="ko-KR" />
-                        </Border.GestureRecognizers>
-                    </Border>
-                    <Border x:Name="BtnDe" Padding="8,4" Background="#333333" Stroke="#00000000">
-                        <Border.StrokeShape>
-                            <RoundRectangle CornerRadius="8" />
-                        </Border.StrokeShape>
-                        <Label Text="🇩🇪" FontSize="15" />
-                        <Border.GestureRecognizers>
-                            <TapGestureRecognizer Tapped="OnLangTapped" CommandParameter="de-DE" />
-                        </Border.GestureRecognizers>
-                    </Border>
-                </HorizontalStackLayout>
+        <!-- ═══════════════════════════════════════════════════
+             HEADER PANEL (thay thế Shell.TitleView + LangBar cũ)
+             ═══════════════════════════════════════════════════ -->
+        <VerticalStackLayout Margin="12,10,12,0"
+                             VerticalOptions="Start"
+                             Spacing="6"
+                             ZIndex="8">
 
-                <Border BackgroundColor="#0F000000" Stroke="#00000000" Padding="8,0">
-                    <Border.StrokeShape>
-                        <RoundRectangle CornerRadius="10" />
-                    </Border.StrokeShape>
+            <!-- ROW 1: Thanh "Tất cả địa điểm" + Avatar user -->
+            <Border Padding="10,0"
+                    BackgroundColor="White"
+                    Stroke="#E6E6E6"
+                    StrokeThickness="1">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="18" />
+                </Border.StrokeShape>
+                <Border.Shadow>
+                    <Shadow Brush="Black" Opacity="0.12" Offset="0,2" Radius="8" />
+                </Border.Shadow>
+
+                <Grid ColumnDefinitions="*,Auto" HeightRequest="48">
+                    <!-- Picker địa điểm -->
                     <Picker x:Name="TourPicker"
-                            Title="Tất cả địa điểm"
+                            Grid.Column="0"
+                            Title="🗺 Tất cả địa điểm"
                             TextColor="#1F1F1F"
                             TitleColor="#5F6368"
                             FontSize="15"
                             BackgroundColor="Transparent"
-                            HeightRequest="42"
+                            VerticalOptions="Center"
                             SelectedIndexChanged="OnTourSelected" />
-                </Border>
-            </VerticalStackLayout>
-        </Border>
 
+                    <!-- Avatar user (hình tròn) -->
+                    <Border Grid.Column="1"
+                            x:Name="AvatarBorder"
+                            WidthRequest="36"
+                            HeightRequest="36"
+                            BackgroundColor="#5C6BC0"
+                            Stroke="Transparent"
+                            Margin="0,0,4,0"
+                            VerticalOptions="Center">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="18" />
+                        </Border.StrokeShape>
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnTopLoginClicked" />
+                        </Border.GestureRecognizers>
+
+                        <Grid>
+                            <Image x:Name="ImgAvatar" Aspect="AspectFill" IsVisible="False" WidthRequest="36" HeightRequest="36">
+                                <Image.Clip>
+                                    <EllipseGeometry Center="18,18" RadiusX="18" RadiusY="18" />
+                                </Image.Clip>
+                            </Image>
+                            <Label x:Name="AvatarLabel" Text="?" TextColor="White" FontSize="15" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center" />
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <!-- ROW 2: Hàng cờ ngôn ngữ + nút QR tròn ở góc phải -->
+            <Grid ColumnDefinitions="*,Auto">
+                <!-- Cờ ngôn ngữ -->
+                <Border Grid.Column="0"
+                        Padding="10,8"
+                        BackgroundColor="White"
+                        Stroke="#E6E6E6"
+                        StrokeThickness="1"
+                        Margin="0,0,8,0">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="14" />
+                    </Border.StrokeShape>
+                    <Border.Shadow>
+                        <Shadow Brush="Black" Opacity="0.10" Offset="0,2" Radius="6" />
+                    </Border.Shadow>
+                    <HorizontalStackLayout x:Name="LangBar" Spacing="6">
+                        <Border x:Name="BtnVi" Padding="8,4" Background="#1976D2" Stroke="#00000000">
+                            <Border.StrokeShape><RoundRectangle CornerRadius="8" /></Border.StrokeShape>
+                            <Label Text="🇻🇳" FontSize="16" />
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnLangTapped" CommandParameter="vi-VN" />
+                            </Border.GestureRecognizers>
+                        </Border>
+                        <Border x:Name="BtnEn" Padding="8,4" Background="#333333" Stroke="#00000000">
+                            <Border.StrokeShape><RoundRectangle CornerRadius="8" /></Border.StrokeShape>
+                            <Label Text="🇺🇸" FontSize="16" />
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnLangTapped" CommandParameter="en-US" />
+                            </Border.GestureRecognizers>
+                        </Border>
+                        <Border x:Name="BtnJa" Padding="8,4" Background="#333333" Stroke="#00000000">
+                            <Border.StrokeShape><RoundRectangle CornerRadius="8" /></Border.StrokeShape>
+                            <Label Text="🇯🇵" FontSize="16" />
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnLangTapped" CommandParameter="ja-JP" />
+                            </Border.GestureRecognizers>
+                        </Border>
+                        <Border x:Name="BtnKo" Padding="8,4" Background="#333333" Stroke="#00000000">
+                            <Border.StrokeShape><RoundRectangle CornerRadius="8" /></Border.StrokeShape>
+                            <Label Text="🇰🇷" FontSize="16" />
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnLangTapped" CommandParameter="ko-KR" />
+                            </Border.GestureRecognizers>
+                        </Border>
+                        <Border x:Name="BtnDe" Padding="8,4" Background="#333333" Stroke="#00000000">
+                            <Border.StrokeShape><RoundRectangle CornerRadius="8" /></Border.StrokeShape>
+                            <Label Text="🇩🇪" FontSize="16" />
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnLangTapped" CommandParameter="de-DE" />
+                            </Border.GestureRecognizers>
+                        </Border>
+                    </HorizontalStackLayout>
+                </Border>
+
+                <!-- Nút QR hình tròn nhỏ -->
+                <Border Grid.Column="1"
+                        WidthRequest="46"
+                        HeightRequest="46"
+                        BackgroundColor="White"
+                        Stroke="#E6E6E6"
+                        StrokeThickness="1">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="23" />
+                    </Border.StrokeShape>
+                    <Border.Shadow>
+                        <Shadow Brush="Black" Opacity="0.14" Offset="0,2" Radius="6" />
+                    </Border.Shadow>
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnQrButtonClicked" />
+                    </Border.GestureRecognizers>
+                    <!-- Icon QR bằng Path SVG -->
+                    <Grid HorizontalOptions="Center" VerticalOptions="Center"
+                          WidthRequest="26" HeightRequest="26">
+                        <!-- Ô trên trái -->
+                        <Path Data="M2 2 H9 V9 H2 Z M3 3 H8 V8 H3 Z M4 4 H7 V7 H4 Z"
+                              Fill="#3F3F3F"
+                              HorizontalOptions="Start"
+                              VerticalOptions="Start" />
+                        <!-- Ô trên phải -->
+                        <Path Data="M15 2 H22 V9 H15 Z M16 3 H21 V8 H16 Z M17 4 H20 V7 H17 Z"
+                              Fill="#3F3F3F"
+                              HorizontalOptions="Start"
+                              VerticalOptions="Start" />
+                        <!-- Ô dưới trái -->
+                        <Path Data="M2 15 H9 V22 H2 Z M3 16 H8 V21 H3 Z M4 17 H7 V20 H4 Z"
+                              Fill="#3F3F3F"
+                              HorizontalOptions="Start"
+                              VerticalOptions="Start" />
+                        <!-- Chấm dữ liệu giữa -->
+                        <Path Data="M11 2 H13 V4 H11 Z M11 6 H13 V8 H11 Z M11 11 H13 V13 H11 Z M6 11 H8 V13 H6 Z M2 11 H4 V13 H2 Z M15 11 H17 V13 H15 Z M19 11 H22 V13 H19 Z M15 15 H17 V17 H15 Z M19 15 H21 V17 H19 Z M11 15 H13 V17 H11 Z M15 19 H17 V22 H15 Z M19 19 H22 V22 H19 Z M11 19 H13 V22 H11 Z"
+                              Fill="#3F3F3F"
+                              HorizontalOptions="Start"
+                              VerticalOptions="Start" />
+                    </Grid>
+                </Border>
+            </Grid>
+        </VerticalStackLayout>
+        <!-- ═══════════════ KẾT THÚC HEADER ═══════════════ -->
+
+        <!-- Nút định vị + zoom (giữ nguyên) -->
         <VerticalStackLayout Grid.Row="0"
                              HorizontalOptions="End"
                              VerticalOptions="Center"
@@ -161,6 +218,7 @@
             </Border>
         </VerticalStackLayout>
 
+        <!-- Bottom Sheet (giữ nguyên) -->
         <Border x:Name="BottomSheet" Padding="0" Background="Transparent" VerticalOptions="End" ZIndex="10">
             <Border Padding="16,8,16,14" Background="White" Stroke="#E6E6E6">
                 <Border.StrokeShape>
@@ -190,7 +248,6 @@
                             <RoundRectangle CornerRadius="10" />
                         </Border.StrokeShape>
                         <Grid HeightRequest="170">
-                            <!-- Carousel: hiện khi POI có nhiều ảnh -->
                             <CarouselView x:Name="PoiImageCarousel"
                                           IndicatorView="PoiImageIndicator"
                                           IsVisible="False"
@@ -198,9 +255,7 @@
                                           HeightRequest="170">
                                 <CarouselView.ItemTemplate>
                                     <DataTemplate>
-                                        <Image Source="{Binding .}"
-                                               Aspect="AspectFill"
-                                               HeightRequest="170" />
+                                        <Image Source="{Binding .}" Aspect="AspectFill" HeightRequest="170" />
                                     </DataTemplate>
                                 </CarouselView.ItemTemplate>
                             </CarouselView>
@@ -211,7 +266,6 @@
                                            VerticalOptions="End"
                                            Margin="0,0,0,6"
                                            IsVisible="False" />
-                            <!-- Fallback: ảnh đơn (tương thích ngược) -->
                             <Image x:Name="PoiImage" HeightRequest="170" Aspect="AspectFill" />
                         </Grid>
                     </Border>

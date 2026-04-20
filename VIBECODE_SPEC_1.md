@@ -1,86 +1,95 @@
-# 🎫 ĐẶC TẢ MODULE: TẠO VÀ QUẢN LÝ QR CODE (GIỚI HẠN LƯỢT QUÉT)
+# 👤 13. Đặc Tả Module: Quản Lý Trang Cá Nhân & Gói PRO (Profile & Subscription)
 
-![Status](https://img.shields.io/badge/Status-In_Planning-orange)
-![Module](https://img.shields.io/badge/Module-Web_CMS_%26_Mobile-blue)
-![Database](https://img.shields.io/badge/Table-PoiTickets-success)
+![Status](https://img.shields.io/badge/Status-Proposed-orange)
+![Monetization](https://img.shields.io/badge/Monetization-Freemium_Model-brightgreen)
+![Feature](https://img.shields.io/badge/Feature-Smart_Routing-blue)
 
-> **Mục tiêu:** Cung cấp công cụ cho Web Admin tạo ra các mã QR Code định danh chứa nội dung thuyết minh của một Điểm tham quan (POI) cụ thể theo ngôn ngữ được chọn. Mỗi mã QR được cấp một `TicketCode` duy nhất và chỉ có giá trị sử dụng tối đa **5 lần quét**.
-
----
-
-## 1. Yêu cầu chức năng (Functional Requirements)
-
-### 1.1. Phía Quản trị viên (Web Admin CMS)
-* **Giao diện tạo QR:**
-    * Dropdown chọn **POI** (Load từ bảng `Pois`).
-    * Dropdown chọn **Ngôn ngữ** (Load từ bảng `PoiLanguage` tương ứng với POI đã chọn).
-    * Nút bấm **"Tạo QR Code"**.
-* **Xử lý kết quả:**
-    * Hệ thống sinh ra một chuỗi ngẫu nhiên, duy nhất làm mã vé (`TicketCode`).
-    * Tạo hình ảnh mã QR chứa đường dẫn (Deep link/URL) có nhúng `TicketCode` này.
-    * Hiển thị hình ảnh mã QR lên màn hình kèm theo nút **"Tải ảnh QR Code (.PNG)"** để Admin in ấn hoặc chia sẻ.
-
-### 1.2. Phía Người dùng (End-User / Mobile App)
-* **Hành động quét:** Người dùng sử dụng App (hoặc Camera điện thoại) quét mã QR.
-* **Xác thực:** Hệ thống kiểm tra số lượt đã sử dụng (`CurrentUses`) so với giới hạn (`MaxUses = 5`).
-* **Hiển thị kết quả:**
-    * **Thành công (< 5 lần):** Tăng `CurrentUses` lên 1. Mở màn hình hiển thị nội dung thuyết minh (ảnh, audio, text) từ bảng `PoiLanguage` và `PoiMedia` tương ứng.
-    * **Thất bại (>= 5 lần):** Hiển thị thông báo lỗi: *"Mã QR này đã vượt quá số lần sử dụng cho phép (5/5)."*
+> **Mục tiêu:** Xây dựng trung tâm quản lý tài khoản cho du khách (Profile Dashboard). Điểm nhấn của module này là hệ thống **Nâng cấp tài khoản (Gói PRO)**, cho phép người dùng mở khóa các đặc quyền vượt trội như: nghe thuyết minh vô hạn, chỉ đường trực tiếp tới POI, quét QR không giới hạn và xem lại bản đồ hành trình đã đi.
 
 ---
 
-## 2. Ánh xạ Cơ sở dữ liệu (Database Mapping)
+## 📱 1. Giao diện Quản lý Trang cá nhân (Profile Dashboard)
 
-Tính năng này sẽ sử dụng trực tiếp bảng `[dbo].[PoiTickets]` đã được định nghĩa trong file `GpsApp_Redesigned.sql`.
+Giao diện được thiết kế theo dạng danh sách (List View) trực quan, chia thành các phân vùng:
 
-| Cột (Column) | Kiểu dữ liệu | Ràng buộc / Mặc định | Ý nghĩa nghiệp vụ |
-| :--- | :--- | :--- | :--- |
-| `TicketCode` | `varchar(50)` | **PK** | Chuỗi mã hóa nhúng vào trong hình ảnh QR Code (VD: `QR-POI1-VI-XYZ123`). |
-| `IdPoi` | `int` | **FK** -> `Pois.Id` | Khóa ngoại trỏ đến Điểm tham quan. |
-| `LanguageTag` | `nvarchar(10)`| Không | Mã ngôn ngữ (VD: `vi`, `en`) để query bảng `PoiLanguage`. |
-| `MaxUses` | `int` | Default: `5` | Giới hạn số lần quét (Cứng: 5 lần). |
-| `CurrentUses`| `int` | Default: `0` | Số lần đã quét thực tế (Tăng dần sau mỗi lần người dùng quét). |
-| `CreatedAt` | `datetime2(3)`| Default: `sysutcdatetime()` | Thời điểm tạo mã QR. |
-
----
-
-## 3. Thiết kế API Endpoints (Backend - C# .NET 10)
-
-| HTTP Method | Endpoint | Quyền (Auth) | Mô tả |
-| :--- | :--- | :---: | :--- |
-| `POST` | `/api/v1/tickets/generate` | **Admin** | Nhận payload `{ IdPoi, LanguageTag }`. Sinh `TicketCode`, Insert vào DB và trả về dạng Base64/Link ảnh QR. |
-| `POST` | `/api/v1/tickets/scan/{ticketCode}`| **Public/User**| Hàm thực thi nghiệp vụ quét. Trừ lượt và trả về Data POI. |
+* **Khu vực Header (Thông tin chung):**
+    * Hiển thị **Avatar** hình tròn (lấy từ `AvatarUrl`), Tên hiển thị (`Username`/`FullName`) và Email.
+    * **Badge Trạng thái:** Thẻ tag nhỏ ghi `Tài khoản Miễn phí` hoặc `🌟 Tài khoản PRO` màu vàng nổi bật.
+* **Khu vực Call-to-Action (Nâng cấp):**
+    * Banner/Nút bấm nổi bật: **"🚀 Nâng cấp Gói PRO - Trải nghiệm du lịch không giới hạn!"**.
+* **Khu vực Lịch sử & Hoạt động:**
+    * 📍 **Lịch sử tham quan:** Danh sách các POI đã nghe thuyết minh (Truy xuất từ bảng `HistoryPoi`).
+    * 🗺️ **Nhật ký hành trình (Tính năng PRO):** Mở ra bản đồ có vẽ đường màu đỏ nối các điểm người dùng đã đi qua.
+* **Khu vực Thiết lập:**
+    * ✏️ **Cập nhật thông tin:** Form thay đổi Tên, Số điện thoại (`PhoneNumber`), cập nhật Avatar.
+    * 🚪 **Đăng xuất tài khoản**.
 
 ---
 
-## 4. Luồng xử lý nghiệp vụ (UML Sequence Diagram)
+## 💎 2. Phân hệ Nâng cấp Gói PRO (Subscription UI)
 
-Sơ đồ dưới đây mô tả luồng kiểm tra logic cực kỳ chặt chẽ khi người dùng thực hiện quét mã:
+Khi người dùng nhấn vào nút nâng cấp, một trang thông tin sẽ hiện ra. Giao diện được thiết kế theo phong cách thẻ song song (Card-based UI) sang trọng (Dark mode), giúp người dùng dễ dàng so sánh:
 
-```mermaid
+| Tính năng / Đặc quyền | 🆓 Gói Cơ bản (Free) | 🌟 Gói PRO (Premium) |
+| :--- | :--- | :--- |
+| **Mức giá** | Miễn phí | `X.000 VNĐ / Tháng` (Hoặc mua theo Tour) |
+| **Thuyết minh POI** | Giới hạn số lần nghe/ngày | **Vô hạn (Nghe không giới hạn)** |
+| **Quét mã QR tại trạm** | Tối đa 5 lần/mã (`MaxUses = 5`) | **Vô hạn số lần quét** (Bỏ qua `MaxUses`) |
+| **Chỉ đường (Smart Routing)** | ❌ Không hỗ trợ | ✅ **Có nút chỉ đường** vẽ tuyến đi tới POI |
+| **Nhật ký hành trình** | ❌ Không hỗ trợ | ✅ **Lưu vết đường đi (Màu đỏ trên bản đồ)** |
+| **Hành động (Button)** | *Đang sử dụng* | **[ Nâng Cấp Ngay ]** |
+
+---
+
+## 🗺️ 3. Đặc tả Kỹ thuật: Các Tính Năng PRO Cốt Lõi
+
+### 3.1. Tính năng: Chỉ đường trực tiếp tới POI (Smart Routing)
+* **Quy trình:** Khi người dùng mở xem chi tiết một điểm tham quan (POI), giao diện sẽ xuất hiện thêm nút **"Đường đi tới đây"** (Directions).
+* **Hoạt động:** Hệ thống sử dụng tọa độ GPS hiện tại của người dùng và `Latitude`/`Longitude` của POI, sau đó gọi API bản đồ (Google Maps Directions API hoặc Mapbox). Kết quả trả về là một đường polyline màu xanh (Blue Route) vẽ trực tiếp trên màn hình bản đồ của App, hướng dẫn đường đi chi tiết.
+
+### 3.2. Tính năng: Quét QR vô hạn
+* **Quy trình:** API `/api/v1/tickets/scan/{ticketCode}` sẽ kiểm tra trạng thái tài khoản.
+* **Hoạt động:** Thông thường, bảng `PoiTickets` sẽ chặn nếu `CurrentUses >= MaxUses` (5 lần). Nhưng nếu API xác định User đang sở hữu `PlanType = PRO`, rào cản này sẽ bị vô hiệu hóa, cho phép trả về dữ liệu thuyết minh ngay lập tức.
+
+### 3.3. Tính năng: Nhật ký tuyến đường (Travel History)
+* **Quy trình:** Khi người dùng chọn "Nhật ký hành trình" trong Trang cá nhân.
+* **Hoạt động:** Hệ thống sẽ truy xuất bảng `Analytics_Route` dựa trên định danh của người dùng. Tập hợp các điểm `Latitude`, `Longitude` sắp xếp theo `RecordedAt` sẽ được nối lại với nhau tạo thành một **đường thẳng màu đỏ (Red Polyline)** vẽ đè lên bản đồ. Tính năng này giúp khách du lịch xem lại toàn bộ dấu chân của mình trong ngày.
+
+---
+
+## 🗄️ 4. Nâng cấp Cơ sở dữ liệu (Database Update)
+
+Để hệ thống phân biệt được người dùng Free và Pro, cần chạy script bổ sung 2 cột vào bảng `Users` hiện tại:
+
+```sql
+-- Thêm cột quản lý Gói cước vào bảng Users
+ALTER TABLE [dbo].[Users] 
+ADD [PlanType] [varchar](20) NOT NULL DEFAULT ('FREE'), -- 'FREE' hoặc 'PRO'
+    [ProExpiryDate] [datetime2](3) NULL; -- Thời hạn kết thúc gói PRO (nếu có)
+
 sequenceDiagram
-    participant User as Người dùng (App)
-    participant API as Backend API
-    participant DB as SQL Server (PoiTickets)
+    participant App as 📱 MAUI App
+    participant API as ⚡ Backend API
+    participant DB as 🗄️ SQL Server
+    participant Maps as 🌍 Route Provider (Google)
 
-    User->>API: POST /api/v1/tickets/scan/{TicketCode}
+    App->>API: GET /pois/{id}/directions (Truyền Token)
     activate API
     
-    API->>DB: Kiểm tra TicketCode
-    DB-->>API: Trả về dòng dữ liệu Ticket (IdPoi, Lang, Max, Current)
+    API->>DB: Lấy thông tin User
+    DB-->>API: PlanType = "FREE" / "PRO"
     
-    alt Không tìm thấy TicketCode
-        API-->>User: Lỗi 404 - "Mã QR không tồn tại"
-    else Tồn tại Ticket
-        alt CurrentUses >= MaxUses
-            API-->>User: Lỗi 403 - "Mã QR đã hết hạn sử dụng (5/5)"
-        else CurrentUses < MaxUses
-            %% Bắt đầu Transaction
-            API->>DB: UPDATE PoiTickets SET CurrentUses = CurrentUses + 1 WHERE TicketCode = ...
-            API->>DB: SELECT data FROM PoiLanguage, PoiMedia WHERE IdPoi = ... AND Lang = ...
-            DB-->>API: Dữ liệu thuyết minh (TextToSpeech, Audio, Image)
-            API-->>User: HTTP 200 OK + Dữ liệu thuyết minh
-            User->>User: App mở màn hình phát Audio / Hiển thị Text
-        end
+    alt PlanType == "FREE" (Chưa nâng cấp)
+        API-->>App: HTTP 403 Forbidden
+        App->>App: Mở màn hình giới thiệu "Gói PRO" (Bảng giá so sánh)
+    else PlanType == "PRO" (Đã nâng cấp)
+        API->>DB: Lấy tọa độ POI đích
+        DB-->>API: Lat, Lng
+        
+        API->>Maps: Request Route (Từ GPS User -> GPS POI)
+        Maps-->>API: Dữ liệu vẽ đường (Polyline)
+        
+        API-->>App: HTTP 200 OK + Route Data
+        App->>App: Render đường chỉ dẫn màu Xanh lên Map
     end
     deactivate API

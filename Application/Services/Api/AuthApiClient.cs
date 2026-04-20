@@ -45,6 +45,8 @@ public sealed class AuthApiClient
         Preferences.Set("auth_user_id", result.UserId.ToString());
         Preferences.Set("auth_username", result.Username);
         Preferences.Set("auth_avatar_url", result.AvatarUrl ?? "");
+        Preferences.Set("auth_plan_type", result.PlanType ?? "FREE");
+        Preferences.Set("auth_mail", result.Mail ?? "");
     }
 
     public static void ClearSession()
@@ -53,6 +55,8 @@ public sealed class AuthApiClient
         Preferences.Remove("auth_user_id");
         Preferences.Remove("auth_username");
         Preferences.Remove("auth_avatar_url");
+        Preferences.Remove("auth_plan_type");
+        Preferences.Remove("auth_mail");
     }
 
     public static bool IsLoggedIn() =>
@@ -69,6 +73,15 @@ public sealed class AuthApiClient
 
     public static string GetCurrentAvatarUrl() =>
         Preferences.Get("auth_avatar_url", "");
+
+    public static string GetCurrentPlanType() =>
+        Preferences.Get("auth_plan_type", "FREE");
+
+    public static bool IsPro() =>
+        Preferences.Get("auth_plan_type", "FREE") == "PRO";
+
+    public static string GetCurrentMail() =>
+        Preferences.Get("auth_mail", "");
 }
 
 public sealed class LoginResult
@@ -78,5 +91,7 @@ public sealed class LoginResult
     public string Username { get; set; } = "";
     public string Mail { get; set; } = "";
     public string? AvatarUrl { get; set; }
+    public string? PlanType { get; set; }
+    public DateTime? ProExpiryDate { get; set; }
     public DateTime ExpiresAt { get; set; }
 }
