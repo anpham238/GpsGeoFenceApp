@@ -12,6 +12,7 @@ public partial class AppShell : Shell
         Routing.RegisterRoute("qrscan",        typeof(Pages.QrScanPage));
         Routing.RegisterRoute("proupgrade",    typeof(ProUpgradePage));
         Routing.RegisterRoute("travelhistory", typeof(TravelHistoryPage));
+        Routing.RegisterRoute("visitedhistory", typeof(VisitedHistoryPage));
 
         // ProfilePage được mở như modal (GoToAsync("profile")) từ avatar trên MapPage
         Routing.RegisterRoute("profile", typeof(ProfilePage));

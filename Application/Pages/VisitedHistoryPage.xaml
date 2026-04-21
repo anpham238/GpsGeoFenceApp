@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="MauiApp1.Pages.VisitedHistoryPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Title="Lịch sử tham quan"
+    BackgroundColor="#F5F7FA">
+
+    <Grid RowDefinitions="Auto,*">
+        <Grid Padding="16,40,16,12" ColumnDefinitions="Auto,*,Auto" BackgroundColor="#1976D2">
+            <Button Text="✕"
+                    WidthRequest="34"
+                    HeightRequest="34"
+                    CornerRadius="17"
+                    BackgroundColor="#1E88E5"
+                    TextColor="White"
+                    Clicked="OnCloseProfileClicked" />
+            <Label Grid.Column="1"
+                   Text="Lịch sử tham quan"
+                   TextColor="White"
+                   FontAttributes="Bold"
+                   FontSize="18"
+                   HorizontalOptions="Center"
+                   VerticalOptions="Center" />
+        </Grid>
+
+        <CollectionView x:Name="HistoryCollection"
+                        Grid.Row="1"
+                        Margin="16,12,16,0"
+                        SelectionMode="None">
+            <CollectionView.EmptyView>
+                <VerticalStackLayout Padding="16,24" Spacing="8">
+                    <Label Text="Bạn chưa có lịch sử tham quan." FontSize="15" TextColor="#5F6368" HorizontalTextAlignment="Center" />
+                </VerticalStackLayout>
+            </CollectionView.EmptyView>
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Grid ColumnDefinitions="24,*" Padding="0,8">
+                        <VerticalStackLayout Grid.Column="0" HorizontalOptions="Center" Spacing="0">
+                            <BoxView WidthRequest="2" HeightRequest="8" Color="#CFD8DC" />
+                            <BoxView WidthRequest="10" HeightRequest="10" CornerRadius="5" Color="#1976D2" />
+                            <BoxView WidthRequest="2" HeightRequest="56" Color="#CFD8DC" />
+                        </VerticalStackLayout>
+                        <Border Grid.Column="1" Stroke="#E0E0E0" BackgroundColor="White" Padding="14,12">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="12" />
+                            </Border.StrokeShape>
+                            <VerticalStackLayout Spacing="6">
+                                <Label Text="{Binding PoiName}" FontAttributes="Bold" FontSize="16" TextColor="#202124" />
+                                <Label Text="{Binding LastVisitedAtDisplay}" FontSize="13" TextColor="#5F6368" />
+                            </VerticalStackLayout>
+                        </Border>
+                    </Grid>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+    </Grid>
+</ContentPage>

@@ -122,6 +122,7 @@ public static class MauiProgram
         builder.Services.AddTransient<ProfilePage>();
         builder.Services.AddTransient<ProUpgradePage>();
         builder.Services.AddTransient<TravelHistoryPage>();
+        builder.Services.AddTransient<VisitedHistoryPage>();
         return builder.Build();
     }
 

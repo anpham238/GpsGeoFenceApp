@@ -5,6 +5,7 @@ namespace MauiApp1.Services.Api;
 public sealed class GuestDeviceApiClient
 {
     private readonly HttpClient _http;
+    public string BaseUrl => _http.BaseAddress?.ToString().TrimEnd('/') ?? "";
 
     public GuestDeviceApiClient(HttpClient http) => _http = http;
 

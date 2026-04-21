@@ -1,8 +1,10 @@
 ﻿using MauiApp1.Models;
 using MauiApp1.Services.Api;
+using MauiApp1.Services.Guest;
 using MauiApp1.Services.Narration;
 using MauiApp1.Services.Sync;
 using Microsoft.Maui.Controls.Maps;
+using Syncfusion.Maui.Toolkit.BottomSheet;
 
 namespace MauiApp1.Pages;
 
@@ -21,6 +23,7 @@ public partial class MapPage : ContentPage
     private readonly AnalyticsClient _analytics;
     private readonly PoiApiClient _poiApi;
     private readonly UsageApiClient _usage;
+    private readonly GuestHeartbeatService _deviceRealtime;
     private CancellationTokenSource? _searchCts;
     private List<PoiSearchResult> _searchResults = new();
     private string _currentLang = LanguageService.Current;
@@ -50,7 +53,8 @@ public partial class MapPage : ContentPage
         AnalyticsClient analytics,
         PoiApiClient poiApi,
         ProfileApiClient profileApi,
-        UsageApiClient usage)
+        UsageApiClient usage,
+        GuestHeartbeatService deviceRealtime)
     {
         InitializeComponent();
         _geofence = geofence ?? throw new ArgumentNullException(nameof(geofence));
@@ -67,68 +71,7 @@ public partial class MapPage : ContentPage
         _poiApi = poiApi ?? throw new ArgumentNullException(nameof(poiApi));
         _profileApi = profileApi;
         _usage = usage ?? throw new ArgumentNullException(nameof(usage));
-        // Toolbar
-        ToolbarItems.Add(new ToolbarItem
-        {
-            Text = "QR",
-            Order = ToolbarItemOrder.Primary,
-            Command = new Command(async () =>
-            {
-                try
-                {
-                    // 1. Xin quyền Camera
-                    var camStatus = await Permissions.CheckStatusAsync<Permissions.Camera>();
-                    if (camStatus != PermissionStatus.Granted)
-                        camStatus = await Permissions.RequestAsync<Permissions.Camera>();
-
-                    // 2. Xin quyền Đọc Bộ Nhớ (Storage) để chọn ảnh QR có sẵn
-                    var storageStatus = await Permissions.CheckStatusAsync<Permissions.StorageRead>();
-                    if (storageStatus != PermissionStatus.Granted)
-                        storageStatus = await Permissions.RequestAsync<Permissions.StorageRead>();
-
-                    // 3. Nếu được cấp quyền Camera (quyền Storage có thể tùy chọn trên một số máy)
-                    if (camStatus == PermissionStatus.Granted)
-                    {
-                        await Shell.Current!.GoToAsync("qrscan");
-                    }
-                    else
-                    {
-                        await this.DisplayAlertAsync("Từ chối", "Bạn cần cấp quyền Camera để sử dụng tính năng này.", "OK");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    await this.DisplayAlertAsync("Lỗi Crash QR", ex.Message, "OK");
-                }
-            })
-        });
-        ToolbarItems.Add(new ToolbarItem
-        {
-            Text = "Sync",
-            Order = ToolbarItemOrder.Secondary,
-            Command = new Command(async () =>
-            {
-                try
-                {
-                    await _poiSync.SyncOnceAsync();
-                    await ReloadPoisAsync();
-                    if (_pois.Count > 0)
-                        await _geofence.RegisterAsync(_pois);
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"[Sync] Manual sync failed: {ex.Message}");
-                }
-            })
-        });
-
-        ToolbarItems.Add(new ToolbarItem
-        {
-            Text = "Reset",
-            Order = ToolbarItemOrder.Secondary,
-            Command = new Command(() => MyMap.MoveToRegion(MapSpan.FromCenterAndRadius(_hcmCenter, Distance.FromKilometers(3))))
-        });
-
+        _deviceRealtime = deviceRealtime ?? throw new ArgumentNullException(nameof(deviceRealtime));
         BtnOpenInMaps.Clicked += async (_, _) => await OpenMapsAsync(_nearestPoi);
         BtnDirections.Clicked += async (_, _) => await DrawDirectionsAsync(_nearestPoi);
         BtnListen.Clicked += async (_, _) => await OnListenButtonClickedAsync();
@@ -201,6 +144,11 @@ public partial class MapPage : ContentPage
         {
             HighlightPoi(poi, $"Vào vùng {type}");
             ShowDetail(poi);
+            if (type == "ENTER")
+            {
+                MyMap.MoveToRegion(MapSpan.FromCenterAndRadius(new Location(poi.Latitude, poi.Longitude), Distance.FromMeters(300)));
+                if (_sheetReady) _ = BottomSheet.TranslateToAsync(0, _sheetExpandedOffset, 250, Easing.CubicOut);
+            }
         });
 
         if (!await EnsureUsageAllowedAsync("POI_LISTEN"))
@@ -413,17 +361,14 @@ public partial class MapPage : ContentPage
                         e.HideInfoWindow = false;
                         HighlightPoi(p, "Đã chọn");
                         ShowDetail(p);
-
+                        MyMap.MoveToRegion(MapSpan.FromCenterAndRadius(new Location(p.Latitude, p.Longitude), Distance.FromMeters(300)));
+                        if (_sheetReady) _ = BottomSheet.TranslateToAsync(0, _sheetExpandedOffset, 250, Easing.CubicOut);
                         if (!await EnsureUsageAllowedAsync("POI_LISTEN"))
                             return;
-
                         var started = DateTime.UtcNow;
                         var lang = LanguageService.Current;
                         var fullText = await GetNarrationTextAsync(p.Id, PoiEventType.Tap, lang) ?? p.NarrationText ?? p.Description;
-
-                        // ĐÃ SỬA CẤU TRÚC ANNOUNCEMENT TẠI ĐÂY
                         await _narration.HandleAsync(new Announcement(p, lang, PoiEventType.Tap, started), overrideText: fullText);
-
                         var dur = (int)(DateTime.UtcNow - started).TotalSeconds;
                         _ = _playback.LogAsync(p.Id, "TAP", dur > 0 ? dur : null);
                         _ = _analytics.LogVisitAsync(p.Id, "tap");
@@ -482,6 +427,7 @@ public partial class MapPage : ContentPage
                 }
 
                 _userLocation = loc;
+                _ = _deviceRealtime.ReportLocationAsync(loc.Latitude, loc.Longitude);
                 Poi? nearest = null;
                 double nearestDist = double.MaxValue;
 
@@ -642,11 +588,11 @@ public partial class MapPage : ContentPage
             MyMap.MoveToRegion(MapSpan.FromCenterAndRadius(
                 new Location(selected.Latitude, selected.Longitude),
                 Distance.FromMeters(300))));
-
         if (localPoi != null)
         {
             HighlightPoi(localPoi, "Tìm kiếm");
             ShowDetail(localPoi);
+            if (_sheetReady) _ = BottomSheet.TranslateToAsync(0, _sheetExpandedOffset, 250, Easing.CubicOut);
         }
     }
 

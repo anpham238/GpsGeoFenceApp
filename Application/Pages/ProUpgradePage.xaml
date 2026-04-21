@@ -14,6 +14,18 @@
                HorizontalOptions="Center" />
     </Shell.TitleView>
 
+    <Grid>
+    <Button Text="✕"
+            Margin="16,40,0,0"
+            WidthRequest="34"
+            HeightRequest="34"
+            CornerRadius="17"
+            BackgroundColor="#1A2E1A"
+            TextColor="White"
+            HorizontalOptions="Start"
+            VerticalOptions="Start"
+            Clicked="OnCloseProfileClicked" />
+
     <ScrollView>
         <VerticalStackLayout Spacing="0" Padding="16,20,16,32">
 
@@ -141,4 +153,5 @@
 
         </VerticalStackLayout>
     </ScrollView>
+    </Grid>
 </ContentPage>

@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Net.Http.Headers;
 
 namespace MauiApp1.Services.Api;
 
@@ -17,16 +18,16 @@ public sealed class PlaybackApiClient
     {
         try
         {
-            var userId = AuthApiClient.GetCurrentUserId();
-            if (userId == Guid.Empty) return;
+            var token = Preferences.Get("auth_token", "");
+            if (string.IsNullOrWhiteSpace(token)) return;
+            _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             var body = new
             {
                 PoiId = poiId,
-                UserId = userId,
                 DurationSeconds = durationSeconds
             };
-            using var resp = await _http.PostAsJsonAsync("/api/v1/history", body, ct);
+            using var resp = await _http.PostAsJsonAsync("/api/v1/profile/history", body, ct);
             if (!resp.IsSuccessStatusCode)
                 System.Diagnostics.Debug.WriteLine($"[Playback] Log failed: {resp.StatusCode}");
         }

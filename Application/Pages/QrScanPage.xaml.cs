@@ -163,7 +163,10 @@ public partial class QrScanPage : ContentPage
                 if (poi != null)
                 {
                     LblStatus.Text = $"✓ {poi.Name} (Còn {result.Remaining} lần)";
+                    var started = DateTime.UtcNow;
                     await _narration.HandleAsync(new Announcement(poi, result.Language, PoiEventType.Tap, DateTime.UtcNow));
+                    var duration = (int)(DateTime.UtcNow - started).TotalSeconds;
+                    _ = _playback.LogAsync(poi.Id, "QR_SCAN", duration > 0 ? duration : null);
                     await DisplayAlertAsync("Thành công", $"Đang phát thuyết minh...\n(Vé của bạn còn {result.Remaining} lần quét)", "OK");
                     await CloseAsync();
                     return;
@@ -176,8 +179,11 @@ public partial class QrScanPage : ContentPage
                 if (poi != null)
                 {
                     LblStatus.Text = $"✓ {poi.Name}";
+                    var started = DateTime.UtcNow;
                     var lang = MauiApp1.Services.LanguageService.Current;
                     await _narration.HandleAsync(new Announcement(poi, lang, PoiEventType.Tap, DateTime.UtcNow));
+                    var duration = (int)(DateTime.UtcNow - started).TotalSeconds;
+                    _ = _playback.LogAsync(poi.Id, "QR_SCAN", duration > 0 ? duration : null);
                     await DisplayAlertAsync(poi.Name, "Đang phát thuyết minh...", "OK");
                     await CloseAsync();
                     return;

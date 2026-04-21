@@ -24,7 +24,7 @@ public partial class ProfilePage : ContentPage
 
     private async void OnBackTapped(object sender, EventArgs e)
     {
-        await Shell.Current.GoToAsync("..");
+        await Shell.Current.GoToAsync("//map");
     }
 
     private async Task LoadProfileAsync()
@@ -80,7 +80,7 @@ public partial class ProfilePage : ContentPage
 
     private async void OnUpgradeClicked(object sender, EventArgs e) => await Shell.Current.GoToAsync("proupgrade");
 
-    private async void OnHistoryTapped(object sender, EventArgs e) => await DisplayAlertAsync("Lịch sử", "Tính năng xem lịch sử chi tiết đang được xây dựng.", "OK");
+    private async void OnHistoryTapped(object sender, EventArgs e) => await Shell.Current.GoToAsync("visitedhistory");
 
     private async void OnTravelHistoryTapped(object sender, EventArgs e)
     {

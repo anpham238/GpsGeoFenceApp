@@ -50,4 +50,8 @@ public partial class ProUpgradePage : ContentPage
             await DisplayAlertAsync("Lỗi", "Không thể nâng cấp lúc này. Vui lòng thử lại.", "OK");
         }
     }
+    private async void OnCloseProfileClicked(object sender, EventArgs e)
+    {
+        await Shell.Current.GoToAsync("//map");
+    }
 }

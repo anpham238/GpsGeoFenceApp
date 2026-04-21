@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using MapApi.Contracts.Realtime;
 using MapApi.Data;
 using MapApi.Models;
 using MapApi.Services;
@@ -49,6 +50,8 @@ builder.Services.AddCors(opt =>
 builder.Services.AddHttpClient<TranslatorClient>();
 builder.Services.AddScoped<PoiManagementService>();
 builder.Services.AddHostedService<TranslationBackgroundService>();
+builder.Services.AddScoped<IHistoryService, HistoryService>();
+builder.Services.AddSingleton<IDevicePresenceService, DevicePresenceService>();
 builder.Services.AddSignalR();
 var app = builder.Build();
 app.UseCors();
@@ -560,44 +563,30 @@ app.MapPost("/api/v1/profile/upgrade", async (HttpContext ctx, AppDb db) =>
 }).RequireAuthorization();
 
 // ============================================================
+// POST /api/v1/profile/history — Ghi lịch sử ghé thăm từ user hiện tại
+// ============================================================
+app.MapPost("/api/v1/profile/history", async (
+    HttpContext ctx, ProfileHistoryUpsertRequest req, IHistoryService historySvc) =>
+{
+    var idClaim = ctx.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    if (!Guid.TryParse(idClaim, out var userId)) return Results.Unauthorized();
+
+    if (req.PoiId <= 0) return Results.BadRequest(new { error = "PoiId là bắt buộc" });
+
+    var result = await historySvc.UpsertVisitAsync(req.PoiId, userId, req.DurationSeconds);
+    if (!result.Success)
+        return Results.BadRequest(new { error = result.Error ?? "Không thể ghi lịch sử" });
+    return Results.Ok(new { ok = true });
+}).RequireAuthorization();
+
+// ============================================================
 // POST /api/v1/history — Ghi lịch sử ghé thăm (thay /api/v1/playback)
 // ============================================================
-app.MapPost("/api/v1/history", async (HistoryRequest req, AppDb db) =>
+app.MapPost("/api/v1/history", async (HistoryRequest req, IHistoryService historySvc) =>
 {
-    if (req.PoiId <= 0 || req.UserId == Guid.Empty)
-        return Results.BadRequest(new { error = "PoiId và UserId là bắt buộc" });
-
-    var poi = await db.Pois.AsNoTracking().FirstOrDefaultAsync(p => p.Id == req.PoiId);
-    if (poi is null) return Results.BadRequest(new { error = "POI not found" });
-
-    if (!await db.Users.AnyAsync(u => u.UserId == req.UserId))
-        return Results.BadRequest(new { error = "User not found" });
-
-    // Upsert theo (IdPoi, IdUser)
-    var existing = await db.HistoryPoi
-        .FirstOrDefaultAsync(h => h.IdPoi == req.PoiId && h.IdUser == req.UserId);
-
-    if (existing is not null)
-    {
-        existing.Quantity++;
-        existing.LastVisitedAt = DateTime.UtcNow;
-        existing.TotalDurationSeconds =
-            (existing.TotalDurationSeconds ?? 0) + (req.DurationSeconds ?? 0);
-    }
-    else
-    {
-        db.HistoryPoi.Add(new HistoryPoi
-        {
-            IdPoi = req.PoiId,
-            IdUser = req.UserId,
-            PoiName = poi.Name,
-            Quantity = 1,
-            LastVisitedAt = DateTime.UtcNow,
-            TotalDurationSeconds = req.DurationSeconds
-        });
-    }
-
-    await db.SaveChangesAsync();
+    var result = await historySvc.UpsertVisitAsync(req.PoiId, req.UserId, req.DurationSeconds);
+    if (!result.Success)
+        return Results.BadRequest(new { error = result.Error ?? "Không thể ghi lịch sử" });
     return Results.Ok(new { ok = true });
 });
 // ============================================================
@@ -758,11 +747,10 @@ app.MapGet("/api/v1/analytics/heatmap", async (AppDb db) =>
 // ============================================================
 // GET /api/v1/admin/stats — Dashboard: 4 số liệu tổng quan
 // ============================================================
-app.MapGet("/api/v1/admin/stats", async (AppDb db) =>
+app.MapGet("/api/v1/admin/stats", async (AppDb db, IDevicePresenceService presence) =>
 {
-    var timeout = DateTime.UtcNow.AddMinutes(-5);
     var totalDevices  = await db.GuestDevices.CountAsync();
-    var onlineDevices = await db.GuestDevices.CountAsync(d => d.LastActiveAt >= timeout);
+    var onlineDevices = presence.OnlineCount;
     var totalUsers    = await db.Users.CountAsync();
     var totalPro      = await db.Users.CountAsync(u => u.PlanType == "PRO");
 
@@ -835,9 +823,8 @@ app.MapPut("/api/v1/admin/users/{id:guid}", async (Guid id, AdminUserUpdateReque
 // ============================================================
 // GET /api/v1/admin/devices — Danh sách thiết bị + trạng thái Online/Offline
 // ============================================================
-app.MapGet("/api/v1/admin/devices", async (AppDb db) =>
+app.MapGet("/api/v1/admin/devices", async (AppDb db, IDevicePresenceService presence) =>
 {
-    var timeout = DateTime.UtcNow.AddMinutes(-5);
     var devices = await db.GuestDevices.AsNoTracking()
         .OrderByDescending(d => d.LastActiveAt)
         .Select(d => new
@@ -845,10 +832,41 @@ app.MapGet("/api/v1/admin/devices", async (AppDb db) =>
             d.DeviceId, d.Platform, d.AppVersion,
             d.LastLatitude, d.LastLongitude,
             d.FirstSeenAt, d.LastActiveAt,
-            IsOnline = d.LastActiveAt >= timeout
+            IsOnline = presence.IsOnline(d.DeviceId)
         })
         .ToListAsync();
     return Results.Ok(devices);
+});
+
+// ============================================================
+// GET /api/v1/admin/devices/realtime-snapshot — Contract snapshot cho CMS
+// ============================================================
+app.MapGet("/api/v1/admin/devices/realtime-snapshot", async (
+    AppDb db, IDevicePresenceService presence, CancellationToken ct) =>
+{
+    var onlineCount = presence.OnlineCount;
+    var devices = await db.GuestDevices.AsNoTracking()
+        .OrderByDescending(x => x.LastActiveAt)
+        .Select(x => new DevicePresenceDto
+        {
+            DeviceId = x.DeviceId,
+            IsOnline = presence.IsOnline(x.DeviceId),
+            OnlineCount = onlineCount,
+            LastActiveAt = x.LastActiveAt,
+            FirstSeenAt = x.FirstSeenAt,
+            Platform = x.Platform,
+            AppVersion = x.AppVersion,
+            LastLatitude = x.LastLatitude,
+            LastLongitude = x.LastLongitude
+        })
+        .ToListAsync(ct);
+
+    return Results.Ok(new DevicePresenceSnapshotEnvelope
+    {
+        EmittedAt = DateTime.UtcNow,
+        OnlineCount = onlineCount,
+        Devices = devices
+    });
 });
 
 // ============================================================
@@ -1128,6 +1146,11 @@ public sealed class HistoryRequest
 {
     public int PoiId { get; set; }
     public Guid UserId { get; set; }
+    public int? DurationSeconds { get; set; }
+}
+public sealed class ProfileHistoryUpsertRequest
+{
+    public int PoiId { get; set; }
     public int? DurationSeconds { get; set; }
 }
 public sealed class PoiUpdateRequest

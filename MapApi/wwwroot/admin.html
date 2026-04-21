@@ -6,6 +6,7 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Smart Tourism — Web Admin</title>
@@ -1216,6 +1217,9 @@ let _usersCurrentPage = 1;
 let _usersSearchTimer = null;
 let _statsRefreshTimer = null;
 let _devicesRefreshTimer = null;
+let _deviceHubConn = null;
+let _deviceMap = new Map();
+const DEVICE_EVENT_V1 = 'admin.devices.presence.changed.v1';
 
 // ── Auth ──────────────────────────────────────────────────────────
 async function doLogin() {
@@ -1241,6 +1245,11 @@ function doLogout() {
   token = ''; currentUser = '';
   clearTimeout(_statsRefreshTimer);
   clearTimeout(_devicesRefreshTimer);
+  if (_deviceHubConn) {
+    _deviceHubConn.stop().catch(() => {});
+    _deviceHubConn = null;
+  }
+  _deviceMap = new Map();
   localStorage.removeItem('admin_token');
   localStorage.removeItem('admin_user');
   document.getElementById('appShell').style.display = 'none';
@@ -1251,6 +1260,7 @@ function startApp() {
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('appShell').style.display = 'flex';
   document.getElementById('userLabel').textContent = `👤 ${currentUser}`;
+  initDevicesRealtime();
   showSection('secPois');
 }
 
@@ -1665,9 +1675,44 @@ let _locationMap = null;
 let _locationMarker = null;
 
 async function loadDevices() {
-  const res = await authFetch('/api/v1/admin/devices');
+  const res = await authFetch('/api/v1/admin/devices/realtime-snapshot');
   if (!res) return;
-  const devices = await res.json();
+  const snapshot = await res.json();
+  applyDeviceSnapshot(snapshot);
+  renderDevicesTable();
+}
+
+function applyDeviceSnapshot(snapshot) {
+  _deviceMap = new Map();
+  const devices = Array.isArray(snapshot?.devices) ? snapshot.devices : [];
+  for (const item of devices) {
+    const dto = normalizeDeviceDto(item);
+    if (dto.deviceId) _deviceMap.set(dto.deviceId, dto);
+  }
+}
+
+function applyPresenceChangedEnvelope(envelope) {
+  const dto = normalizeDeviceDto(envelope?.data || {});
+  if (!dto.deviceId) return;
+  _deviceMap.set(dto.deviceId, dto);
+}
+
+function normalizeDeviceDto(raw) {
+  return {
+    deviceId: raw.deviceId || '',
+    platform: raw.platform || null,
+    appVersion: raw.appVersion || null,
+    lastLatitude: raw.lastLatitude ?? null,
+    lastLongitude: raw.lastLongitude ?? null,
+    firstSeenAt: raw.firstSeenAt || null,
+    lastActiveAt: raw.lastActiveAt || null,
+    isOnline: !!raw.isOnline
+  };
+}
+
+function renderDevicesTable() {
+  const devices = Array.from(_deviceMap.values())
+    .sort((a, b) => new Date(b.lastActiveAt || 0) - new Date(a.lastActiveAt || 0));
 
   const online = devices.filter(d => d.isOnline).length;
   const offline = devices.length - online;
@@ -1694,8 +1739,36 @@ async function loadDevices() {
         : '<span class="subtle-text">Chưa có</span>'}</td>
     </tr>`).join('');
 
-  clearTimeout(_devicesRefreshTimer);
-  _devicesRefreshTimer = setTimeout(loadDevices, 30000);
+}
+
+async function initDevicesRealtime() {
+  if (!window.signalR || !token) return;
+  if (_deviceHubConn && _deviceHubConn.state !== 'Disconnected') return;
+
+  _deviceHubConn = new signalR.HubConnectionBuilder()
+    .withUrl('/hubs/device')
+    .withAutomaticReconnect()
+    .build();
+
+  _deviceHubConn.on(DEVICE_EVENT_V1, (envelope) => {
+    applyPresenceChangedEnvelope(envelope);
+    renderDevicesTable();
+  });
+
+  _deviceHubConn.on('DeviceStatusChanged', (dto) => {
+    applyPresenceChangedEnvelope({ data: dto });
+    renderDevicesTable();
+  });
+
+  _deviceHubConn.onreconnected(() => {
+    loadDevices();
+  });
+
+  try {
+    await _deviceHubConn.start();
+  } catch (e) {
+    console.error('Không thể kết nối device hub:', e);
+  }
 }
 
 function buildPlatformIcon(platform) {

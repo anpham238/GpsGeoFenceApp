@@ -1,0 +1,17 @@
+[
+  {
+    "Name": "New Profile",
+    "Projects": [
+      {
+        "Path": "..\\MapApi\\MapApi.csproj",
+        "Action": "StartWithoutDebugging",
+        "DebugTarget": "https"
+      },
+      {
+        "Path": "MauiApp1.csproj",
+        "Action": "Start",
+        "DebugTarget": "Xiaomi M2010J19SG (Android 12.0 - API 31)"
+      }
+    ]
+  }
+]

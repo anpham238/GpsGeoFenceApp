@@ -1,5 +1,6 @@
 using MapApi.Data;
 using MapApi.Models;
+using MapApi.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,7 +11,12 @@ namespace MapApi.Controllers;
 public class GuestDevicesController : ControllerBase
 {
     private readonly AppDb _db;
-    public GuestDevicesController(AppDb db) => _db = db;
+    private readonly IDevicePresenceService _presence;
+    public GuestDevicesController(AppDb db, IDevicePresenceService presence)
+    {
+        _db = db;
+        _presence = presence;
+    }
 
     [HttpPost("heartbeat")]
     public async Task<IActionResult> Heartbeat([FromBody] GuestHeartbeatRequest req, CancellationToken ct)
@@ -62,9 +68,8 @@ public class GuestDevicesController : ControllerBase
     [HttpGet("online")]
     public async Task<IActionResult> GetOnline(CancellationToken ct)
     {
-        var threshold = DateTime.UtcNow.AddSeconds(-90);
         var list = await _db.GuestDevices.AsNoTracking()
-            .Where(x => x.LastActiveAt >= threshold)
+            .Where(x => _presence.IsOnline(x.DeviceId))
             .OrderByDescending(x => x.LastActiveAt)
             .Select(x => new
             {
@@ -79,7 +84,6 @@ public class GuestDevicesController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll(CancellationToken ct)
     {
-        var threshold = DateTime.UtcNow.AddSeconds(-5);
         var list = await _db.GuestDevices.AsNoTracking()
             .OrderByDescending(x => x.LastActiveAt)
             .Select(x => new
@@ -87,7 +91,7 @@ public class GuestDevicesController : ControllerBase
                 x.DeviceId, x.Platform, x.AppVersion,
                 x.LastLatitude, x.LastLongitude,
                 x.FirstSeenAt, x.LastActiveAt,
-                IsOnline = x.LastActiveAt >= threshold
+                IsOnline = _presence.IsOnline(x.DeviceId)
             })
             .ToListAsync(ct);
         return Ok(list);
