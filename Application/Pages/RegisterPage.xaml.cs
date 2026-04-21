@@ -93,7 +93,7 @@ public partial class RegisterPage : ContentPage
                 ShowError("Đăng ký thất bại. Tên đăng nhập hoặc email đã tồn tại."); return;
             }
 
-            await DisplayAlert("Thành công", "Tài khoản đã được tạo. Vui lòng đăng nhập.", "OK");
+            await DisplayAlertAsync("Thành công", "Tài khoản đã được tạo. Vui lòng đăng nhập.", "OK");
             await Shell.Current.GoToAsync("..");
         }
         catch (Exception ex)

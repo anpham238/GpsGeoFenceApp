@@ -49,6 +49,7 @@ builder.Services.AddCors(opt =>
 builder.Services.AddHttpClient<TranslatorClient>();
 builder.Services.AddScoped<PoiManagementService>();
 builder.Services.AddHostedService<TranslationBackgroundService>();
+builder.Services.AddSignalR();
 var app = builder.Build();
 app.UseCors();
 app.UseStaticFiles();
@@ -150,7 +151,7 @@ app.MapGet("/api/v1/pois/{id}", async (int id, AppDb db) =>
         DebounceSeconds = 3,
         ImageUrl = media?.Image,
         MapLink  = media?.MapLink,
-        AudioUrl = media?.Audio,
+        AudioUrl = (string?)null,
         Language = "vi-VN",
         NarrationText = (string?)null
     });
@@ -186,13 +187,31 @@ var EnterPrefix = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCas
 
 app.MapGet("/api/v1/pois/{id}/narration", async (
     int id, string? lang, string? eventType,
-    AppDb db, CancellationToken ct) =>
+    HttpContext ctx, AppDb db, CancellationToken ct) =>
 {
     var poi = await db.Pois.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id, ct);
     if (poi is null) return Results.NotFound(new { error = "POI not found" });
 
     var toLang = string.IsNullOrWhiteSpace(lang) ? "vi-VN" : lang.Trim();
     var evt    = ParseEventTypeByte(eventType);
+
+    // Gate ngôn ngữ premium
+    var langInfo = await db.SupportedLanguages.AsNoTracking()
+        .FirstOrDefaultAsync(l => l.LanguageTag == toLang && l.IsActive, ct);
+    if (langInfo?.IsPremium == true)
+    {
+        var idClaimNar = ctx.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        var isPro = false;
+        if (Guid.TryParse(idClaimNar, out var narUserId))
+        {
+            var u = await db.Users.AsNoTracking().FirstOrDefaultAsync(x => x.UserId == narUserId && x.IsActive, ct);
+            isPro = u?.PlanType == "PRO";
+        }
+        if (!isPro)
+            return Results.Json(
+                new { error = "Ngôn ngữ này nằm trong gói Premium. Vui lòng nâng cấp.", requirePro = true },
+                statusCode: StatusCodes.Status403Forbidden);
+    }
 
     var poiLang = await db.PoiLanguages.AsNoTracking()
         .FirstOrDefaultAsync(n => n.IdPoi == id && n.LanguageTag == toLang, ct);
@@ -437,10 +456,12 @@ app.MapGet("/api/v1/profile/travel-history", async (
 }).RequireAuthorization();
 
 // ============================================================
-// GET /api/v1/pois/{id}/directions — Chỉ đường tới POI (PRO only)
+// GET /api/v1/pois/{id}/directions?userLat=...&userLng=... — Chỉ đường tới POI (PRO only)
+// Gọi OSRM để lấy tuyến đường thực tế và trả về mảng tọa độ Polyline
 // ============================================================
 app.MapGet("/api/v1/pois/{id}/directions", async (
-    int id, HttpContext ctx, AppDb db) =>
+    int id, double? userLat, double? userLng,
+    HttpContext ctx, AppDb db, IHttpClientFactory httpFactory) =>
 {
     var idClaim = ctx.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
     if (!Guid.TryParse(idClaim, out var userId)) return Results.Unauthorized();
@@ -455,12 +476,68 @@ app.MapGet("/api/v1/pois/{id}/directions", async (
     var poi = await db.Pois.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id && p.IsActive);
     if (poi is null) return Results.NotFound(new { error = "POI not found" });
 
+    // Nếu không có tọa độ user → trả về thông tin POI để App tự xử lý
+    if (userLat is null || userLng is null)
+        return Results.Ok(new
+        {
+            PoiId = poi.Id, PoiName = poi.Name,
+            Destination = new { Lat = poi.Latitude, Lng = poi.Longitude },
+            RouteCoordinates = (object?)null,
+            Message = "Cung cấp userLat & userLng để lấy tuyến đường OSRM"
+        });
+
+    // Gọi OSRM public API
+    try
+    {
+        var client = httpFactory.CreateClient();
+        client.Timeout = TimeSpan.FromSeconds(10);
+        var osrmUrl = $"http://router.project-osrm.org/route/v1/driving/" +
+                      $"{userLng!.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)}," +
+                      $"{userLat!.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)};" +
+                      $"{poi.Longitude.ToString(System.Globalization.CultureInfo.InvariantCulture)}," +
+                      $"{poi.Latitude.ToString(System.Globalization.CultureInfo.InvariantCulture)}" +
+                      "?overview=full&geometries=geojson";
+
+        var resp = await client.GetAsync(osrmUrl);
+        if (resp.IsSuccessStatusCode)
+        {
+            var json = await resp.Content.ReadAsStringAsync();
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            var coords = doc.RootElement
+                .GetProperty("routes")[0]
+                .GetProperty("geometry")
+                .GetProperty("coordinates");
+
+            var route = new System.Collections.Generic.List<object>();
+            foreach (var c in coords.EnumerateArray())
+                route.Add(new { Lng = c[0].GetDouble(), Lat = c[1].GetDouble() });
+
+            var distanceM = doc.RootElement.GetProperty("routes")[0].GetProperty("distance").GetDouble();
+            var durationS = doc.RootElement.GetProperty("routes")[0].GetProperty("duration").GetDouble();
+
+            return Results.Ok(new
+            {
+                PoiId = poi.Id, PoiName = poi.Name,
+                Destination = new { Lat = poi.Latitude, Lng = poi.Longitude },
+                DistanceMeters = distanceM,
+                DurationSeconds = durationS,
+                RouteCoordinates = route
+            });
+        }
+    }
+    catch { /* OSRM không khả dụng → fallback */ }
+
+    // Fallback: trả về đường thẳng 2 điểm
     return Results.Ok(new
     {
-        PoiId     = poi.Id,
-        PoiName   = poi.Name,
-        Latitude  = poi.Latitude,
-        Longitude = poi.Longitude
+        PoiId = poi.Id, PoiName = poi.Name,
+        Destination = new { Lat = poi.Latitude, Lng = poi.Longitude },
+        RouteCoordinates = new[]
+        {
+            new { Lng = userLng!.Value, Lat = userLat!.Value },
+            new { Lng = poi.Longitude,  Lat = poi.Latitude  }
+        },
+        Message = "Đường thẳng (OSRM không khả dụng)"
     });
 }).RequireAuthorization();
 
@@ -774,6 +851,250 @@ app.MapGet("/api/v1/admin/devices", async (AppDb db) =>
     return Results.Ok(devices);
 });
 
+// ============================================================
+// POST /api/v1/usage/check — Kiểm tra & tăng lượt dùng Freemium
+// Body: { entityId, actionType }
+// Trả về 200 OK (hợp lệ) hoặc 402 Payment Required (hết lượt)
+// PRO users bypass hoàn toàn
+// ============================================================
+app.MapPost("/api/v1/usage/check", async (UsageCheckRequest req, HttpContext ctx, AppDb db) =>
+{
+    if (string.IsNullOrWhiteSpace(req.EntityId) || string.IsNullOrWhiteSpace(req.ActionType))
+        return Results.BadRequest(new { error = "EntityId và ActionType là bắt buộc" });
+
+    var actionType = req.ActionType.ToUpperInvariant();
+    if (actionType != "QR_SCAN" && actionType != "POI_LISTEN")
+        return Results.BadRequest(new { error = "ActionType phải là QR_SCAN hoặc POI_LISTEN" });
+
+    // Kiểm tra nếu là user PRO → bypass
+    var idClaim = ctx.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    if (Guid.TryParse(idClaim, out var userId))
+    {
+        var u = await db.Users.AsNoTracking().FirstOrDefaultAsync(x => x.UserId == userId && x.IsActive);
+        if (u?.PlanType == "PRO")
+            return Results.Ok(new { allowed = true, bypassed = true, plan = "PRO" });
+    }
+
+    var maxLimit = actionType == "QR_SCAN" ? 5 : 10;
+    var now = DateTime.UtcNow;
+
+    var tracking = await db.DailyUsageTrackings
+        .FirstOrDefaultAsync(x => x.EntityId == req.EntityId && x.ActionType == actionType);
+
+    if (tracking is null)
+    {
+        db.DailyUsageTrackings.Add(new MapApi.Models.DailyUsageTracking
+        {
+            EntityId = req.EntityId,
+            ActionType = actionType,
+            UsedCount = 1,
+            LastResetAt = now
+        });
+        await db.SaveChangesAsync();
+        return Results.Ok(new { allowed = true, used = 1, limit = maxLimit, resetIn = "12h" });
+    }
+
+    // Reset sau 12 giờ
+    if ((now - tracking.LastResetAt).TotalHours >= 12)
+    {
+        tracking.UsedCount = 1;
+        tracking.LastResetAt = now;
+        await db.SaveChangesAsync();
+        return Results.Ok(new { allowed = true, used = 1, limit = maxLimit, resetIn = "12h" });
+    }
+
+    if (tracking.UsedCount < maxLimit)
+    {
+        tracking.UsedCount++;
+        await db.SaveChangesAsync();
+        var resetInHours = 12 - (now - tracking.LastResetAt).TotalHours;
+        return Results.Ok(new { allowed = true, used = tracking.UsedCount, limit = maxLimit, resetInHours });
+    }
+
+    // Hết lượt → 402
+    var timeLeft = 12 - (now - tracking.LastResetAt).TotalHours;
+    return Results.Json(
+        new { allowed = false, used = tracking.UsedCount, limit = maxLimit, resetInHours = timeLeft,
+              message = $"Hết lượt. Làm mới sau {timeLeft:F1} giờ nữa." },
+        statusCode: 402);
+});
+
+// ============================================================
+// GET /api/v1/pois/{id}/content?lang={lang}
+// FREE: trả về TextToSpeech. PRO: trả về ProAudioUrl + ProPodcastScript
+// Gate ngôn ngữ Premium: FREE dùng ngôn ngữ IsPremium=1 → 403
+// ============================================================
+app.MapGet("/api/v1/pois/{id}/content", async (
+    int id, string? lang, HttpContext ctx, AppDb db, CancellationToken ct) =>
+{
+    var poi = await db.Pois.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id && p.IsActive, ct);
+    if (poi is null) return Results.NotFound(new { error = "POI not found" });
+
+    var toLang = string.IsNullOrWhiteSpace(lang) ? "vi-VN" : lang.Trim();
+
+    // Kiểm tra ngôn ngữ có phải premium không
+    var langInfo = await db.SupportedLanguages.AsNoTracking()
+        .FirstOrDefaultAsync(l => l.LanguageTag == toLang && l.IsActive, ct);
+
+    // Xác định plan của người dùng
+    var isPro = false;
+    var idClaim = ctx.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    if (Guid.TryParse(idClaim, out var userId))
+    {
+        var u = await db.Users.AsNoTracking().FirstOrDefaultAsync(x => x.UserId == userId && x.IsActive, ct);
+        isPro = u?.PlanType == "PRO";
+    }
+
+    // Gate ngôn ngữ premium
+    if (langInfo?.IsPremium == true && !isPro)
+        return Results.Json(
+            new { error = "Ngôn ngữ này nằm trong gói Premium. Vui lòng nâng cấp để tiếp tục.", requirePro = true },
+            statusCode: StatusCodes.Status403Forbidden);
+
+    var poiLang = await db.PoiLanguages.AsNoTracking()
+        .FirstOrDefaultAsync(l => l.IdPoi == id && l.LanguageTag == toLang, ct);
+
+    // Fallback vi-VN
+    if (poiLang is null && toLang != "vi-VN")
+        poiLang = await db.PoiLanguages.AsNoTracking()
+            .FirstOrDefaultAsync(l => l.IdPoi == id && l.LanguageTag == "vi-VN", ct);
+
+    if (isPro && !string.IsNullOrWhiteSpace(poiLang?.ProAudioUrl))
+    {
+        return Results.Ok(new
+        {
+            PoiId = id, Language = toLang, Plan = "PRO",
+            ContentType = "studio_audio",
+            ProAudioUrl = poiLang.ProAudioUrl,
+            ProPodcastScript = poiLang.ProPodcastScript,
+            TextToSpeech = (string?)null
+        });
+    }
+
+    return Results.Ok(new
+    {
+        PoiId = id, Language = toLang, Plan = isPro ? "PRO" : "FREE",
+        ContentType = "tts",
+        ProAudioUrl = (string?)null,
+        ProPodcastScript = (string?)null,
+        TextToSpeech = poiLang?.TextToSpeech ?? ""
+    });
+});
+
+// ============================================================
+// GET /api/v1/languages — Danh sách ngôn ngữ (Public)
+// Trả về cờ isPremium để App vẽ icon 🔒
+// ============================================================
+app.MapGet("/api/v1/languages", async (AppDb db, CancellationToken ct) =>
+{
+    var langs = await db.SupportedLanguages.AsNoTracking()
+        .Where(l => l.IsActive)
+        .OrderBy(l => l.IsPremium).ThenBy(l => l.LanguageTag)
+        .Select(l => new { l.LanguageTag, l.LanguageName, l.IsPremium })
+        .ToListAsync(ct);
+    return Results.Ok(langs);
+});
+
+// ============================================================
+// GET /api/v1/tours/{id}/offline-pack?lang={lang} — Gói Offline (PRO only)
+// Trả về toàn bộ data Tour: POIs + tọa độ + text + URLs ảnh + audio
+// ============================================================
+app.MapGet("/api/v1/tours/{id}/offline-pack", async (
+    int id, string? lang, HttpContext ctx, AppDb db, CancellationToken ct) =>
+{
+    var idClaim = ctx.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    if (!Guid.TryParse(idClaim, out var userId)) return Results.Unauthorized();
+
+    var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.UserId == userId && u.IsActive, ct);
+    if (user is null) return Results.NotFound();
+
+    if (user.PlanType != "PRO")
+        return Results.Json(
+            new { error = "Tính năng tải Tour ngoại tuyến chỉ dành cho Gói PRO", requirePro = true },
+            statusCode: StatusCodes.Status403Forbidden);
+
+    var tour = await db.Tours.AsNoTracking()
+        .Include(t => t.TourPois)
+        .FirstOrDefaultAsync(t => t.Id == id && t.IsActive, ct);
+    if (tour is null) return Results.NotFound(new { error = "Tour not found" });
+
+    var toLang = string.IsNullOrWhiteSpace(lang) ? "vi-VN" : lang.Trim();
+    var poiIds = tour.TourPois.OrderBy(tp => tp.SortOrder).Select(tp => tp.PoiId).ToList();
+
+    var pois = await db.Pois.AsNoTracking()
+        .Where(p => poiIds.Contains(p.Id) && p.IsActive)
+        .ToListAsync(ct);
+
+    var images = await db.PoiImages.AsNoTracking()
+        .Where(img => poiIds.Contains(img.IdPoi))
+        .ToListAsync(ct);
+
+    var languages = await db.PoiLanguages.AsNoTracking()
+        .Where(l => poiIds.Contains(l.IdPoi) && l.LanguageTag == toLang)
+        .ToListAsync(ct);
+
+    var pack = poiIds.Select(pid =>
+    {
+        var p = pois.FirstOrDefault(x => x.Id == pid);
+        if (p is null) return null;
+        var l = languages.FirstOrDefault(x => x.IdPoi == pid);
+        var imgs = images.Where(x => x.IdPoi == pid).OrderBy(x => x.SortOrder)
+                         .Select(x => x.ImageUrl).ToList();
+        return new
+        {
+            p.Id, p.Name, p.Description, p.Latitude, p.Longitude,
+            p.RadiusMeters, p.CooldownSeconds,
+            Language = toLang,
+            TextToSpeech = l?.TextToSpeech,
+            ProAudioUrl = l?.ProAudioUrl,
+            ProPodcastScript = l?.ProPodcastScript,
+            ImageUrls = imgs
+        };
+    }).Where(x => x is not null).ToList();
+
+    return Results.Ok(new
+    {
+        TourId = tour.Id,
+        TourName = tour.Name,
+        Language = toLang,
+        GeneratedAt = DateTime.UtcNow,
+        PoiCount = pack.Count,
+        Pois = pack
+    });
+}).RequireAuthorization();
+
+// ============================================================
+// GET /api/v1/pois/search?q={keyword} — Tìm kiếm POI theo tên/mô tả
+// ============================================================
+app.MapGet("/api/v1/pois/search", async (string? q, AppDb db) =>
+{
+    if (string.IsNullOrWhiteSpace(q))
+        return Results.Ok(Array.Empty<object>());
+
+    var keyword = q.Trim().ToLower();
+    var results = await db.Pois.AsNoTracking()
+        .Where(p => p.IsActive &&
+                    (p.Name.ToLower().Contains(keyword) ||
+                     (p.Description != null && p.Description.ToLower().Contains(keyword))))
+        .OrderBy(p => p.Name)
+        .Take(10)
+        .Select(p => new
+        {
+            p.Id,
+            p.Name,
+            p.Description,
+            p.Latitude,
+            p.Longitude,
+            p.RadiusMeters
+        })
+        .ToListAsync();
+
+    return Results.Ok(results);
+})
+.WithName("SearchPois")
+.WithSummary("Tìm kiếm POI theo từ khóa (tên hoặc mô tả)");
+
+app.MapHub<MapApi.Hubs.DeviceHub>("/hubs/device");
 app.MapControllers();
 app.Run();
 // ─── Helpers ───────────────────────────────────────────────────────────────
@@ -822,3 +1143,4 @@ public sealed record AnalyticsVisitRequest(Guid SessionId, int PoiId, string Act
 public sealed record AnalyticsRouteRequest(Guid SessionId, double Latitude, double Longitude);
 public sealed record AnalyticsListenRequest(Guid SessionId, int PoiId, int DurationSeconds);
 public sealed record AdminUserUpdateRequest(string? PhoneNumber, string? PlanType, DateTime? ProExpiryDate);
+public sealed record UsageCheckRequest(string EntityId, string ActionType);

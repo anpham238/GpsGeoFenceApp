@@ -48,7 +48,10 @@ public static class MauiProgram
         builder.Services.AddSingleton<PoiDatabase>();
         builder.Services.AddSingleton<SyncMetadataRepository>();
         builder.Services.AddSingleton<PoiNarrationCache>();
-        string apiBaseUrl = "https://242c0x8k-7286.asse.devtunnels.ms";
+        var defaultApiBaseUrl = "https://x45vvppz-7286.asse.devtunnels.ms/";
+        var rawApiBaseUrl = Preferences.Default.Get("ApiBaseUrl", defaultApiBaseUrl);
+        var apiBaseUrl = NormalizeApiBaseUrl(rawApiBaseUrl, defaultApiBaseUrl);
+
         builder.Services.AddHttpClient<PoiApiClient>(http =>
         {
             http.BaseAddress = new Uri(apiBaseUrl);
@@ -101,6 +104,11 @@ public static class MauiProgram
             http.BaseAddress = new Uri(apiBaseUrl);
             http.Timeout = TimeSpan.FromSeconds(15);
         });
+        builder.Services.AddHttpClient<UsageApiClient>(http =>
+        {
+            http.BaseAddress = new Uri(apiBaseUrl);
+            http.Timeout = TimeSpan.FromSeconds(10);
+        });
         // ── Guest tracking (ẩn danh) ──────────────────────────────────
         builder.Services.AddSingleton<GuestDeviceService>();
         builder.Services.AddSingleton<GuestHeartbeatService>();
@@ -115,5 +123,33 @@ public static class MauiProgram
         builder.Services.AddTransient<ProUpgradePage>();
         builder.Services.AddTransient<TravelHistoryPage>();
         return builder.Build();
+    }
+
+    private static string NormalizeApiBaseUrl(string? rawApiBaseUrl, string fallbackApiBaseUrl)
+    {
+        var apiBaseUrl = string.IsNullOrWhiteSpace(rawApiBaseUrl)
+            ? fallbackApiBaseUrl
+            : rawApiBaseUrl.Trim();
+
+        if (!apiBaseUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
+            !apiBaseUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            apiBaseUrl = "http://" + apiBaseUrl;
+        }
+
+#if ANDROID
+        // Android không truy cập host machine qua localhost/127.0.0.1.
+        // Auto-fix về 10.0.2.2 để tránh trường hợp Preferences lưu URL sai.
+        if (Uri.TryCreate(apiBaseUrl, UriKind.Absolute, out var parsed) &&
+            (string.Equals(parsed.Host, "localhost", StringComparison.OrdinalIgnoreCase) ||
+             parsed.Host == "127.0.0.1"))
+        {
+            var port = parsed.IsDefaultPort ? 5150 : parsed.Port;
+            var scheme = string.IsNullOrWhiteSpace(parsed.Scheme) ? "http" : parsed.Scheme;
+            apiBaseUrl = $"{scheme}://10.0.2.2:{port}";
+        }
+#endif
+
+        return apiBaseUrl;
     }
 }

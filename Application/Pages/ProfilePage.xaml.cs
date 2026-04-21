@@ -80,7 +80,7 @@ public partial class ProfilePage : ContentPage
 
     private async void OnUpgradeClicked(object sender, EventArgs e) => await Shell.Current.GoToAsync("proupgrade");
 
-    private async void OnHistoryTapped(object sender, EventArgs e) => await DisplayAlert("Lịch sử", "Tính năng xem lịch sử chi tiết đang được xây dựng.", "OK");
+    private async void OnHistoryTapped(object sender, EventArgs e) => await DisplayAlertAsync("Lịch sử", "Tính năng xem lịch sử chi tiết đang được xây dựng.", "OK");
 
     private async void OnTravelHistoryTapped(object sender, EventArgs e)
     {
@@ -111,7 +111,7 @@ public partial class ProfilePage : ContentPage
         }
         catch (Exception ex)
         {
-            await DisplayAlert("Lỗi", ex.Message, "OK");
+            await DisplayAlertAsync("Lỗi", ex.Message, "OK");
         }
     }
 
@@ -128,7 +128,7 @@ public partial class ProfilePage : ContentPage
         var updated = await _profileApi.UpdateProfileAsync(EntryUsername.Text?.Trim(), EntryPhone.Text?.Trim(), _avatarStream, _avatarFileName);
         if (updated is null)
         {
-            await DisplayAlert("Lỗi", "Không thể cập nhật. Vui lòng thử lại.", "OK");
+            await DisplayAlertAsync("Lỗi", "Không thể cập nhật. Vui lòng thử lại.", "OK");
             return;
         }
         Preferences.Set("auth_username", updated.Username);
@@ -136,12 +136,12 @@ public partial class ProfilePage : ContentPage
 
         OnCancelEditClicked(sender, e);
         await LoadProfileAsync();
-        await DisplayAlert("Thành công", "Thông tin đã được cập nhật.", "OK");
+        await DisplayAlertAsync("Thành công", "Thông tin đã được cập nhật.", "OK");
     }
 
     private async void OnLogoutTapped(object sender, EventArgs e)
     {
-        var confirm = await DisplayAlert("Đăng xuất", "Bạn có chắc muốn đăng xuất?", "Có", "Không");
+        var confirm = await DisplayAlertAsync("Đăng xuất", "Bạn có chắc muốn đăng xuất?", "Có", "Không");
         if (!confirm) return;
         AuthApiClient.ClearSession();
         Preferences.Remove("Username");

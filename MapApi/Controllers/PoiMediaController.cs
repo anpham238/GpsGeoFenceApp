@@ -6,7 +6,6 @@ using Microsoft.EntityFrameworkCore;
 namespace MapApi.Controllers;
 
 public sealed record SetMapLinkRequest(string MapLink);
-public sealed record SetAudioRequest(string AudioUrl);
 public sealed record ReorderImagesRequest(List<long> OrderedIds);
 
 [ApiController]
@@ -69,22 +68,6 @@ public class PoiMediaController : ControllerBase
 
         await _db.SaveChangesAsync(ct);
         return Ok(new { poiId = id, mapLink = req.MapLink });
-    }
-
-    [HttpPost("audio")]
-    public async Task<IActionResult> SetAudio(int id, [FromBody] SetAudioRequest req, CancellationToken ct)
-    {
-        var poi = await _db.Pois.FindAsync(new object[] { id }, ct);
-        if (poi is null) return NotFound("Không tìm thấy địa điểm này.");
-
-        var existing = await _db.PoiMedia.FirstOrDefaultAsync(m => m.IdPoi == id, ct);
-        if (existing is not null)
-            existing.Audio = req.AudioUrl;
-        else
-            _db.PoiMedia.Add(new PoiMedia { IdPoi = id, Audio = req.AudioUrl });
-
-        await _db.SaveChangesAsync(ct);
-        return Ok(new { poiId = id, audioUrl = req.AudioUrl });
     }
 
     // ── Multi-image gallery ──────────────────────────────────────────────

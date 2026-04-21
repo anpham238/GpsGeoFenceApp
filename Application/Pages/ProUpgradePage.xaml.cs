@@ -27,7 +27,7 @@ public partial class ProUpgradePage : ContentPage
     {
         if (!AuthApiClient.IsLoggedIn())
         {
-            await DisplayAlert("Thông báo", "Vui lòng đăng nhập để nâng cấp.", "OK");
+            await DisplayAlertAsync("Thông báo", "Vui lòng đăng nhập để nâng cấp.", "OK");
             return;
         }
 
@@ -40,14 +40,14 @@ public partial class ProUpgradePage : ContentPage
         {
             BtnUpgrade.Text            = "Đã là PRO ✅";
             BtnUpgrade.BackgroundColor = Color.FromArgb("#4CAF50");
-            await DisplayAlert("Chúc mừng! 🌟", "Bạn đã nâng cấp thành công lên Gói PRO.\nTận hưởng trải nghiệm không giới hạn!", "Tuyệt vời!");
+            await DisplayAlertAsync("Chúc mừng! 🌟", "Bạn đã nâng cấp thành công lên Gói PRO.\nTận hưởng trải nghiệm không giới hạn!", "Tuyệt vời!");
             await Shell.Current.GoToAsync("..");
         }
         else
         {
             BtnUpgrade.IsEnabled = true;
             BtnUpgrade.Text      = "Nâng Cấp Ngay";
-            await DisplayAlert("Lỗi", "Không thể nâng cấp lúc này. Vui lòng thử lại.", "OK");
+            await DisplayAlertAsync("Lỗi", "Không thể nâng cấp lúc này. Vui lòng thử lại.", "OK");
         }
     }
 }

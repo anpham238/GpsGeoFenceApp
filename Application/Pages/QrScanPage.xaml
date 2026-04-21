@@ -50,6 +50,23 @@
 			</Border>
 		</Grid>
 
+		<Border x:Name="QuotaBadge"
+		        VerticalOptions="End"
+		        HorizontalOptions="Center"
+		        Margin="0,0,0,110"
+		        Padding="14,8"
+		        BackgroundColor="#CC000000"
+		        Stroke="Transparent">
+		    <Border.StrokeShape>
+		        <RoundRectangle CornerRadius="20" />
+		    </Border.StrokeShape>
+		    <Label x:Name="LblQuota"
+		           Text="⏱️ Đang kiểm tra lượt..."
+		           TextColor="White"
+		           FontSize="13"
+		           HorizontalOptions="Center" />
+		</Border>
+
 		<HorizontalStackLayout VerticalOptions="End" HorizontalOptions="Center" Spacing="30" Margin="0, 0, 0, 40">
 			<VerticalStackLayout Spacing="8">
 				<Border StrokeShape="RoundRectangle 25" BackgroundColor="#33FFFFFF" Stroke="Transparent" WidthRequest="50" HeightRequest="50">

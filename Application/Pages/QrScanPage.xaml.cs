@@ -18,17 +18,24 @@ public partial class QrScanPage : ContentPage
     private readonly NarrationManager _narration;
     private readonly PlaybackApiClient _playback;
     private readonly TicketApiClient _ticketApi; // Thêm API gọi vé
+    private readonly UsageApiClient _usage;
     private bool _isProcessing;
     private bool _torchOn;
     private CameraBarcodeReaderView? _cameraView;
 
-    public QrScanPage(PoiDatabase db, NarrationManager narration, PlaybackApiClient playback, TicketApiClient ticketApi)
+    public QrScanPage(
+        PoiDatabase db,
+        NarrationManager narration,
+        PlaybackApiClient playback,
+        TicketApiClient ticketApi,
+        UsageApiClient usage)
     {
         InitializeComponent();
         _db = db;
         _narration = narration;
         _playback = playback;
         _ticketApi = ticketApi;
+        _usage = usage;
     }
 
     protected override void OnAppearing()
@@ -56,6 +63,30 @@ public partial class QrScanPage : ContentPage
         else
         {
             _cameraView.IsDetecting = true;
+        }
+
+        _ = LoadQuotaBadgeAsync();
+    }
+
+    private async Task LoadQuotaBadgeAsync()
+    {
+        try
+        {
+            if (AuthApiClient.IsPro())
+            {
+                LblQuota.Text = "🌟 PRO: Quét không giới hạn";
+                QuotaBadge.BackgroundColor = Microsoft.Maui.Graphics.Color.FromArgb("#CC006400");
+                return;
+            }
+            var entityId = UsageApiClient.GetEntityId();
+            var (allowed, resetInHours) = await _usage.CheckAsync(entityId, "QR_SCAN");
+            LblQuota.Text = allowed
+                ? "⏱️ Còn lượt quét hôm nay"
+                : $"❌ Hết lượt. Làm mới sau {resetInHours:F1}h";
+        }
+        catch
+        {
+            QuotaBadge.IsVisible = false;
         }
     }
 
@@ -89,6 +120,27 @@ public partial class QrScanPage : ContentPage
         {
             if (_cameraView != null) _cameraView.IsDetecting = false;
             LblStatus.Text = "Đang xử lý...";
+
+            // Paywall (Freemium Quota) cho hành động quét QR
+            if (!AuthApiClient.IsPro())
+            {
+                var entityId = UsageApiClient.GetEntityId();
+                var (allowed, resetInHours) = await _usage.CheckAsync(entityId, "QR_SCAN");
+                if (!allowed)
+                {
+                    LblStatus.Text = "Hết lượt miễn phí";
+                    var goUpgrade = await DisplayAlertAsync(
+                        "Hết lượt quét QR miễn phí",
+                        $"Bạn đã dùng hết lượt quét QR. Lượt sẽ được làm mới sau khoảng {resetInHours:F1} giờ.\n\nNâng cấp PRO để dùng không giới hạn.",
+                        "Nâng cấp PRO",
+                        "Đóng");
+
+                    if (goUpgrade)
+                        await Shell.Current.GoToAsync("proupgrade");
+                    await ResumeScanAsync();
+                    return;
+                }
+            }
 
             // =========================================================
             // TRƯỜNG HỢP 1: KIỂM TRA MÃ QR VÉ (TICKET) HOẶC ID TRỰC TIẾP

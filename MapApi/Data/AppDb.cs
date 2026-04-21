@@ -18,6 +18,8 @@ public sealed class AppDb(DbContextOptions<AppDb> options) : DbContext(options)
     public DbSet<AnalyticsListenDuration> AnalyticsListenDurations => Set<AnalyticsListenDuration>();
     public DbSet<GuestDevice> GuestDevices => Set<GuestDevice>();
     public DbSet<PoiImage> PoiImages => Set<PoiImage>();
+    public DbSet<DailyUsageTracking> DailyUsageTrackings => Set<DailyUsageTracking>();
+    public DbSet<SupportedLanguage> SupportedLanguages => Set<SupportedLanguage>();
     protected override void OnModelCreating(ModelBuilder b)
     {
         b.Entity<Poi>(e =>
@@ -43,6 +45,8 @@ public sealed class AppDb(DbContextOptions<AppDb> options) : DbContext(options)
             e.Property(x => x.IdPoi).IsRequired();
             e.Property(x => x.LanguageTag).HasMaxLength(10).IsRequired();
             e.Property(x => x.TextToSpeech).HasMaxLength(4000);
+            e.Property(x => x.ProPodcastScript).HasColumnType("nvarchar(max)");
+            e.Property(x => x.ProAudioUrl).HasMaxLength(1000);
             e.HasOne<Poi>().WithMany()
              .HasForeignKey(x => x.IdPoi).OnDelete(DeleteBehavior.Cascade);
             e.HasIndex(x => new { x.IdPoi, x.LanguageTag })
@@ -56,7 +60,6 @@ public sealed class AppDb(DbContextOptions<AppDb> options) : DbContext(options)
             e.Property(x => x.IdPoi).IsRequired();
             e.Property(x => x.Image).HasMaxLength(1000);
             e.Property(x => x.MapLink).HasMaxLength(1000);
-            e.Property(x => x.Audio).HasMaxLength(1000);
             e.HasOne<Poi>().WithMany()
              .HasForeignKey(x => x.IdPoi).OnDelete(DeleteBehavior.Cascade);
             e.HasIndex(x => x.IdPoi).HasDatabaseName("IX_PoiMedia_Poi");
@@ -139,6 +142,26 @@ public sealed class AppDb(DbContextOptions<AppDb> options) : DbContext(options)
             e.Property(x => x.CreatedAt).HasDefaultValueSql("SYSUTCDATETIME()");
             e.HasOne<Poi>().WithMany()
              .HasForeignKey(x => x.IdPoi).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<DailyUsageTracking>(e =>
+        {
+            e.ToTable("DailyUsageTracking");
+            e.HasKey(x => new { x.EntityId, x.ActionType });
+            e.Property(x => x.EntityId).HasMaxLength(100).IsRequired();
+            e.Property(x => x.ActionType).HasMaxLength(20).IsRequired();
+            e.Property(x => x.UsedCount).HasDefaultValue(0);
+            e.Property(x => x.LastResetAt).HasDefaultValueSql("SYSUTCDATETIME()");
+        });
+
+        b.Entity<SupportedLanguage>(e =>
+        {
+            e.ToTable("SupportedLanguages");
+            e.HasKey(x => x.LanguageTag);
+            e.Property(x => x.LanguageTag).HasMaxLength(10).IsRequired();
+            e.Property(x => x.LanguageName).HasMaxLength(50).IsRequired();
+            e.Property(x => x.IsPremium).HasDefaultValue(false);
+            e.Property(x => x.IsActive).HasDefaultValue(true);
         });
 
         b.Entity<GuestDevice>(e =>

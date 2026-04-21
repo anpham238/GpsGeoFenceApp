@@ -835,8 +835,6 @@
     <nav>
         <a onclick="showSection('secPois')" id="navPois">📍 Danh sách POI</a>
         <a onclick="showSection('secCreate')" id="navCreate">➕ Thêm POI mới</a>
-        <a onclick="showSection('secTours')" id="navTours">🗺 Quản lý Tour</a>
-        <a onclick="showSection('secTranslate')" id="navTranslate">🌍 Dịch tự động</a>
         <a onclick="showSection('secQrCode')" id="navQrCode">🔲 Tạo mã QR</a>
         <a onclick="showSection('secDashboard')" id="navDashboard">📊 Analytics Dashboard</a>
         <a onclick="showSection('secUsers')" id="navUsers">👥 Người dùng & Doanh thu</a>
@@ -1051,14 +1049,45 @@
                     <div class="form-row"><label>Tên địa điểm *</label><input id="fName" placeholder="Nhà thờ Đức Bà" /></div>
                     <div class="form-row"><label>Bán kính (m)</label><input id="fRadius" type="number" value="120" /></div>
                 </div>
-                <div class="form-row"><label>Mô tả</label><textarea id="fDesc" placeholder="Mô tả ngắn bằng tiếng Việt..."></textarea></div>
-                <div class="form-row"><label>Thuyết minh (TTS)</label><textarea id="fNarr" placeholder="Nội dung thuyết minh âm thanh..."></textarea></div>
                 <div class="grid2">
                     <div class="form-row"><label>Vĩ độ (Lat)</label><input id="fLat" type="number" step="0.000001" placeholder="10.779811" /></div>
                     <div class="form-row"><label>Kinh độ (Lng)</label><input id="fLng" type="number" step="0.000001" placeholder="106.699099" /></div>
                 </div>
                 <div class="form-row"><label>Google Maps Link</label><input id="fMapLink" placeholder="https://maps.app.goo.gl/..." /></div>
                 <div class="form-row"><label>Audio URL</label><input id="fAudio" placeholder="https://... hoặc đường dẫn file" /></div>
+
+                <!-- Language Tabs for Content -->
+                <div style="margin-top:16px;margin-bottom:8px;">
+                    <label style="color:#90caf9;font-size:0.85rem;display:block;margin-bottom:8px;">🌍 Nội dung theo ngôn ngữ</label>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
+                        <button type="button" class="btn btn-sm" id="tabVi" onclick="switchLangTab('vi-VN')" style="background:#1976D2;color:#fff;">🇻🇳 vi-VN</button>
+                        <button type="button" class="btn btn-sm" id="tabEn" onclick="switchLangTab('en-US')" style="background:#333;color:#ccc;">🇺🇸 en-US</button>
+                        <button type="button" class="btn btn-sm" id="tabJa" onclick="switchLangTab('ja-JP')" style="background:#333;color:#ccc;">🇯🇵 ja-JP</button>
+                        <button type="button" class="btn btn-sm" id="tabKo" onclick="switchLangTab('ko-KR')" style="background:#333;color:#ccc;">🇰🇷 ko-KR</button>
+                        <button type="button" class="btn btn-sm" id="tabDe" onclick="switchLangTab('de-DE')" style="background:#333;color:#ccc;">🇩🇪 de-DE</button>
+                    </div>
+                    <div id="langTabContent">
+                        <div class="form-row"><label id="descLabel">Mô tả (vi-VN)</label><textarea id="fDesc" placeholder="Mô tả ngắn bằng tiếng Việt..."></textarea></div>
+                        <div class="form-row"><label id="narrLabel">Thuyết minh TTS (vi-VN)</label><textarea id="fNarr" placeholder="Nội dung thuyết minh âm thanh..."></textarea></div>
+                    </div>
+                </div>
+
+                <!-- Multi-image Upload -->
+                <div style="margin-top:8px;margin-bottom:16px;">
+                    <label style="color:#90caf9;font-size:0.85rem;display:block;margin-bottom:6px;">🖼️ Ảnh địa điểm</label>
+                    <div id="imageDropZone"
+                         style="border:2px dashed #333;border-radius:8px;padding:20px;text-align:center;color:#777;font-size:0.875rem;cursor:pointer;transition:border-color .2s;"
+                         ondragover="event.preventDefault();this.style.borderColor='#1976D2';"
+                         ondragleave="this.style.borderColor='#333';"
+                         ondrop="handleImageDrop(event);"
+                         onclick="document.getElementById('fImages').click()">
+                        📂 Kéo thả ảnh vào đây hoặc <span style="color:#90caf9;text-decoration:underline;">chọn tệp</span><br/>
+                        <span style="font-size:0.8rem;color:#555;">Hỗ trợ: JPG, PNG — tối đa 5 ảnh</span>
+                    </div>
+                    <input type="file" id="fImages" multiple accept="image/jpeg,image/png" style="display:none;" onchange="previewImages(this.files)" />
+                    <div id="imagePreviewRow" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;"></div>
+                </div>
+
                 <div style="display:flex;gap:10px;margin-top:6px;">
                     <button class="btn btn-primary" onclick="submitPoi()">💾 Lưu</button>
                     <button class="btn" style="background:#333;" onclick="clearForm()">✕ Huỷ</button>
@@ -1231,10 +1260,10 @@ function startApp() {
         document.querySelectorAll('#sidebar nav a').forEach(a => a.classList.remove('active'));
         document.getElementById(id).classList.add('active');
         // THÊM TIÊU ĐỀ CHO DASHBOARD
-        const titles = { secPois: 'Danh sách POI', secCreate: 'Thêm POI mới', secTours: 'Quản lý Tour', secTranslate: 'Dịch tự động', secQrCode: 'QR Code', secDashboard: 'Analytics Dashboard', secUsers: 'Người dùng & Doanh thu', secDevices: 'Quản lý thiết bị' };
+        const titles = { secPois: 'Danh sách POI', secCreate: 'Thêm POI mới', secQrCode: 'QR Code', secDashboard: 'Analytics Dashboard', secUsers: 'Người dùng & Doanh thu', secDevices: 'Quản lý thiết bị' };
         document.getElementById('topTitle').textContent = titles[id] || '';
         currentSection = id;
-        const navMap = { secPois: 'navPois', secCreate: 'navCreate', secTours: 'navTours', secTranslate: 'navTranslate', secQrCode: 'navQrCode', secDashboard: 'navDashboard', secUsers: 'navUsers', secDevices: 'navDevices' };
+        const navMap = { secPois: 'navPois', secCreate: 'navCreate', secQrCode: 'navQrCode', secDashboard: 'navDashboard', secUsers: 'navUsers', secDevices: 'navDevices' };
         if (navMap[id]) document.getElementById(navMap[id]).classList.add('active');
         loadSection(id);
     }
@@ -1249,6 +1278,62 @@ function loadSection(id) {
         if (id === 'secUsers') { loadAdminStats(); loadUsers(1); }
         if (id === 'secDevices') loadDevices();
     }
+
+// ── POI Form: Language Tab Switcher ──────────────────────────────
+let _currentLangTab = 'vi-VN';
+const _langTabData = { 'vi-VN': { desc: '', narr: '' }, 'en-US': { desc: '', narr: '' }, 'ja-JP': { desc: '', narr: '' }, 'ko-KR': { desc: '', narr: '' }, 'de-DE': { desc: '', narr: '' } };
+
+function switchLangTab(lang) {
+    // Save current tab data
+    _langTabData[_currentLangTab].desc = document.getElementById('fDesc').value;
+    _langTabData[_currentLangTab].narr = document.getElementById('fNarr').value;
+    _currentLangTab = lang;
+    // Restore target tab data
+    document.getElementById('fDesc').value = _langTabData[lang].desc;
+    document.getElementById('fNarr').value = _langTabData[lang].narr;
+    document.getElementById('descLabel').textContent = `Mô tả (${lang})`;
+    document.getElementById('narrLabel').textContent = `Thuyết minh TTS (${lang})`;
+    // Update button highlights
+    ['vi-VN','en-US','ja-JP','ko-KR','de-DE'].forEach(l => {
+        const btn = document.getElementById('tab' + l.replace('-','').replace(/[A-Z]/g, c => c));
+        if (btn) btn.style.background = l === lang ? '#1976D2' : '#333';
+    });
+}
+
+// ── POI Form: Image Preview & Drop ───────────────────────────────
+let _pendingImages = [];
+
+function handleImageDrop(event) {
+    event.preventDefault();
+    document.getElementById('imageDropZone').style.borderColor = '#333';
+    const files = Array.from(event.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+    previewImages(files);
+}
+
+function previewImages(filesOrList) {
+    const files = Array.from(filesOrList);
+    _pendingImages = files.slice(0, 5);
+    const row = document.getElementById('imagePreviewRow');
+    row.innerHTML = '';
+    _pendingImages.forEach((f, i) => {
+        const reader = new FileReader();
+        reader.onload = e => {
+            const img = document.createElement('img');
+            img.src = e.target.result;
+            img.style.cssText = 'width:70px;height:70px;object-fit:cover;border-radius:6px;border:2px solid #333;';
+            const wrap = document.createElement('div');
+            wrap.style.cssText = 'position:relative;display:inline-block;';
+            const del = document.createElement('button');
+            del.textContent = '✕';
+            del.style.cssText = 'position:absolute;top:-4px;right:-4px;background:#c62828;color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer;';
+            del.onclick = () => { _pendingImages.splice(i, 1); previewImages(_pendingImages); };
+            wrap.appendChild(img);
+            wrap.appendChild(del);
+            row.appendChild(wrap);
+        };
+        reader.readAsDataURL(f);
+    });
+}
 
 // ── POI List ──────────────────────────────────────────────────────
 async function loadPois() {

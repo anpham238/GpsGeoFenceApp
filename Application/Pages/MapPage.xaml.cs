@@ -2,6 +2,7 @@
 using MauiApp1.Services.Api;
 using MauiApp1.Services.Narration;
 using MauiApp1.Services.Sync;
+using Microsoft.Maui.Controls.Maps;
 
 namespace MauiApp1.Pages;
 
@@ -18,10 +19,10 @@ public partial class MapPage : ContentPage
     private readonly PoiNarrationCache _narrationCache;
     private readonly TranslatorClient _translator;
     private readonly AnalyticsClient _analytics;
-    private readonly TourApiClient _tourApi;
     private readonly PoiApiClient _poiApi;
-    private List<TourDto> _tours = [];
-    private TourDto? _selectedTour;
+    private readonly UsageApiClient _usage;
+    private CancellationTokenSource? _searchCts;
+    private List<PoiSearchResult> _searchResults = new();
     private string _currentLang = LanguageService.Current;
     private readonly List<Poi> _pois = new();
     private readonly Dictionary<int, Pin> _pinMap = new();
@@ -35,6 +36,7 @@ public partial class MapPage : ContentPage
     bool _sheetReady = false;
     const double SheetPeekHeight = 140;
     private readonly ProfileApiClient _profileApi; // 👈 1. THÊM DÒNG NÀY
+    private Polyline? _routePolyline;
     public MapPage(
         IGeofenceService geofence,
         ILocationService location,
@@ -46,9 +48,9 @@ public partial class MapPage : ContentPage
         PoiNarrationCache narrationCache,
         TranslatorClient translator,
         AnalyticsClient analytics,
-        TourApiClient tourApi,
         PoiApiClient poiApi,
-        ProfileApiClient profileApi)
+        ProfileApiClient profileApi,
+        UsageApiClient usage)
     {
         InitializeComponent();
         _geofence = geofence ?? throw new ArgumentNullException(nameof(geofence));
@@ -64,6 +66,7 @@ public partial class MapPage : ContentPage
         _geofence = geofence ?? throw new ArgumentNullException(nameof(geofence));
         _poiApi = poiApi ?? throw new ArgumentNullException(nameof(poiApi));
         _profileApi = profileApi;
+        _usage = usage ?? throw new ArgumentNullException(nameof(usage));
         // Toolbar
         ToolbarItems.Add(new ToolbarItem
         {
@@ -127,6 +130,8 @@ public partial class MapPage : ContentPage
         });
 
         BtnOpenInMaps.Clicked += async (_, _) => await OpenMapsAsync(_nearestPoi);
+        BtnDirections.Clicked += async (_, _) => await DrawDirectionsAsync(_nearestPoi);
+        BtnListen.Clicked += async (_, _) => await OnListenButtonClickedAsync();
         BottomSheet.SizeChanged += (_, _) => SetupBottomSheetOffsets();
         this.SizeChanged += (_, _) => SetupBottomSheetOffsets();
         _geofence.OnPoiEvent += OnGeofenceEvent;
@@ -197,6 +202,9 @@ public partial class MapPage : ContentPage
             HighlightPoi(poi, $"Vào vùng {type}");
             ShowDetail(poi);
         });
+
+        if (!await EnsureUsageAllowedAsync("POI_LISTEN"))
+            return;
 
         var started = DateTime.UtcNow;
         var lang = LanguageService.Current;
@@ -325,7 +333,6 @@ public partial class MapPage : ContentPage
             try { await _poiSync.SyncOnceAsync(); } catch { }
 
             await ReloadPoisAsync();
-            await LoadToursAsync();
             if (!await EnsureLocationPermissionsAsync()) return;
 
             await MainThread.InvokeOnMainThreadAsync(() => MyMap.IsShowingUser = true);
@@ -370,42 +377,11 @@ public partial class MapPage : ContentPage
         return status == PermissionStatus.Granted;
     }
 
-    private async Task LoadToursAsync()
-    {
-        try
-        {
-            _tours = await _tourApi.GetAllAsync();
-            await MainThread.InvokeOnMainThreadAsync(() =>
-            {
-                TourPicker.Items.Clear();
-                TourPicker.Items.Add("🗺 Tất cả địa điểm");
-                foreach (var t in _tours)
-                    TourPicker.Items.Add($"📍 {t.Name}");
-                TourPicker.SelectedIndex = 0;
-            });
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[Tours] Load failed: {ex.Message}");
-        }
-    }
-
-    private void OnTourSelected(object? sender, EventArgs e)
-    {
-        var idx = TourPicker.SelectedIndex;
-        _selectedTour = (idx <= 0 || idx > _tours.Count) ? null : _tours[idx - 1];
-        _ = ReloadPoisAsync();
-    }
-
     private async Task ReloadPoisAsync()
     {
         try
         {
-            var allPois = await _db.GetActivePoisAsync();
-            // Lọc theo tour nếu đang chọn
-            var pois = _selectedTour is null
-                ? allPois
-                : allPois.Where(p => _selectedTour.PoiIds.Contains(p.Id)).ToList();
+            var pois = await _db.GetActivePoisAsync();
             await MainThread.InvokeOnMainThreadAsync(() =>
             {
                 _pois.Clear();
@@ -416,26 +392,18 @@ public partial class MapPage : ContentPage
                 foreach (var p in pois)
                 {
                     _pois.Add(p);
-                    // Tour POI: màu xanh dương; POI thường: màu cam
-                    bool isTourPoi = _selectedTour?.PoiIds.Contains(p.Id) == true;
                     var circle = new Microsoft.Maui.Controls.Maps.Circle
                     {
                         Center = new Location(p.Latitude, p.Longitude),
                         Radius = Distance.FromMeters(p.RadiusMeters),
                         StrokeWidth = 0,
-                        FillColor = isTourPoi
-                            ? Color.FromRgba(25, 118, 210, 50)   // xanh dương #1976D2
-                            : Color.FromRgba(255, 69, 0, 40)     // cam
+                        FillColor = Color.FromRgba(255, 69, 0, 40)
                     };
                     MyMap.MapElements.Add(circle);
 
-                    // Hiển thị số thứ tự trong tour nếu đang lọc
-                    var tourOrder = _selectedTour is not null
-                        ? _selectedTour.PoiIds.IndexOf(p.Id) + 1
-                        : 0;
                     var pin = new Pin
                     {
-                        Label = tourOrder > 0 ? $"{tourOrder}. {p.Name}" : p.Name,
+                        Label = p.Name,
                         Address = p.Description ?? "",
                         Location = new Location(p.Latitude, p.Longitude),
                         Type = PinType.Place
@@ -445,6 +413,9 @@ public partial class MapPage : ContentPage
                         e.HideInfoWindow = false;
                         HighlightPoi(p, "Đã chọn");
                         ShowDetail(p);
+
+                        if (!await EnsureUsageAllowedAsync("POI_LISTEN"))
+                            return;
 
                         var started = DateTime.UtcNow;
                         var lang = LanguageService.Current;
@@ -534,6 +505,9 @@ public partial class MapPage : ContentPage
 
                     if (GeofenceEventGate.ShouldAccept(nearest.Id, "NEAR", 3, nearest.CooldownSeconds))
                     {
+                        if (!await EnsureUsageAllowedAsync("POI_LISTEN"))
+                            continue;
+
                         var started = DateTime.UtcNow;
                         var lang = LanguageService.Current;
                         var fullText = await GetNarrationTextAsync(nearest.Id, PoiEventType.Near, lang, token);
@@ -568,7 +542,6 @@ public partial class MapPage : ContentPage
         DetailName.Text = "Đang dịch...";
         DetailDesc.Text = "";
         DetailCoord.Text = $"📍 {poi.Latitude:F6}, {poi.Longitude:F6}";
-        DetailRadius.Text = $"🔵 Bán kính: {poi.RadiusMeters}m";
 
         // Reset image area
         PoiImage.Source = null;
@@ -587,8 +560,191 @@ public partial class MapPage : ContentPage
         DetailName.Text = translatedName ?? poi.Name;
         DetailDesc.Text = string.IsNullOrWhiteSpace(translatedDesc) ? "(Không có mô tả)" : translatedDesc;
 
-        var link = !string.IsNullOrWhiteSpace(poi.MapLink) ? poi.MapLink : $"https://www.google.com/maps/search/?api=1&query={poi.Latitude},{poi.Longitude}";
-        LblPoiLink.Text = link;
+        BtnDirections.IsVisible = AuthApiClient.IsPro();
+    }
+
+    private async void OnSearchTextChanged(object? sender, TextChangedEventArgs e)
+    {
+        var keyword = e.NewTextValue?.Trim() ?? "";
+        _searchCts?.Cancel();
+
+        if (string.IsNullOrWhiteSpace(keyword))
+        {
+            SearchDropdown.IsVisible = false;
+            SearchSuggestions.ItemsSource = null;
+            return;
+        }
+
+        _searchCts = new CancellationTokenSource();
+        var token = _searchCts.Token;
+        try
+        {
+            await Task.Delay(300, token);
+            if (token.IsCancellationRequested) return;
+
+            var results = await _poiApi.SearchAsync(keyword, token);
+            if (token.IsCancellationRequested) return;
+
+            _searchResults = results;
+            await MainThread.InvokeOnMainThreadAsync(() =>
+            {
+                SearchSuggestions.ItemsSource = results;
+                SearchDropdown.IsVisible = results.Count > 0;
+            });
+        }
+        catch (TaskCanceledException) { }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[Search] {ex.Message}");
+        }
+    }
+
+    private void OnSearchCompleted(object? sender, EventArgs e)
+    {
+        // Trigger immediate search on keyboard confirm
+        var keyword = SearchEntry.Text?.Trim() ?? "";
+        if (!string.IsNullOrWhiteSpace(keyword))
+            _ = SearchImmediateAsync(keyword);
+    }
+
+    private async Task SearchImmediateAsync(string keyword)
+    {
+        try
+        {
+            var results = await _poiApi.SearchAsync(keyword);
+            _searchResults = results;
+            await MainThread.InvokeOnMainThreadAsync(() =>
+            {
+                SearchSuggestions.ItemsSource = results;
+                SearchDropdown.IsVisible = results.Count > 0;
+            });
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[SearchImmediate] {ex.Message}");
+        }
+    }
+
+    private async void OnSuggestionSelected(object? sender, SelectionChangedEventArgs e)
+    {
+        if (e.CurrentSelection?.FirstOrDefault() is not PoiSearchResult selected)
+            return;
+
+        // Clear selection so user can tap same item again
+        SearchSuggestions.SelectedItem = null;
+        SearchDropdown.IsVisible = false;
+        SearchEntry.Text = selected.Name;
+
+        // Find matching local POI or use search result coordinates to navigate
+        var localPoi = _pois.FirstOrDefault(p => p.Id == selected.Id);
+
+        await MainThread.InvokeOnMainThreadAsync(() =>
+            MyMap.MoveToRegion(MapSpan.FromCenterAndRadius(
+                new Location(selected.Latitude, selected.Longitude),
+                Distance.FromMeters(300))));
+
+        if (localPoi != null)
+        {
+            HighlightPoi(localPoi, "Tìm kiếm");
+            ShowDetail(localPoi);
+        }
+    }
+
+    private async Task OnListenButtonClickedAsync()
+    {
+        if (_nearestPoi == null) return;
+
+        if (!await EnsureUsageAllowedAsync("POI_LISTEN"))
+            return;
+
+        var started = DateTime.UtcNow;
+        var lang = LanguageService.Current;
+        var fullText = await GetNarrationTextAsync(_nearestPoi.Id, PoiEventType.Tap, lang) ?? _nearestPoi.NarrationText ?? _nearestPoi.Description;
+        await _narration.HandleAsync(new Announcement(_nearestPoi, lang, PoiEventType.Tap, started), overrideText: fullText);
+
+        var dur = (int)(DateTime.UtcNow - started).TotalSeconds;
+        _ = _playback.LogAsync(_nearestPoi.Id, "TAP", dur > 0 ? dur : null);
+        _ = _analytics.LogVisitAsync(_nearestPoi.Id, "tap");
+        if (dur > 0) _ = _analytics.LogListenDurationAsync(_nearestPoi.Id, dur);
+    }
+
+    private async Task<bool> EnsureUsageAllowedAsync(string actionType)
+    {
+        try
+        {
+            if (AuthApiClient.IsPro())
+                return true;
+
+            var entityId = UsageApiClient.GetEntityId();
+            var (allowed, resetInHours) = await _usage.CheckAsync(entityId, actionType);
+            if (allowed) return true;
+
+            var goUpgrade = await DisplayAlertAsync(
+                "Hết lượt miễn phí",
+                $"Bạn đã dùng hết lượt trải nghiệm. Lượt sẽ được làm mới sau khoảng {resetInHours:F1} giờ.\n\nNâng cấp PRO để dùng không giới hạn.",
+                "Nâng cấp PRO",
+                "Đóng");
+
+            if (goUpgrade)
+                await Shell.Current.GoToAsync("proupgrade");
+
+            return false;
+        }
+        catch
+        {
+            return true; // lỗi mạng → không chặn user
+        }
+    }
+
+    private async Task DrawDirectionsAsync(Poi? poi)
+    {
+        if (poi == null) return;
+
+        if (!AuthApiClient.IsLoggedIn())
+        {
+            await DisplayAlertAsync("Cần đăng nhập", "Tính năng chỉ đường chỉ dành cho tài khoản PRO. Vui lòng đăng nhập/nâng cấp.", "OK");
+            return;
+        }
+
+        if (!AuthApiClient.IsPro())
+        {
+            var goUpgrade = await DisplayAlertAsync(
+                "Chỉ đường (PRO)",
+                "Tính năng chỉ đường chỉ dành cho Gói PRO. Bạn có muốn nâng cấp ngay không?",
+                "Nâng cấp PRO",
+                "Đóng");
+            if (goUpgrade) await Shell.Current.GoToAsync("proupgrade");
+            return;
+        }
+
+        var userLat = _userLocation?.Latitude;
+        var userLng = _userLocation?.Longitude;
+        if (!userLat.HasValue || !userLng.HasValue)
+        {
+            await DisplayAlertAsync("Chưa có vị trí", "Không lấy được vị trí hiện tại để chỉ đường. Vui lòng bật GPS và thử lại.", "OK");
+            return;
+        }
+
+        var dto = await _profileApi.GetDirectionsAsync(poi.Id, userLat, userLng);
+        if (dto?.RouteCoordinates == null || dto.RouteCoordinates.Count < 2)
+        {
+            await DisplayAlertAsync("Không lấy được tuyến đường", dto?.Message ?? "Vui lòng thử lại sau.", "OK");
+            return;
+        }
+
+        if (_routePolyline != null)
+            MyMap.MapElements.Remove(_routePolyline);
+
+        _routePolyline = new Polyline
+        {
+            StrokeColor = Color.FromArgb("#1976D2"),
+            StrokeWidth = 6
+        };
+
+        foreach (var c in dto.RouteCoordinates)
+            _routePolyline.Geopath.Add(new Location(c.Lat, c.Lng));
+
+        MyMap.MapElements.Add(_routePolyline);
     }
 
     private async Task LoadPoiImagesAsync(Poi poi)

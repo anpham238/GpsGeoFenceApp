@@ -6,5 +6,4 @@ public sealed class PoiMedia
     public int IdPoi { get; set; }
     public string? Image { get; set; }
     public string? MapLink { get; set; }
-    public string? Audio { get; set; }
 }

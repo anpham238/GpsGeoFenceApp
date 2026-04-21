@@ -68,7 +68,7 @@ public class PoiController : ControllerBase
                 // LẤY DỮ LIỆU TỪ BẢNG PoiMedia
                 ImageUrl = _db.PoiMedia.Where(m => m.IdPoi == p.Id).Select(m => m.Image).FirstOrDefault(),
                 MapLink = _db.PoiMedia.Where(m => m.IdPoi == p.Id).Select(m => m.MapLink).FirstOrDefault(),
-                AudioUrl = _db.PoiMedia.Where(m => m.IdPoi == p.Id).Select(m => m.Audio).FirstOrDefault(),
+                AudioUrl = null,
 
                 // Lấy Text thuyết minh tiếng Việt từ bảng PoiLanguage (nếu có)
                 NarrationText = _db.PoiLanguages.Where(l => l.IdPoi == p.Id && l.LanguageTag == "vi-VN").Select(l => l.TextToSpeech).FirstOrDefault(),

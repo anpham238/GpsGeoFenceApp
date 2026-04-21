@@ -1,95 +1,71 @@
-# 👤 13. Đặc Tả Module: Quản Lý Trang Cá Nhân & Gói PRO (Profile & Subscription)
+# 🎨 17. Đặc Tả Module: Nâng cấp Trải nghiệm UX/UI (Thiết kế chuẩn Google)
 
-![Status](https://img.shields.io/badge/Status-Proposed-orange)
-![Monetization](https://img.shields.io/badge/Monetization-Freemium_Model-brightgreen)
-![Feature](https://img.shields.io/badge/Feature-Smart_Routing-blue)
+![Status](https://img.shields.io/badge/Status-Redesigning-orange)
+![Tech](https://img.shields.io/badge/Tech-.NET_MAUI_XAML-512BD4)
+![UX](https://img.shields.io/badge/UX-Google_Material_Design-brightgreen)
 
-> **Mục tiêu:** Xây dựng trung tâm quản lý tài khoản cho du khách (Profile Dashboard). Điểm nhấn của module này là hệ thống **Nâng cấp tài khoản (Gói PRO)**, cho phép người dùng mở khóa các đặc quyền vượt trội như: nghe thuyết minh vô hạn, chỉ đường trực tiếp tới POI, quét QR không giới hạn và xem lại bản đồ hành trình đã đi.
-
----
-
-## 📱 1. Giao diện Quản lý Trang cá nhân (Profile Dashboard)
-
-Giao diện được thiết kế theo dạng danh sách (List View) trực quan, chia thành các phân vùng:
-
-* **Khu vực Header (Thông tin chung):**
-    * Hiển thị **Avatar** hình tròn (lấy từ `AvatarUrl`), Tên hiển thị (`Username`/`FullName`) và Email.
-    * **Badge Trạng thái:** Thẻ tag nhỏ ghi `Tài khoản Miễn phí` hoặc `🌟 Tài khoản PRO` màu vàng nổi bật.
-* **Khu vực Call-to-Action (Nâng cấp):**
-    * Banner/Nút bấm nổi bật: **"🚀 Nâng cấp Gói PRO - Trải nghiệm du lịch không giới hạn!"**.
-* **Khu vực Lịch sử & Hoạt động:**
-    * 📍 **Lịch sử tham quan:** Danh sách các POI đã nghe thuyết minh (Truy xuất từ bảng `HistoryPoi`).
-    * 🗺️ **Nhật ký hành trình (Tính năng PRO):** Mở ra bản đồ có vẽ đường màu đỏ nối các điểm người dùng đã đi qua.
-* **Khu vực Thiết lập:**
-    * ✏️ **Cập nhật thông tin:** Form thay đổi Tên, Số điện thoại (`PhoneNumber`), cập nhật Avatar.
-    * 🚪 **Đăng xuất tài khoản**.
+> **Mục tiêu:** Cải tổ toàn diện giao diện Mobile App nhằm mang lại trải nghiệm mượt mà, hiện đại và trực quan hơn cho du khách. Mọi logic xử lý dữ liệu và API Backend giữ nguyên 100%. Trọng tâm thay đổi nằm ở cấu trúc Component XAML, hiệu ứng Animation và Layout.
 
 ---
 
-## 💎 2. Phân hệ Nâng cấp Gói PRO (Subscription UI)
+## 🗺️ 1. Tối ưu Màn hình Bản đồ Chính (Main Map View)
 
-Khi người dùng nhấn vào nút nâng cấp, một trang thông tin sẽ hiện ra. Giao diện được thiết kế theo phong cách thẻ song song (Card-based UI) sang trọng (Dark mode), giúp người dùng dễ dàng so sánh:
+Dựa trên hình ảnh thực tế, giao diện bản đồ cũ đang bị chiếm dụng không gian bởi thanh Navigation Bar và khung chọn Tour. Chúng ta sẽ "giải phóng" không gian này để bản đồ tràn viền.
 
-| Tính năng / Đặc quyền | 🆓 Gói Cơ bản (Free) | 🌟 Gói PRO (Premium) |
-| :--- | :--- | :--- |
-| **Mức giá** | Miễn phí | `X.000 VNĐ / Tháng` (Hoặc mua theo Tour) |
-| **Thuyết minh POI** | Giới hạn số lần nghe/ngày | **Vô hạn (Nghe không giới hạn)** |
-| **Quét mã QR tại trạm** | Tối đa 5 lần/mã (`MaxUses = 5`) | **Vô hạn số lần quét** (Bỏ qua `MaxUses`) |
-| **Chỉ đường (Smart Routing)** | ❌ Không hỗ trợ | ✅ **Có nút chỉ đường** vẽ tuyến đi tới POI |
-| **Nhật ký hành trình** | ❌ Không hỗ trợ | ✅ **Lưu vết đường đi (Màu đỏ trên bản đồ)** |
-| **Hành động (Button)** | *Đang sử dụng* | **[ Nâng Cấp Ngay ]** |
+### 1.1. Dọn dẹp không gian (Clean up)
+* **Xóa bỏ Top App Bar:** Xóa hoàn toàn thanh điều hướng màu đen trên cùng (Chứa nút Hamburger `≡`, chữ `QR` và menu 3 chấm `⋮`).
+* **Xóa bỏ Dropdown Tour:** Xóa bỏ khung chọn "Tất cả địa điểm / Tour POI" cũ rườm rà.
 
----
-
-## 🗺️ 3. Đặc tả Kỹ thuật: Các Tính Năng PRO Cốt Lõi
-
-### 3.1. Tính năng: Chỉ đường trực tiếp tới POI (Smart Routing)
-* **Quy trình:** Khi người dùng mở xem chi tiết một điểm tham quan (POI), giao diện sẽ xuất hiện thêm nút **"Đường đi tới đây"** (Directions).
-* **Hoạt động:** Hệ thống sử dụng tọa độ GPS hiện tại của người dùng và `Latitude`/`Longitude` của POI, sau đó gọi API bản đồ (Google Maps Directions API hoặc Mapbox). Kết quả trả về là một đường polyline màu xanh (Blue Route) vẽ trực tiếp trên màn hình bản đồ của App, hướng dẫn đường đi chi tiết.
-
-### 3.2. Tính năng: Quét QR vô hạn
-* **Quy trình:** API `/api/v1/tickets/scan/{ticketCode}` sẽ kiểm tra trạng thái tài khoản.
-* **Hoạt động:** Thông thường, bảng `PoiTickets` sẽ chặn nếu `CurrentUses >= MaxUses` (5 lần). Nhưng nếu API xác định User đang sở hữu `PlanType = PRO`, rào cản này sẽ bị vô hiệu hóa, cho phép trả về dữ liệu thuyết minh ngay lập tức.
-
-### 3.3. Tính năng: Nhật ký tuyến đường (Travel History)
-* **Quy trình:** Khi người dùng chọn "Nhật ký hành trình" trong Trang cá nhân.
-* **Hoạt động:** Hệ thống sẽ truy xuất bảng `Analytics_Route` dựa trên định danh của người dùng. Tập hợp các điểm `Latitude`, `Longitude` sắp xếp theo `RecordedAt` sẽ được nối lại với nhau tạo thành một **đường thẳng màu đỏ (Red Polyline)** vẽ đè lên bản đồ. Tính năng này giúp khách du lịch xem lại toàn bộ dấu chân của mình trong ngày.
+### 1.2. Floating Search Bar (Thanh tìm kiếm nổi)
+* Thay thế chức năng Tour bằng một **Thanh tìm kiếm POI nổi (Floating Search Bar)** nằm bo tròn ở cạnh trên màn hình (Giống hệt Google Maps).
+* Khung Search này có đổ bóng (Shadow) nhẹ. Bên trái chứa icon 🔍, bên phải tích hợp luôn icon **Quét mã QR** và icon **Avatar Người dùng** (Bấm vào Avatar sẽ mở trang Profile).
 
 ---
 
-## 🗄️ 4. Nâng cấp Cơ sở dữ liệu (Database Update)
+## ✨ 2. Tương tác POI & Hiệu ứng Camera (Smart Interactions)
 
-Để hệ thống phân biệt được người dùng Free và Pro, cần chạy script bổ sung 2 cột vào bảng `Users` hiện tại:
+Mang lại cảm giác mượt mà và tập trung khi người dùng tương tác với các điểm tham quan trên bản đồ.
 
-```sql
--- Thêm cột quản lý Gói cước vào bảng Users
-ALTER TABLE [dbo].[Users] 
-ADD [PlanType] [varchar](20) NOT NULL DEFAULT ('FREE'), -- 'FREE' hoặc 'PRO'
-    [ProExpiryDate] [datetime2](3) NULL; -- Thời hạn kết thúc gói PRO (nếu có)
+### 2.1. Hiệu ứng Zoom-in (Camera Animation)
+* Khi người dùng chạm (Tap) vào một Marker POI trên bản đồ, hệ thống không chỉ hiện Bottom Sheet mà sẽ kích hoạt hàm di chuyển Camera của MAUI Map.
+* **Hành động:** Bản đồ tự động mượt mà lướt tới (Pan) và **phóng to (Zoom in)** tập trung chính giữa điểm POI đó.
 
-sequenceDiagram
-    participant App as 📱 MAUI App
-    participant API as ⚡ Backend API
-    participant DB as 🗄️ SQL Server
-    participant Maps as 🌍 Route Provider (Google)
+### 2.2. Tái cấu trúc Bottom Sheet (Chuẩn Google Maps)
+Bottom Sheet trượt từ dưới lên sẽ được thiết kế lại hoàn toàn chia làm 3 phân vùng rõ rệt:
+1. **Khu vực Media (Trên cùng):** * Chiếm khoảng 30% chiều cao Bottom Sheet. 
+    * Nếu POI có nhiều ảnh, hiển thị dưới dạng thanh trượt ngang (Horizontal Scroll/Carousel). Người dùng vuốt sang trái/phải để xem ảnh, ảnh bo góc mượt mà.
+2. **Khu vực Thông tin (Giữa):**
+    * **Tên địa điểm:** Font chữ to, đậm (Heading 1).
+    * **Tọa độ (Lat/Long):** Font nhỏ, màu xám nhạt nằm dưới tên.
+    * **Mô tả/Đánh giá:** Một đoạn text tóm tắt nội dung POI.
+3. **Khu vực Nút Hành động (Dưới cùng - Action Row):** Dàn hàng ngang các nút bấm (Bo góc tròn giống Google):
+    * 🚙 **Đường đi (Chỉ dành cho PRO):** Nút nổi bật nhất màu xanh dương. Nếu là User Free, có icon ổ khóa nhỏ bên cạnh. Bấm vào sẽ vẽ đường màu xanh trên map.
+    * 🗺️ **Mở Google Maps:** Nút màu xám/trắng. Bấm vào sẽ dùng `Launcher.OpenAsync` đẩy tọa độ sang app Google Maps của điện thoại.
+    * 🎧 **Nghe Thuyết minh:** Nút phát Audio TTS/Podcast.
 
-    App->>API: GET /pois/{id}/directions (Truyền Token)
-    activate API
-    
-    API->>DB: Lấy thông tin User
-    DB-->>API: PlanType = "FREE" / "PRO"
-    
-    alt PlanType == "FREE" (Chưa nâng cấp)
-        API-->>App: HTTP 403 Forbidden
-        App->>App: Mở màn hình giới thiệu "Gói PRO" (Bảng giá so sánh)
-    else PlanType == "PRO" (Đã nâng cấp)
-        API->>DB: Lấy tọa độ POI đích
-        DB-->>API: Lat, Lng
-        
-        API->>Maps: Request Route (Từ GPS User -> GPS POI)
-        Maps-->>API: Dữ liệu vẽ đường (Polyline)
-        
-        API-->>App: HTTP 200 OK + Route Data
-        App->>App: Render đường chỉ dẫn màu Xanh lên Map
-    end
-    deactivate API
+---
+
+## 👤 3. Lột xác Giao diện Quản lý Cá nhân (Google Account Style)
+
+Xóa bỏ giao diện Profile màu xanh đen cũ. Áp dụng phong cách Material Design của trang quản lý "Google Account".
+
+### 3.1. Nút Thoát nhanh (Exit/Close Button)
+* Ở góc trên cùng bên phải (hoặc trái) của trang Profile và trang Upgrade PRO, thêm một **nút Dấu "X" (Close)** hoặc mũi tên "←" to, rõ ràng.
+* Hành động: Bấm vào sẽ đóng trang Cá nhân và quay lập tức về màn hình Bản đồ chính trọn vẹn.
+
+### 3.2. Bố cục Profile (Layout)
+* **Khu vực Header:**
+    * Chứa Avatar hình tròn cỡ lớn nằm chính giữa màn hình (Có icon 📷 nhỏ đính kèm để thay ảnh).
+    * Dòng chữ chào mừng: `Xin chào, [Tên Người Dùng]!` (Font to, thanh lịch).
+    * Nút badge quản lý: Nút hiển thị hạng tài khoản `Tài khoản Miễn phí` (Màu xám) hoặc `🌟 Tài khoản PRO` (Hào quang vàng).
+* **Khu vực Menu (List View):**
+    * Đặt trong các thẻ Card màu trắng, nền trang màu kem/xám nhạt. Các mục menu được bo góc.
+    * 🚀 **Nâng cấp Gói PRO** (Nằm tách biệt ở trên cùng để thu hút sự chú ý).
+    * 👤 Hồ sơ của bạn (Cập nhật thông tin).
+    * 📈 Dòng thời gian của bạn (Nhật ký hành trình - PRO).
+    * 📍 Các địa điểm đã lưu/nghe (Lịch sử xem POI).
+    * 🚪 Đăng xuất (Nằm cuối cùng, text màu đỏ).
+
+### 3.3. Màn hình Nâng cấp PRO
+* Khi bấm "Nâng cấp Gói PRO" từ Profile, mở ra Modal/Trang mới có nút "X" để thoát.
+* Giao diện trình bày các quyền lợi độc quyền (Nghe vô hạn, Quét QR vô hạn, Dẫn đường) dưới dạng thẻ Card lớn, sử dụng icon rực rỡ để kích thích tỷ lệ chuyển đổi (Conversion Rate).

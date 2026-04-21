@@ -5,7 +5,6 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:maps="clr-namespace:Microsoft.Maui.Controls.Maps;assembly=Microsoft.Maui.Controls.Maps"
     Title="">
-    <!-- Ẩn TitleView mặc định vì ta tự vẽ header trong Grid -->
     <Shell.TitleView>
         <ContentView />
     </Shell.TitleView>
@@ -17,46 +16,63 @@
                   IsScrollEnabled="True"
                   IsZoomEnabled="True" />
 
-        <!-- ═══════════════════════════════════════════════════
-             HEADER PANEL (thay thế Shell.TitleView + LangBar cũ)
-             ═══════════════════════════════════════════════════ -->
-        <VerticalStackLayout Margin="12,10,12,0"
+        <!-- ═══════════════ FLOATING SEARCH BAR ═══════════════ -->
+        <VerticalStackLayout Margin="12,48,12,0"
                              VerticalOptions="Start"
-                             Spacing="6"
-                             ZIndex="8">
+                             ZIndex="9">
 
-            <!-- ROW 1: Thanh "Tất cả địa điểm" + Avatar user -->
+            <!-- Search Bar Row -->
             <Border Padding="10,0"
                     BackgroundColor="White"
                     Stroke="#E6E6E6"
                     StrokeThickness="1">
                 <Border.StrokeShape>
-                    <RoundRectangle CornerRadius="18" />
+                    <RoundRectangle CornerRadius="26" />
                 </Border.StrokeShape>
                 <Border.Shadow>
-                    <Shadow Brush="Black" Opacity="0.12" Offset="0,2" Radius="8" />
+                    <Shadow Brush="Black" Opacity="0.15" Offset="0,3" Radius="10" />
                 </Border.Shadow>
 
-                <Grid ColumnDefinitions="*,Auto" HeightRequest="48">
-                    <!-- Picker địa điểm -->
-                    <Picker x:Name="TourPicker"
-                            Grid.Column="0"
-                            Title="🗺 Tất cả địa điểm"
-                            TextColor="#1F1F1F"
-                            TitleColor="#5F6368"
-                            FontSize="15"
-                            BackgroundColor="Transparent"
-                            VerticalOptions="Center"
-                            SelectedIndexChanged="OnTourSelected" />
+                <Grid ColumnDefinitions="Auto,*,Auto,Auto" HeightRequest="52">
+                    <!-- Search Icon -->
+                    <Label Grid.Column="0" Text="🔍" FontSize="18"
+                           VerticalOptions="Center" Margin="4,0,4,0" />
 
-                    <!-- Avatar user (hình tròn) -->
-                    <Border Grid.Column="1"
+                    <!-- Search Entry -->
+                    <Entry x:Name="SearchEntry"
+                           Grid.Column="1"
+                           Placeholder="Tìm địa điểm..."
+                           PlaceholderColor="#9E9E9E"
+                           TextColor="#1F1F1F"
+                           FontSize="15"
+                           BackgroundColor="Transparent"
+                           VerticalOptions="Center"
+                           TextChanged="OnSearchTextChanged"
+                           Completed="OnSearchCompleted" />
+
+                    <!-- QR Button -->
+                    <Border Grid.Column="2"
+                            WidthRequest="36" HeightRequest="36"
+                            BackgroundColor="#F5F5F5"
+                            Stroke="Transparent"
+                            Margin="0,0,6,0"
+                            VerticalOptions="Center">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="18" />
+                        </Border.StrokeShape>
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnQrButtonClicked" />
+                        </Border.GestureRecognizers>
+                        <Label Text="▦" FontSize="18" HorizontalOptions="Center" VerticalOptions="Center" TextColor="#3F3F3F" />
+                    </Border>
+
+                    <!-- Avatar -->
+                    <Border Grid.Column="3"
                             x:Name="AvatarBorder"
-                            WidthRequest="36"
-                            HeightRequest="36"
+                            WidthRequest="36" HeightRequest="36"
                             BackgroundColor="#5C6BC0"
                             Stroke="Transparent"
-                            Margin="0,0,4,0"
+                            Margin="0,0,2,0"
                             VerticalOptions="Center">
                         <Border.StrokeShape>
                             <RoundRectangle CornerRadius="18" />
@@ -64,7 +80,6 @@
                         <Border.GestureRecognizers>
                             <TapGestureRecognizer Tapped="OnTopLoginClicked" />
                         </Border.GestureRecognizers>
-
                         <Grid>
                             <Image x:Name="ImgAvatar" Aspect="AspectFill" IsVisible="False" WidthRequest="36" HeightRequest="36">
                                 <Image.Clip>
@@ -77,9 +92,39 @@
                 </Grid>
             </Border>
 
-            <!-- ROW 2: Hàng cờ ngôn ngữ + nút QR tròn ở góc phải -->
-            <Grid ColumnDefinitions="*,Auto">
-                <!-- Cờ ngôn ngữ -->
+            <!-- Search Suggestions Dropdown -->
+            <Border x:Name="SearchDropdown"
+                    IsVisible="False"
+                    BackgroundColor="White"
+                    Stroke="#E6E6E6"
+                    StrokeThickness="1"
+                    Margin="0,4,0,0">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="14" />
+                </Border.StrokeShape>
+                <Border.Shadow>
+                    <Shadow Brush="Black" Opacity="0.12" Offset="0,4" Radius="10" />
+                </Border.Shadow>
+                <CollectionView x:Name="SearchSuggestions"
+                                MaximumHeightRequest="240"
+                                SelectionMode="Single"
+                                SelectionChanged="OnSuggestionSelected">
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Padding="16,12" ColumnDefinitions="Auto,*">
+                                <Label Grid.Column="0" Text="📍" FontSize="16" VerticalOptions="Center" Margin="0,0,12,0" />
+                                <VerticalStackLayout Grid.Column="1">
+                                    <Label Text="{Binding Name}" FontSize="14" TextColor="#202124" FontAttributes="Bold" />
+                                    <Label Text="{Binding Description}" FontSize="12" TextColor="#5F6368" MaxLines="1" LineBreakMode="TailTruncation" />
+                                </VerticalStackLayout>
+                            </Grid>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+            </Border>
+
+            <!-- Language Bar Row -->
+            <Grid ColumnDefinitions="*,Auto" Margin="0,8,0,0">
                 <Border Grid.Column="0"
                         Padding="10,8"
                         BackgroundColor="White"
@@ -109,74 +154,41 @@
                         </Border>
                         <Border x:Name="BtnJa" Padding="8,4" Background="#333333" Stroke="#00000000">
                             <Border.StrokeShape><RoundRectangle CornerRadius="8" /></Border.StrokeShape>
-                            <Label Text="🇯🇵" FontSize="16" />
                             <Border.GestureRecognizers>
                                 <TapGestureRecognizer Tapped="OnLangTapped" CommandParameter="ja-JP" />
                             </Border.GestureRecognizers>
+                            <Grid>
+                                <Label Text="🇯🇵" FontSize="16" />
+                                <Label Text="🔒" FontSize="8" HorizontalOptions="End" VerticalOptions="Start" Margin="0,-2,-2,0" />
+                            </Grid>
                         </Border>
                         <Border x:Name="BtnKo" Padding="8,4" Background="#333333" Stroke="#00000000">
                             <Border.StrokeShape><RoundRectangle CornerRadius="8" /></Border.StrokeShape>
-                            <Label Text="🇰🇷" FontSize="16" />
                             <Border.GestureRecognizers>
                                 <TapGestureRecognizer Tapped="OnLangTapped" CommandParameter="ko-KR" />
                             </Border.GestureRecognizers>
+                            <Grid>
+                                <Label Text="🇰🇷" FontSize="16" />
+                                <Label Text="🔒" FontSize="8" HorizontalOptions="End" VerticalOptions="Start" Margin="0,-2,-2,0" />
+                            </Grid>
                         </Border>
                         <Border x:Name="BtnDe" Padding="8,4" Background="#333333" Stroke="#00000000">
                             <Border.StrokeShape><RoundRectangle CornerRadius="8" /></Border.StrokeShape>
-                            <Label Text="🇩🇪" FontSize="16" />
                             <Border.GestureRecognizers>
                                 <TapGestureRecognizer Tapped="OnLangTapped" CommandParameter="de-DE" />
                             </Border.GestureRecognizers>
+                            <Grid>
+                                <Label Text="🇩🇪" FontSize="16" />
+                                <Label Text="🔒" FontSize="8" HorizontalOptions="End" VerticalOptions="Start" Margin="0,-2,-2,0" />
+                            </Grid>
                         </Border>
                     </HorizontalStackLayout>
                 </Border>
-
-                <!-- Nút QR hình tròn nhỏ -->
-                <Border Grid.Column="1"
-                        WidthRequest="46"
-                        HeightRequest="46"
-                        BackgroundColor="White"
-                        Stroke="#E6E6E6"
-                        StrokeThickness="1">
-                    <Border.StrokeShape>
-                        <RoundRectangle CornerRadius="23" />
-                    </Border.StrokeShape>
-                    <Border.Shadow>
-                        <Shadow Brush="Black" Opacity="0.14" Offset="0,2" Radius="6" />
-                    </Border.Shadow>
-                    <Border.GestureRecognizers>
-                        <TapGestureRecognizer Tapped="OnQrButtonClicked" />
-                    </Border.GestureRecognizers>
-                    <!-- Icon QR bằng Path SVG -->
-                    <Grid HorizontalOptions="Center" VerticalOptions="Center"
-                          WidthRequest="26" HeightRequest="26">
-                        <!-- Ô trên trái -->
-                        <Path Data="M2 2 H9 V9 H2 Z M3 3 H8 V8 H3 Z M4 4 H7 V7 H4 Z"
-                              Fill="#3F3F3F"
-                              HorizontalOptions="Start"
-                              VerticalOptions="Start" />
-                        <!-- Ô trên phải -->
-                        <Path Data="M15 2 H22 V9 H15 Z M16 3 H21 V8 H16 Z M17 4 H20 V7 H17 Z"
-                              Fill="#3F3F3F"
-                              HorizontalOptions="Start"
-                              VerticalOptions="Start" />
-                        <!-- Ô dưới trái -->
-                        <Path Data="M2 15 H9 V22 H2 Z M3 16 H8 V21 H3 Z M4 17 H7 V20 H4 Z"
-                              Fill="#3F3F3F"
-                              HorizontalOptions="Start"
-                              VerticalOptions="Start" />
-                        <!-- Chấm dữ liệu giữa -->
-                        <Path Data="M11 2 H13 V4 H11 Z M11 6 H13 V8 H11 Z M11 11 H13 V13 H11 Z M6 11 H8 V13 H6 Z M2 11 H4 V13 H2 Z M15 11 H17 V13 H15 Z M19 11 H22 V13 H19 Z M15 15 H17 V17 H15 Z M19 15 H21 V17 H19 Z M11 15 H13 V17 H11 Z M15 19 H17 V22 H15 Z M19 19 H22 V22 H19 Z M11 19 H13 V22 H11 Z"
-                              Fill="#3F3F3F"
-                              HorizontalOptions="Start"
-                              VerticalOptions="Start" />
-                    </Grid>
-                </Border>
             </Grid>
         </VerticalStackLayout>
-        <!-- ═══════════════ KẾT THÚC HEADER ═══════════════ -->
+        <!-- ═══════════════ END HEADER ═══════════════ -->
 
-        <!-- Nút định vị + zoom (giữ nguyên) -->
+        <!-- Location + Zoom buttons -->
         <VerticalStackLayout Grid.Row="0"
                              HorizontalOptions="End"
                              VerticalOptions="Center"
@@ -218,17 +230,18 @@
             </Border>
         </VerticalStackLayout>
 
-        <!-- Bottom Sheet (giữ nguyên) -->
+        <!-- ═══════════════ BOTTOM SHEET ═══════════════ -->
         <Border x:Name="BottomSheet" Padding="0" Background="Transparent" VerticalOptions="End" ZIndex="10">
-            <Border Padding="16,8,16,14" Background="White" Stroke="#E6E6E6">
+            <Border Padding="16,8,16,24" Background="White" Stroke="#E6E6E6">
                 <Border.StrokeShape>
-                    <RoundRectangle CornerRadius="18,18,0,0" />
+                    <RoundRectangle CornerRadius="20,20,0,0" />
                 </Border.StrokeShape>
                 <Border.Shadow>
-                    <Shadow Brush="Black" Opacity="0.12" Offset="0,-2" Radius="10" />
+                    <Shadow Brush="Black" Opacity="0.14" Offset="0,-3" Radius="12" />
                 </Border.Shadow>
-                <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto">
-                    <Grid Grid.Row="0" Grid.ColumnSpan="2" Padding="0,6,0,8">
+                <VerticalStackLayout Spacing="0">
+                    <!-- Drag handle -->
+                    <Grid Padding="0,6,0,10">
                         <BoxView HeightRequest="4" WidthRequest="46" HorizontalOptions="Center" BackgroundColor="#D0D0D0" CornerRadius="2" />
                         <Grid.GestureRecognizers>
                             <PanGestureRecognizer PanUpdated="BottomSheet_PanUpdated" />
@@ -236,26 +249,20 @@
                         </Grid.GestureRecognizers>
                     </Grid>
 
-                    <VerticalStackLayout Grid.Row="1" Grid.ColumnSpan="2" Spacing="2">
-                        <Label x:Name="DetailName" FontSize="17" FontAttributes="Bold" TextColor="#202124" />
-                        <Label x:Name="DetailDesc" FontSize="13" TextColor="#5F6368" MaxLines="3" LineBreakMode="TailTruncation" />
-                        <Label x:Name="DetailCoord" FontSize="12" TextColor="#80868B" />
-                        <Label x:Name="DetailRadius" FontSize="12" TextColor="#80868B" />
-                    </VerticalStackLayout>
-
-                    <Border Grid.Row="2" Grid.ColumnSpan="2" Background="#F2F4F8" Stroke="#00000000" Margin="0,8,0,8">
+                    <!-- Media Area: Image Carousel -->
+                    <Border Background="#F2F4F8" Stroke="#00000000" Margin="0,0,0,12">
                         <Border.StrokeShape>
-                            <RoundRectangle CornerRadius="10" />
+                            <RoundRectangle CornerRadius="12" />
                         </Border.StrokeShape>
-                        <Grid HeightRequest="170">
+                        <Grid HeightRequest="180">
                             <CarouselView x:Name="PoiImageCarousel"
                                           IndicatorView="PoiImageIndicator"
                                           IsVisible="False"
                                           Loop="False"
-                                          HeightRequest="170">
+                                          HeightRequest="180">
                                 <CarouselView.ItemTemplate>
                                     <DataTemplate>
-                                        <Image Source="{Binding .}" Aspect="AspectFill" HeightRequest="170" />
+                                        <Image Source="{Binding .}" Aspect="AspectFill" HeightRequest="180" />
                                     </DataTemplate>
                                 </CarouselView.ItemTemplate>
                             </CarouselView>
@@ -266,26 +273,45 @@
                                            VerticalOptions="End"
                                            Margin="0,0,0,6"
                                            IsVisible="False" />
-                            <Image x:Name="PoiImage" HeightRequest="170" Aspect="AspectFill" />
+                            <Image x:Name="PoiImage" HeightRequest="180" Aspect="AspectFill" />
                         </Grid>
                     </Border>
 
-                    <HorizontalStackLayout Grid.Row="3" Grid.ColumnSpan="2" Spacing="6">
-                        <Label Text="Liên kết:" FontSize="12" TextColor="#5F6368" />
-                        <Label x:Name="LblPoiLink" FontSize="12" TextColor="#1A73E8" LineBreakMode="TailTruncation" MaxLines="1" />
-                    </HorizontalStackLayout>
+                    <!-- Info Area -->
+                    <VerticalStackLayout Spacing="3" Margin="0,0,0,14">
+                        <Label x:Name="DetailName" FontSize="18" FontAttributes="Bold" TextColor="#202124" />
+                        <Label x:Name="DetailCoord" FontSize="12" TextColor="#80868B" />
+                        <Label x:Name="DetailDesc" FontSize="13" TextColor="#5F6368" MaxLines="3" LineBreakMode="TailTruncation" Margin="0,4,0,0" />
+                    </VerticalStackLayout>
 
-                    <Button x:Name="BtnOpenInMaps"
-                            Grid.Row="4"
-                            Grid.ColumnSpan="2"
-                            Text="Mở Google Maps"
-                            FontSize="13"
-                            Padding="12,9"
-                            BackgroundColor="#1A73E8"
-                            TextColor="White"
-                            CornerRadius="10"
-                            Margin="0,10,0,0" />
-                </Grid>
+                    <!-- Action Buttons Row -->
+                    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                        <Button x:Name="BtnDirections"
+                                Grid.Column="0"
+                                Text="🚙 Đường đi"
+                                FontSize="12"
+                                Padding="8,10"
+                                BackgroundColor="#1976D2"
+                                TextColor="White"
+                                CornerRadius="12" />
+                        <Button x:Name="BtnOpenInMaps"
+                                Grid.Column="1"
+                                Text="🗺 Maps"
+                                FontSize="12"
+                                Padding="8,10"
+                                BackgroundColor="#F1F3F4"
+                                TextColor="#3C4043"
+                                CornerRadius="12" />
+                        <Button x:Name="BtnListen"
+                                Grid.Column="2"
+                                Text="🎧 Nghe"
+                                FontSize="12"
+                                Padding="8,10"
+                                BackgroundColor="#00897B"
+                                TextColor="White"
+                                CornerRadius="12" />
+                    </Grid>
+                </VerticalStackLayout>
             </Border>
         </Border>
     </Grid>

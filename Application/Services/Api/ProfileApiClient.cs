@@ -73,10 +73,15 @@ public sealed class ProfileApiClient
         catch { return []; }
     }
 
-    public async Task<DirectionsDto?> GetDirectionsAsync(int poiId, CancellationToken ct = default)
+    public async Task<DirectionsDto?> GetDirectionsAsync(
+        int poiId, double? userLat = null, double? userLng = null, CancellationToken ct = default)
     {
         AttachToken();
-        var resp = await _http.GetAsync($"/api/v1/pois/{poiId}/directions", ct);
+        var url = $"/api/v1/pois/{poiId}/directions";
+        if (userLat.HasValue && userLng.HasValue)
+            url += $"?userLat={userLat.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)}" +
+                   $"&userLng={userLng.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)}";
+        var resp = await _http.GetAsync(url, ct);
         if (resp.StatusCode == System.Net.HttpStatusCode.Forbidden) return null;
         if (!resp.IsSuccessStatusCode) return null;
         return await resp.Content.ReadFromJsonAsync<DirectionsDto>(ct);
@@ -125,6 +130,11 @@ public sealed class DirectionsDto
 {
     public int PoiId { get; set; }
     public string PoiName { get; set; } = "";
-    public double Latitude { get; set; }
-    public double Longitude { get; set; }
+    public DestinationPoint? Destination { get; set; }
+    public double? DistanceMeters { get; set; }
+    public double? DurationSeconds { get; set; }
+    public List<RouteCoord>? RouteCoordinates { get; set; }
+    public string? Message { get; set; }
 }
+public sealed class DestinationPoint { public double Lat { get; set; } public double Lng { get; set; } }
+public sealed class RouteCoord { public double Lat { get; set; } public double Lng { get; set; } }

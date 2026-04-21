@@ -46,6 +46,28 @@ public sealed class PoiApiClient
         catch { return []; }
     }
 
+    public async Task<List<PoiSearchResult>> SearchAsync(string q, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(q)) return [];
+        try
+        {
+            var url = $"/api/v1/pois/search?q={Uri.EscapeDataString(q.Trim())}";
+            var data = await _http.GetFromJsonAsync<List<PoiSearchResult>>(url, ct);
+            return data ?? [];
+        }
+        catch { return []; }
+    }
+
     private sealed record SyncVersionDto(string Version, int Count);
     private sealed record PoiImageItemDto(long Id, string ImageUrl, int SortOrder);
+}
+
+public sealed class PoiSearchResult
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = "";
+    public string? Description { get; set; }
+    public double Latitude { get; set; }
+    public double Longitude { get; set; }
+    public int RadiusMeters { get; set; }
 }
