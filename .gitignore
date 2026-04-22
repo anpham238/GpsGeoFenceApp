@@ -1,0 +1,13 @@
+.vs/
+**/.vs/
+**/bin/
+**/obj/
+**/TestResults/
+**/*.user
+**/*.suo
+**/*.cache
+**/*.pdb
+**/*.log
+
+# Keep local tool artifacts out of Git
+.cursor/

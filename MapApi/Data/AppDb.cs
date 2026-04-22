@@ -20,6 +20,8 @@ public sealed class AppDb(DbContextOptions<AppDb> options) : DbContext(options)
     public DbSet<PoiImage> PoiImages => Set<PoiImage>();
     public DbSet<DailyUsageTracking> DailyUsageTrackings => Set<DailyUsageTracking>();
     public DbSet<SupportedLanguage> SupportedLanguages => Set<SupportedLanguage>();
+    public DbSet<AppDownloadSource> AppDownloadSources => Set<AppDownloadSource>();
+    public DbSet<AnalyticsAppDownloadScan> AnalyticsAppDownloadScans => Set<AnalyticsAppDownloadScan>();
     protected override void OnModelCreating(ModelBuilder b)
     {
         b.Entity<Poi>(e =>
@@ -176,6 +178,31 @@ public sealed class AppDb(DbContextOptions<AppDb> options) : DbContext(options)
             e.HasIndex(x => x.LastActiveAt)
              .IsDescending()
              .HasDatabaseName("IX_GuestDevices_LastActive");
+        });
+
+        b.Entity<AppDownloadSource>(e =>
+        {
+            e.ToTable("AppDownloadSources");
+            e.HasKey(x => x.SourceId);
+            e.Property(x => x.SourceId).ValueGeneratedOnAdd();
+            e.Property(x => x.LocationName).HasMaxLength(200).IsRequired();
+            e.Property(x => x.CampaignCode).HasMaxLength(100);
+            e.Property(x => x.CreatedAt).HasDefaultValueSql("SYSUTCDATETIME()");
+        });
+
+        b.Entity<AnalyticsAppDownloadScan>(e =>
+        {
+            e.ToTable("Analytics_AppDownloadScans");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).ValueGeneratedOnAdd();
+            e.Property(x => x.SourceId).IsRequired();
+            e.Property(x => x.Platform).HasMaxLength(50).IsRequired();
+            e.Property(x => x.ScannedAt).HasDefaultValueSql("SYSUTCDATETIME()");
+            
+            e.HasOne<AppDownloadSource>().WithMany()
+             .HasForeignKey(x => x.SourceId).OnDelete(DeleteBehavior.Cascade);
+             
+            e.HasIndex(x => x.SourceId).HasDatabaseName("IX_Analytics_AppDownloadScans_SourceId");
         });
     }
 }

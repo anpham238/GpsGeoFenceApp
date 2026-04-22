@@ -777,6 +777,45 @@
         .device-online { color: #a5d6a7; }
         .device-offline { color: #8b93a7; }
 
+        /* QR Hub */
+        .qr-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .qr-tab-btn {
+            padding: 8px 14px;
+            border-radius: 999px;
+            border: 1px solid #2c3648;
+            background: #111722;
+            color: #cfd8e3;
+            cursor: pointer;
+            font-size: 0.84rem;
+        }
+        .qr-tab-btn.active {
+            background: #1976D2;
+            border-color: #1976D2;
+            color: #fff;
+        }
+        .qr-panel { display: none; }
+        .qr-panel.active { display: block; }
+        .qr-preview {
+            margin-top: 14px;
+            padding: 14px;
+            border-radius: 8px;
+            background: #0f1117;
+            border: 1px solid #2b3345;
+            text-align: center;
+        }
+        .qr-preview img {
+            width: 240px;
+            height: 240px;
+            object-fit: contain;
+            background: #fff;
+            border-radius: 6px;
+            padding: 8px;
+        }
+
         /* Location popup */
         #locationPopup {
             position: fixed;
@@ -894,29 +933,68 @@
             </div>
         </div>
         <div id="secQrCode" class="section">
-            <div class="card" style="max-width: 500px;">
-                <h3 id="topTitleQr">🔲 Tạo mã QR (Giới hạn 5 lần quét)</h3>
-                <div class="form-row">
-                    <label>Chọn địa điểm (POI)</label>
-                    <select id="qrPoiSelect"></select>
+            <div class="card">
+                <h3>🔲 QR Hub: Tạo mã QR</h3>
+                <div class="qr-tabs">
+                    <button id="tabQrNarration" class="qr-tab-btn active" onclick="showQrHubTab('narration')">QR Thuyết minh</button>
+                    <button id="tabQrDistribution" class="qr-tab-btn" onclick="showQrHubTab('distribution')">QR Tải App</button>
                 </div>
-                <div class="form-row">
-                    <label>Chọn ngôn ngữ thuyết minh</label>
-                    <select id="qrLangSelect">
-                        <option value="vi-VN">Tiếng Việt</option>
-                        <option value="en-US">English</option>
-                        <option value="ja-JP">日本語 (Nhật)</option>
-                        <option value="ko-KR">한국어 (Hàn)</option>
-                        <option value="de-DE">Deutsch (Đức)</option>
-                    </select>
-                </div>
-                <button class="btn btn-primary" onclick="createLimitedQr()">Tạo QR Code</button>
 
-                <div id="qrResult" style="display:none; margin-top: 24px; text-align: center; background: #fff; padding: 20px; border-radius: 8px;">
-                    <canvas id="qrCanvas"></canvas>
-                    <p id="qrTicketInfo" style="font-size: 0.9rem; color: #333; margin: 10px 0; font-weight: bold;"></p>
+                <div id="qrPanelNarration" class="qr-panel active">
+                    <div class="grid2">
+                        <div class="form-row">
+                            <label>Chọn địa điểm (POI)</label>
+                            <select id="qrPoiSelect"></select>
+                        </div>
+                        <div class="form-row">
+                            <label>Ngôn ngữ</label>
+                            <select id="qrLangSelect"></select>
+                        </div>
+                    </div>
+                    <div class="form-row" style="max-width:260px;">
+                        <label>Số lần sử dụng (MaxUses)</label>
+                        <input id="qrMaxUses" type="number" min="1" value="5" />
+                    </div>
+                    <button class="btn btn-primary" onclick="createNarrationQr()">Tạo vé Thuyết minh</button>
                 </div>
-                <button id="btnDownloadQr" class="btn btn-warn" style="display:none; width: 100%; margin-top: 12px;" onclick="downloadQr()">⬇️ Tải ảnh QR về máy</button>
+
+                <div id="qrPanelDistribution" class="qr-panel">
+                    <div class="grid2">
+                        <div class="form-row">
+                            <label>Vị trí đặt mã (LocationName)</label>
+                            <input id="distLocationName" placeholder="Cổng chính Dinh Độc Lập" />
+                        </div>
+                        <div class="form-row">
+                            <label>Mã chiến dịch (CampaignCode)</label>
+                            <input id="distCampaignCode" placeholder="SUMMER_2026 (có thể để trống)" />
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="createDistributionQr()">Tạo QR Tải App</button>
+                </div>
+
+                <div id="qrPreview" class="qr-preview" style="display:none;">
+                    <img id="qrPreviewImage" alt="QR Preview" />
+                    <p id="qrPreviewInfo" style="margin-top:10px;color:#b7c3d7;"></p>
+                    <button id="qrDownloadBtn" class="btn btn-warn" style="margin-top:10px;" onclick="downloadQrPreview()">⬇️ Tải ảnh PNG</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                    <h3 style="margin:0;">🕘 Lịch sử QR đã tạo</h3>
+                    <button class="btn btn-primary btn-sm" onclick="loadQrHistory()">🔄 Làm mới</button>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Loại</th>
+                            <th>Mã</th>
+                            <th>Thông tin</th>
+                            <th>Thời gian tạo</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tblQrHistory"></tbody>
+                </table>
             </div>
         </div>
         <div id="secUsers" class="section">
@@ -1862,62 +1940,137 @@ async function loadHeatmap() {
   if (heatLayer) leafletMap.removeLayer(heatLayer);
   heatLayer = L.heatLayer(heatPoints, { radius: 20, blur: 15, maxZoom: 17 }).addTo(leafletMap);
 }
-    // ── QR Code Generator ───────────────────────────────────────────────
-    let qrInstance;
+// ── QR Hub ────────────────────────────────────────────────────────
+let _qrPreviewDataUrl = '';
+let _qrPreviewFileName = 'qr-code.png';
 
-    async function loadPoiForQr() {
-        const res = await authFetch('/api/v1/admin/pois');
-        if (!res) return;
-        const pois = await res.json();
-        const select = document.getElementById('qrPoiSelect');
-        select.innerHTML = pois.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
-    }
-    async function createLimitedQr() {
-        const poiId = document.getElementById('qrPoiSelect').value;
-        const lang = document.getElementById('qrLangSelect').value;
+function showQrHubTab(tab) {
+  const isNarration = tab === 'narration';
+  document.getElementById('tabQrNarration').classList.toggle('active', isNarration);
+  document.getElementById('tabQrDistribution').classList.toggle('active', !isNarration);
+  document.getElementById('qrPanelNarration').classList.toggle('active', isNarration);
+  document.getElementById('qrPanelDistribution').classList.toggle('active', !isNarration);
+}
 
-        toast("Đang tạo QR...", false); // Hiện thông báo đang xử lý
+async function loadPoiForQr() {
+  const [poiRes, langRes] = await Promise.all([
+    authFetch('/api/v1/admin/pois'),
+    authFetch('/api/v1/languages')
+  ]);
+  if (!poiRes || !langRes) return;
 
-        try {
-            const res = await authFetch('/api/v1/tickets/generate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ poiId: parseInt(poiId), language: lang, maxUses: 5 })
-            });
+  const pois = await poiRes.json();
+  const langs = await langRes.json();
+  document.getElementById('qrPoiSelect').innerHTML =
+    (pois || []).map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+  document.getElementById('qrLangSelect').innerHTML =
+    (langs || []).map(l => `<option value="${l.languageTag}">${escapeHtml(l.languageName)} (${l.languageTag})</option>`).join('');
+  loadQrHistory();
+}
 
-            // NÂNG CẤP: Kiểm tra nếu Backend báo lỗi 404 hoặc 500
-            if (!res || !res.ok) {
-                toast("Lỗi Server! Chưa có API hoặc lỗi Database.", true);
-                return;
-            }
+async function createNarrationQr() {
+  const poiId = parseInt(document.getElementById('qrPoiSelect').value, 10);
+  const languageTag = document.getElementById('qrLangSelect').value;
+  const maxUses = parseInt(document.getElementById('qrMaxUses').value, 10) || 5;
 
-            const data = await res.json();
-            const ticketCode = data.ticketCode;
-            const qrContent = JSON.stringify({ ticket_id: ticketCode });
-            const canvas = document.getElementById('qrCanvas');
+  const res = await authFetch('/api/v1/admin/qr/narration', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ poiId, languageTag, maxUses })
+  });
+  if (!res || !res.ok) {
+    toast('Không thể tạo QR thuyết minh', true);
+    return;
+  }
 
-            if (!qrInstance) {
-                qrInstance = new QRious({ element: canvas, size: 250, background: 'white', foreground: 'black' });
-            }
-            qrInstance.value = qrContent;
+  const data = await res.json();
+  _qrPreviewDataUrl = `data:image/png;base64,${data.qrImageBase64 || ''}`;
+  _qrPreviewFileName = `narration_${data.ticketCode || 'ticket'}.png`;
 
-            document.getElementById('qrTicketInfo').textContent = `Mã vé: ${ticketCode}`;
-            document.getElementById('qrResult').style.display = 'block';
-            document.getElementById('btnDownloadQr').style.display = 'block';
-            toast('Tạo QR thành công!');
-        } catch (error) {
-            console.error("Lỗi JS:", error);
-            toast("Lỗi xử lý hệ thống!", true);
-        }
-    }
-    function downloadQr() {
-        const canvas = document.getElementById('qrCanvas');
-        const image = canvas.toDataURL("image/png").replace("image/png", "image/octet-stream");
-        const link = document.createElement('a');
-        link.download = `QR_POI_${document.getElementById('qrPoiSelect').value}_${document.getElementById('qrLangSelect').value}.png`;
-        link.href = image;
-        link.click();
-    }
+  document.getElementById('qrPreviewImage').src = _qrPreviewDataUrl;
+  document.getElementById('qrPreviewInfo').textContent = `Ticket: ${data.ticketCode || '--'}`;
+  document.getElementById('qrPreview').style.display = 'block';
+  toast('Đã tạo QR thuyết minh');
+  loadQrHistory();
+}
+
+async function createDistributionQr() {
+  const locationName = document.getElementById('distLocationName').value.trim();
+  const campaignCode = document.getElementById('distCampaignCode').value.trim();
+  if (!locationName) {
+    toast('Vui lòng nhập vị trí đặt mã', true);
+    return;
+  }
+
+  const res = await authFetch('/api/v1/admin/qr/distribution', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ locationName, campaignCode: campaignCode || null })
+  });
+  if (!res || !res.ok) {
+    toast('Không thể tạo QR tải app', true);
+    return;
+  }
+
+  const data = await res.json();
+  _qrPreviewDataUrl = `data:image/png;base64,${data.qrImageBase64 || ''}`;
+  _qrPreviewFileName = `distribution_${data.sourceId || 'source'}.png`;
+
+  document.getElementById('qrPreviewImage').src = _qrPreviewDataUrl;
+  document.getElementById('qrPreviewInfo').textContent = `SourceId: ${data.sourceId || '--'} | Link: ${data.smartLink || ''}`;
+  document.getElementById('qrPreview').style.display = 'block';
+  toast('Đã tạo QR tải app');
+  loadQrHistory();
+}
+
+function downloadQrPreview() {
+  if (!_qrPreviewDataUrl) {
+    toast('Chưa có ảnh QR để tải', true);
+    return;
+  }
+  const link = document.createElement('a');
+  link.href = _qrPreviewDataUrl;
+  link.download = _qrPreviewFileName;
+  link.click();
+}
+
+async function loadQrHistory() {
+  const res = await authFetch('/api/v1/admin/qr/history');
+  if (!res || !res.ok) return;
+  const data = await res.json();
+  const narration = Array.isArray(data.narration) ? data.narration : [];
+  const distribution = Array.isArray(data.distribution) ? data.distribution : [];
+
+  const rows = [
+    ...narration.map(x => ({
+      type: 'Thuyết minh',
+      code: x.code || '--',
+      info: `POI ${x.poiId} | ${x.languageTag} | ${x.currentUses}/${x.maxUses}`,
+      createdAt: x.createdAt
+    })),
+    ...distribution.map(x => ({
+      type: 'Tải app',
+      code: `SRC-${x.sourceId}`,
+      info: `${x.locationName || '--'}${x.campaignCode ? ' | ' + x.campaignCode : ''}`,
+      createdAt: x.createdAt
+    }))
+  ].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
+  const tbody = document.getElementById('tblQrHistory');
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="4" class="subtle-text">Chưa có dữ liệu QR.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = rows.slice(0, 200).map(r => `
+    <tr>
+      <td>${escapeHtml(r.type)}</td>
+      <td><span class="badge-on">${escapeHtml(r.code)}</span></td>
+      <td>${escapeHtml(r.info)}</td>
+      <td>${formatDateTime(r.createdAt)}</td>
+    </tr>
+  `).join('');
+}
 // ── Boot ──────────────────────────────────────────────────────────
 if (token) startApp();
 </script>
