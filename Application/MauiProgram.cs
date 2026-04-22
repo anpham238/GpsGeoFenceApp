@@ -35,10 +35,12 @@ public static class MauiProgram
 #if ANDROID
         builder.Services.AddSingleton<ILocationService, AndroidLocationService>();
         builder.Services.AddSingleton<IGeofenceService, AndroidGeofenceService>();
+        builder.Services.AddSingleton<IBackgroundLocationRuntime, AndroidBackgroundLocationRuntime>();
         builder.Services.AddSingleton<IAudioPlayer, AndroidAudioPlayer>();
 #else
         builder.Services.AddSingleton<ILocationService, NoopLocationService>();
         builder.Services.AddSingleton<IGeofenceService, NoopGeofenceService>();
+        builder.Services.AddSingleton<IBackgroundLocationRuntime, NoopBackgroundLocationRuntime>();
         builder.Services.AddSingleton<IAudioPlayer, NoopAudioPlayer>();
 #endif
         // ── Audio & Narration ─────────────────────────────────────────

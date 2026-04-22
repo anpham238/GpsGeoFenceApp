@@ -16,3 +16,9 @@ public interface IGeofenceService
     Task RegisterAsync(IEnumerable<Poi> pois, bool initialTriggerOnEnter = true);
     Task UnregisterAllAsync();
 }
+
+public interface IBackgroundLocationRuntime
+{
+    Task StartAsync(CancellationToken ct = default);
+    Task StopAsync(CancellationToken ct = default);
+}

@@ -1,0 +1,53 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+
+actor Guest as "Guest User"
+actor User as "Registered User"
+actor Pro as "PRO User"
+actor Admin as "Admin"
+actor Ext as "External Services\n(OSRM / AppStore / PlayStore)"
+
+rectangle "GPS GeoFence Tourism System" {
+  usecase UC1 as "Track Location\n(Foreground/Background)"
+  usecase UC2 as "View Map + Nearby POI"
+  usecase UC3 as "Auto Narration\n(Enter/Near/Tap)"
+  usecase UC4 as "Scan QR Narration"
+  usecase UC5 as "Search POI"
+  usecase UC6 as "View Travel History"
+  usecase UC7 as "Get Directions"
+  usecase UC8 as "Manage POI/Tour/Media"
+  usecase UC9 as "Manage Users/Plans"
+  usecase UC10 as "Generate QR\n(Narration/Distribution)"
+  usecase UC11 as "View Analytics Dashboard"
+  usecase UC12 as "Redirect Download by Platform"
+}
+
+Guest --> UC1
+Guest --> UC2
+Guest --> UC3
+Guest --> UC4
+Guest --> UC5
+
+User --> UC1
+User --> UC2
+User --> UC3
+User --> UC4
+User --> UC5
+
+Pro --> UC6
+Pro --> UC7
+
+Admin --> UC8
+Admin --> UC9
+Admin --> UC10
+Admin --> UC11
+
+UC7 --> Ext
+UC12 --> Ext
+UC10 ..> UC12 : <<include>>
+UC3 ..> UC1 : <<include>>
+UC3 ..> UC2 : <<include>>
+
+@enduml

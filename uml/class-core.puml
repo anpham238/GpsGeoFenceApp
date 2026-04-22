@@ -1,0 +1,97 @@
+@startuml
+skinparam classAttributeIconSize 0
+hide empty members
+
+package "Mobile App" {
+  class MapPage {
+    +InitializeMapAsync()
+    +OnGeofenceEvent(poi, type)
+    +StartTracking()
+    +StopTracking()
+  }
+
+  interface ILocationService {
+    +StartTracking(onLocation)
+    +StopTracking()
+  }
+  class AndroidLocationService
+  ILocationService <|.. AndroidLocationService
+
+  interface IGeofenceService {
+    +RegisterAsync(pois)
+    +UnregisterAllAsync()
+    +OnPoiEvent
+  }
+  class AndroidGeofenceService
+  IGeofenceService <|.. AndroidGeofenceService
+
+  interface IBackgroundLocationRuntime {
+    +StartAsync()
+    +StopAsync()
+  }
+  class AndroidBackgroundLocationRuntime
+  IBackgroundLocationRuntime <|.. AndroidBackgroundLocationRuntime
+
+  interface INarrationManager {
+    +HandleAsync(announcement, overrideText)
+    +Stop()
+  }
+  class NarrationManager
+  INarrationManager <|.. NarrationManager
+
+  interface IAudioPlayer {
+    +PlayFileAsync(path)
+    +Stop()
+  }
+  class AndroidAudioPlayer
+  IAudioPlayer <|.. AndroidAudioPlayer
+
+  class PoiSyncService
+  class PoiDatabase
+  class GeofenceEventGate
+  class AnalyticsClient
+}
+
+package "Backend API" {
+  class PoiController
+  class AdminQrController
+  class DownloadController
+  class HistoryService
+  class AppDb
+
+  class Poi
+  class PoiLanguage
+  class PoiMedia
+  class Users
+  class HistoryPoi
+  class AnalyticsVisit
+  class AnalyticsRoute
+}
+
+MapPage --> ILocationService
+MapPage --> IGeofenceService
+MapPage --> INarrationManager
+MapPage --> PoiSyncService
+MapPage --> PoiDatabase
+MapPage --> AnalyticsClient
+MapPage --> GeofenceEventGate
+
+NarrationManager --> IAudioPlayer
+PoiSyncService --> PoiDatabase
+PoiSyncService --> PoiController : REST
+AnalyticsClient --> AppDb : via API
+
+PoiController --> AppDb
+AdminQrController --> AppDb
+DownloadController --> AppDb
+HistoryService --> AppDb
+
+AppDb --> Poi
+AppDb --> PoiLanguage
+AppDb --> PoiMedia
+AppDb --> Users
+AppDb --> HistoryPoi
+AppDb --> AnalyticsVisit
+AppDb --> AnalyticsRoute
+
+@enduml

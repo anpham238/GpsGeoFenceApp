@@ -1,0 +1,30 @@
+@startuml
+start
+
+:Open MapPage;
+:Check location permission;
+if (Permission granted?) then (yes)
+  :Sync POI data from API;
+  :Register geofence regions;
+  :Start tracking location;
+else (no)
+  :Show permission required message;
+  stop
+endif
+
+while (App running?) is (yes)
+  :Receive current location;
+  :Detect nearest POI / geofence transition;
+  if (Event accepted by debounce+cooldown?) then (yes)
+    :Load narration text/audio;
+    :Enqueue narration request;
+    :Play narration (audio or TTS);
+    :Log playback + analytics;
+  else (no)
+    :Ignore duplicated event;
+  endif
+endwhile (no)
+
+:Stop tracking;
+stop
+@enduml

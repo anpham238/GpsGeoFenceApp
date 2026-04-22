@@ -358,7 +358,7 @@ public partial class MapPage : ContentPage
                     };
                     pin.MarkerClicked += async (_, e) =>
                     {
-                        e.HideInfoWindow = false;
+                        e.HideInfoWindow = true;
                         HighlightPoi(p, "Đã chọn");
                         ShowDetail(p);
                         MyMap.MoveToRegion(MapSpan.FromCenterAndRadius(new Location(p.Latitude, p.Longitude), Distance.FromMeters(300)));

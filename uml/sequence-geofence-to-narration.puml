@@ -1,0 +1,45 @@
+@startuml
+actor User
+participant MapPage
+participant LocationService
+participant GeofenceService
+participant EventGate as "GeofenceEventGate"
+participant NarrationManager
+participant API as "MapApi"
+database DB
+
+User -> MapPage: Open map
+MapPage -> API: GET /api/v1/sync/version
+API -> DB: Query latest POI version
+DB --> API: version
+API --> MapPage: version
+
+MapPage -> API: GET /api/v1/pois
+API -> DB: Query active POIs
+DB --> API: POI list
+API --> MapPage: POI list
+
+MapPage -> GeofenceService: RegisterAsync(pois)
+MapPage -> LocationService: StartTracking()
+
+LocationService --> MapPage: New location(lat,lng)
+GeofenceService --> MapPage: OnPoiEvent(poi, ENTER/NEAR)
+MapPage -> EventGate: ShouldAccept(poi,event)
+
+alt accepted
+  MapPage -> API: GET /api/v1/pois/{id}/narration
+  API -> DB: Load narration by lang+event
+  DB --> API: narration text
+  API --> MapPage: narration payload
+
+  MapPage -> NarrationManager: HandleAsync(announcement, text)
+  NarrationManager -> NarrationManager: Enqueue + worker process
+  NarrationManager --> MapPage: playback completed
+
+  MapPage -> API: POST /api/v1/analytics/visit
+  MapPage -> API: POST /api/v1/analytics/listen-duration
+else rejected
+  MapPage --> MapPage: Ignore duplicate/spam event
+end
+
+@enduml

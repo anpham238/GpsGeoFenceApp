@@ -1466,61 +1466,72 @@ async function deletePoi(id, name) {
   toast('Đã ẩn POI thành công');
   loadPois();
 }
+    async function submitPoi() {
+        const id = document.getElementById('editPoiId').value;
+        const name = document.getElementById('fName').value.trim();
+        const lat = parseFloat(document.getElementById('fLat').value);
+        const lng = parseFloat(document.getElementById('fLng').value);
 
-async function submitPoi() {
-  const id   = document.getElementById('editPoiId').value;
-  const name = document.getElementById('fName').value.trim();
-  const lat  = parseFloat(document.getElementById('fLat').value);
-  const lng  = parseFloat(document.getElementById('fLng').value);
+        if (!name) { toast('Tên địa điểm là bắt buộc', true); return; }
+        if (isNaN(lat) || isNaN(lng)) { toast('Vĩ độ và kinh độ không hợp lệ', true); return; }
 
-  if (!name) { toast('Tên địa điểm là bắt buộc', true); return; }
-  if (isNaN(lat) || isNaN(lng)) { toast('Vĩ độ và kinh độ không hợp lệ', true); return; }
+        let targetId = id; // ✅ Đã xóa dòng bị trùng lặp
 
-  if (id) {
-    // Update
-    await authFetch(`/api/v1/admin/pois/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name,
-        description: document.getElementById('fDesc').value || null,
-        latitude: lat, longitude: lng,
-        radiusMeters: parseInt(document.getElementById('fRadius').value) || 120
-      })
-    });
-    // Update media
-    const mapLink = document.getElementById('fMapLink').value.trim();
-    const audio   = document.getElementById('fAudio').value.trim();
-    if (mapLink) await authFetch(`/api/v1/pois/${id}/maplink`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ mapLink }) });
-    if (audio)   await authFetch(`/api/v1/pois/${id}/audio`,   { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ audioUrl: audio }) });
-    toast(`Đã cập nhật POI #${id}`);
-  } else {
-    // Create
-    const res = await authFetch('/api/v1/pois', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name,
-        description: document.getElementById('fDesc').value || null,
-        narrationText: document.getElementById('fNarr').value || null,
-        lat, lng,
-        radius: parseInt(document.getElementById('fRadius').value) || 120
-      })
-    });
-    const data = await res?.json();
-    const newId = data?.poiId;
-    if (newId) {
-      const mapLink = document.getElementById('fMapLink').value.trim();
-      const audio   = document.getElementById('fAudio').value.trim();
-      if (mapLink) await authFetch(`/api/v1/pois/${newId}/maplink`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ mapLink }) });
-      if (audio)   await authFetch(`/api/v1/pois/${newId}/audio`,   { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ audioUrl: audio }) });
+        if (id) {
+            // Update
+            await authFetch(`/api/v1/admin/pois/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name,
+                    description: document.getElementById('fDesc').value || null,
+                    latitude: lat, longitude: lng,
+                    radiusMeters: parseInt(document.getElementById('fRadius').value) || 120
+                })
+            });
+        } else {
+            // Create
+            const res = await authFetch('/api/v1/pois', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name,
+                    description: document.getElementById('fDesc').value || null,
+                    narrationText: document.getElementById('fNarr').value || null,
+                    lat, lng,
+                    radius: parseInt(document.getElementById('fRadius').value) || 120
+                })
+            });
+            const data = await res?.json();
+            targetId = data?.poiId;
+        }
+
+        // 👉 ĐOẠN ĐÃ SỬA: GỬI ẢNH LÊN SERVER
+        if (targetId && _pendingImages && _pendingImages.length > 0) {
+            for (const file of _pendingImages) {
+                const formData = new FormData();
+                formData.append('file', file); // ✅ Đổi từ 'images' thành 'file' để khớp với C#
+
+                await fetch(`${API}/api/v1/pois/${targetId}/images`, { // ✅ Xóa chữ 'admin' khỏi URL
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: formData
+                });
+            }
+        }
+
+        if (targetId) {
+            const mapLink = document.getElementById('fMapLink').value.trim();
+            const audio = document.getElementById('fAudio').value.trim();
+            if (mapLink) await authFetch(`/api/v1/pois/${targetId}/maplink`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mapLink }) });
+            if (audio) await authFetch(`/api/v1/pois/${targetId}/audio`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ audioUrl: audio }) });
+
+            toast(id ? `Đã cập nhật POI #${targetId}` : 'Tạo POI thành công!');
+        }
+
+        clearForm();
+        showSection('secPois');
     }
-    toast('Tạo POI thành công! Đang dịch đa ngôn ngữ...');
-  }
-  clearForm();
-  showSection('secPois');
-}
-
 function clearForm() {
   ['editPoiId','fName','fDesc','fNarr','fLat','fLng','fMapLink','fAudio'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('fRadius').value = '120';

@@ -1,5 +1,6 @@
 ﻿using MauiApp1.Services.Api;
 using MauiApp1.Services.Guest;
+using MauiApp1.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace MauiApp1
@@ -22,6 +23,11 @@ namespace MauiApp1
                 _ = await Permissions.RequestAsync<Permissions.LocationWhenInUse>();
                 _ = await Permissions.RequestAsync<Permissions.LocationAlways>();
 
+                var bgGps = IPlatformApplication.Current?.Services
+                    .GetService<IBackgroundLocationRuntime>();
+                if (bgGps is not null)
+                    await bgGps.StopAsync();
+
                 IPlatformApplication.Current?.Services
                     .GetService<GuestHeartbeatService>()?.Start();
 
@@ -40,6 +46,14 @@ namespace MauiApp1
         {
             try
             {
+                var bgGps = IPlatformApplication.Current?.Services
+                    .GetService<IBackgroundLocationRuntime>();
+                if (bgGps is not null &&
+                    await Permissions.CheckStatusAsync<Permissions.LocationAlways>() == PermissionStatus.Granted)
+                {
+                    await bgGps.StartAsync();
+                }
+
                 var hb = IPlatformApplication.Current?.Services
                     .GetService<GuestHeartbeatService>();
                 if (hb is not null) await hb.StopAsync();
@@ -50,10 +64,15 @@ namespace MauiApp1
             }
         }
 
-        protected override void OnResume()
+        protected override async void OnResume()
         {
             try
             {
+                var bgGps = IPlatformApplication.Current?.Services
+                    .GetService<IBackgroundLocationRuntime>();
+                if (bgGps is not null)
+                    await bgGps.StopAsync();
+
                 IPlatformApplication.Current?.Services
                     .GetService<GuestHeartbeatService>()?.Start();
             }
