@@ -173,6 +173,21 @@ ORDER BY Name;
         return list;
     }
 
+    public async Task<HashSet<int>> GetAllIdsAsync()
+    {
+        await InitAsync();
+
+        var ids = new HashSet<int>();
+        await using var conn = new SqliteConnection(Constants.ConnectionString);
+        await conn.OpenAsync();
+        var cmd = conn.CreateCommand();
+        cmd.CommandText = $"SELECT Id FROM {TableName};";
+        await using var r = await cmd.ExecuteReaderAsync();
+        while (await r.ReadAsync())
+            ids.Add(r.GetInt32(0));
+        return ids;
+    }
+
     public async Task<Poi?> GetByIdAsync(int id)
     {
         await InitAsync();

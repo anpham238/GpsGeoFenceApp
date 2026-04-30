@@ -13,6 +13,7 @@ public sealed class Poi
     public int CooldownSeconds { get; set; } = 30;
 
     public bool IsActive { get; set; } = true;
+    public int PriorityLevel { get; set; } = 0;
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 }

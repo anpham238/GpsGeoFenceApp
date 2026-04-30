@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 namespace MapApi.Controllers;
 
 public sealed record SetMapLinkRequest(string MapLink);
+public sealed record SetAudioUrlRequest(string AudioUrl);
 public sealed record ReorderImagesRequest(List<long> OrderedIds);
 
 [ApiController]
@@ -52,6 +53,45 @@ public class PoiMediaController : ControllerBase
 
         await _db.SaveChangesAsync(ct);
         return Ok(new { poiId = id, imageUrl = fileUrl });
+    }
+
+    [HttpPost("audio")]
+    public async Task<IActionResult> SetAudioUrl(int id, [FromBody] SetAudioUrlRequest req, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(req.AudioUrl)) return BadRequest("AudioUrl is required");
+        var lang = await _db.PoiLanguages.FirstOrDefaultAsync(l => l.IdPoi == id && l.LanguageTag == "vi-VN", ct);
+        if (lang is null) return NotFound("PoiLanguage vi-VN not found for this POI.");
+        lang.ProAudioUrl = req.AudioUrl.Trim();
+        await _db.SaveChangesAsync(ct);
+        return Ok(new { poiId = id, audioUrl = lang.ProAudioUrl });
+    }
+
+    [HttpPost("audio/upload")]
+    public async Task<IActionResult> UploadAudio(int id, IFormFile file, CancellationToken ct)
+    {
+        if (file is null || file.Length == 0) return BadRequest("No file");
+        var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+        if (ext is not ".mp3" and not ".wav") return BadRequest("Only .mp3/.wav");
+        if (file.Length > 50 * 1024 * 1024) return BadRequest("File too large (max 50 MB)");
+
+        var poi = await _db.Pois.FindAsync(new object[] { id }, ct);
+        if (poi is null) return NotFound("Không tìm thấy địa điểm này.");
+
+        var dir = Path.Combine(_env.WebRootPath, "audio");
+        Directory.CreateDirectory(dir);
+        var safeName = $"{id}_{Guid.NewGuid():N}{ext}";
+        await using var fs = System.IO.File.Create(Path.Combine(dir, safeName));
+        await file.CopyToAsync(fs, ct);
+        var audioUrl = $"/audio/{safeName}";
+
+        var lang = await _db.PoiLanguages.FirstOrDefaultAsync(l => l.IdPoi == id && l.LanguageTag == "vi-VN", ct);
+        if (lang is not null)
+        {
+            lang.ProAudioUrl = audioUrl;
+            await _db.SaveChangesAsync(ct);
+        }
+
+        return Ok(new { poiId = id, audioUrl });
     }
 
     [HttpPost("maplink")]

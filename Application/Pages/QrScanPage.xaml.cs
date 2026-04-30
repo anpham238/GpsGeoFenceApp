@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using MauiApp1.Data;
 using MauiApp1.Services.Api;
 using MauiApp1.Services.Narration;
@@ -180,7 +180,7 @@ public partial class QrScanPage : ContentPage
                 {
                     LblStatus.Text = $"✓ {poi.Name}";
                     var started = DateTime.UtcNow;
-                    var lang = MauiApp1.Services.LanguageService.Current;
+                    var lang = extractedData.Lang;
                     await _narration.HandleAsync(new Announcement(poi, lang, PoiEventType.Tap, DateTime.UtcNow));
                     var duration = (int)(DateTime.UtcNow - started).TotalSeconds;
                     _ = _playback.LogAsync(poi.Id, "QR_SCAN", duration > 0 ? duration : null);
@@ -188,16 +188,25 @@ public partial class QrScanPage : ContentPage
                     await CloseAsync();
                     return;
                 }
+
+                // POI chưa có trong DB nội bộ — nếu QR là URL landing page thì mở luôn browser
+                if (Uri.TryCreate(raw, UriKind.Absolute, out var landingUri) &&
+                    (landingUri.Scheme == Uri.UriSchemeHttp || landingUri.Scheme == Uri.UriSchemeHttps))
+                {
+                    LblStatus.Text = "Đang mở trang thuyết minh...";
+                    await Launcher.Default.OpenAsync(landingUri);
+                    await ResumeScanAsync();
+                    return;
+                }
             }
 
             // =========================================================
-            // TRƯỜNG HỢP 2: KIỂM TRA LINK WEB
+            // TRƯỜNG HỢP 2: LINK WEB KHÁC (không phải /p/{id})
             // =========================================================
             if (Uri.TryCreate(raw, UriKind.Absolute, out Uri? uriResult) && (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps))
             {
                 LblStatus.Text = "Đang mở trình duyệt...";
-                bool openLink = await DisplayAlertAsync("Quét được liên kết", $"Bạn có muốn mở trang web này không?\n\n{raw}", "Mở", "Hủy");
-                if (openLink) await Launcher.Default.OpenAsync(uriResult);
+                await Launcher.Default.OpenAsync(uriResult);
                 await ResumeScanAsync();
                 return;
             }
@@ -213,29 +222,63 @@ public partial class QrScanPage : ContentPage
         }
     }
 
-    // Hàm bóc tách ID hoặc Ticket từ JSON
-    private static (string? TicketId, int? PoiId) ExtractQrData(string raw)
+    private static (string? TicketId, int? PoiId, string Lang) ExtractQrData(string raw)
     {
         const string prefix = "smarttourism://poi/";
         if (raw.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
         {
-            if (int.TryParse(raw[prefix.Length..].Trim('/'), out int id)) return (null, id);
+            if (int.TryParse(raw[prefix.Length..].Trim('/'), out int id)) return (null, id, "vi-VN");
         }
+
+        // Landing page URL: https://domain/p/{id}?lang=xx-XX
+        if (Uri.TryCreate(raw, UriKind.Absolute, out var uri) &&
+            (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
+        {
+            var segs = uri.AbsolutePath.Trim('/').Split('/');
+            if (segs.Length >= 2 && segs[^2] == "p" && int.TryParse(segs[^1], out int urlPoiId))
+            {
+                string langTag = "vi-VN";
+                var query = uri.Query.TrimStart('?');
+                foreach (var part in query.Split('&'))
+                {
+                    var kv = part.Split('=');
+                    if (kv.Length == 2 && kv[0] == "lang")
+                        langTag = Uri.UnescapeDataString(kv[1]);
+                }
+                return (null, urlPoiId, langTag);
+            }
+        }
+
         try
         {
             using var doc = JsonDocument.Parse(raw);
-            if (doc.RootElement.TryGetProperty("ticket_id", out var ticketIdElement))
-                return (ticketIdElement.GetString(), null);
 
-            if (doc.RootElement.TryGetProperty("poi_id", out var poiIdElement))
+            string? ticketId = null;
+            if (doc.RootElement.TryGetProperty("ticketCode", out var tcElement))
+                ticketId = tcElement.GetString();
+            else if (doc.RootElement.TryGetProperty("ticket_id", out var tidElement))
+                ticketId = tidElement.GetString();
+
+            if (!string.IsNullOrEmpty(ticketId))
+                return (ticketId, null, "vi-VN");
+
+            JsonElement? poiIdElement = null;
+            if (doc.RootElement.TryGetProperty("poiId", out var p1))
+                poiIdElement = p1;
+            else if (doc.RootElement.TryGetProperty("poi_id", out var p2))
+                poiIdElement = p2;
+
+            if (poiIdElement.HasValue)
             {
-                int? id = poiIdElement.ValueKind == JsonValueKind.Number ? poiIdElement.GetInt32() : int.Parse(poiIdElement.GetString() ?? "0"); return (null, id);
+                var el = poiIdElement.Value;
+                int? id = el.ValueKind == JsonValueKind.Number ? el.GetInt32() : int.Parse(el.GetString() ?? "0");
+                return (null, id, "vi-VN");
             }
         }
         catch { }
 
-        if (int.TryParse(raw.Trim(), out var directId)) return (null, directId);
-        return (null, null);
+        if (int.TryParse(raw.Trim(), out var directId)) return (null, directId, "vi-VN");
+        return (null, null, "vi-VN");
     }
 
     private async Task ResumeScanAsync()

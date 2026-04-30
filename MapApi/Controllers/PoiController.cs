@@ -24,7 +24,6 @@ public class PoiController : ControllerBase
         if (string.IsNullOrWhiteSpace(dto.Name))
             return BadRequest("Name (Tiếng Việt) là bắt buộc.");
 
-        // Tạo object POI chuẩn
         var poi = new Poi
         {
             Latitude = dto.Lat,
@@ -33,12 +32,12 @@ public class PoiController : ControllerBase
             Description = dto.Description,
             RadiusMeters = dto.Radius > 0 ? dto.Radius : 100,
             CooldownSeconds = 30,
+            PriorityLevel = dto.PriorityLevel,
             IsActive = true,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
 
-        // Gọi Service: Vừa lưu POI, vừa tự động dịch Mô tả/Thuyết minh sang các ngôn ngữ khác
         await _poiService.AddOrUpdatePoiWithAutoTranslationAsync(
             poi,
             viNarration: dto.NarrationText,
@@ -47,49 +46,96 @@ public class PoiController : ControllerBase
 
         return Ok(new { message = "Lưu thành công và đã tự động dịch đa ngôn ngữ!", poiId = poi.Id });
     }
+
     [HttpGet]
     public async Task<IActionResult> GetAllPois()
     {
-        // Lấy danh sách POI đang Active và móc nối (JOIN) với PoiMedia và PoiLanguage
-        var pois = await _db.Pois
+        var pois = await _db.Pois.AsNoTracking()
             .Where(p => p.IsActive)
-            .Select(p => new PoiDto // <--- SỬA CHỮ 'Poi' THÀNH 'PoiDto' Ở ĐÂY
-            {
-                Id = p.Id,
-                Name = p.Name,
-                Description = p.Description,
-                Latitude = p.Latitude,
-                Longitude = p.Longitude,
-                RadiusMeters = p.RadiusMeters,
-                CooldownSeconds = p.CooldownSeconds,
-                IsActive = p.IsActive,
-                UpdatedAt = p.UpdatedAt,
-
-                // LẤY DỮ LIỆU TỪ BẢNG PoiMedia
-                ImageUrl = _db.PoiMedia.Where(m => m.IdPoi == p.Id).Select(m => m.Image).FirstOrDefault(),
-                MapLink = _db.PoiMedia.Where(m => m.IdPoi == p.Id).Select(m => m.MapLink).FirstOrDefault(),
-                AudioUrl = null,
-
-                // Lấy Text thuyết minh tiếng Việt từ bảng PoiLanguage (nếu có)
-                NarrationText = _db.PoiLanguages.Where(l => l.IdPoi == p.Id && l.LanguageTag == "vi-VN").Select(l => l.TextToSpeech).FirstOrDefault(),
-                Language = "vi-VN"
-            })
             .ToListAsync();
 
-        return Ok(pois);
+        if (pois.Count == 0) return Ok(pois);
+
+        var poiIds = pois.Select(p => p.Id).ToList();
+
+        // 2 queries thay vì N×2 correlated subqueries
+        var mediaMap = await _db.PoiMedia.AsNoTracking()
+            .Where(m => poiIds.Contains(m.IdPoi))
+            .ToDictionaryAsync(m => m.IdPoi);
+
+        var langMap = await _db.PoiLanguages.AsNoTracking()
+            .Where(l => poiIds.Contains(l.IdPoi) && l.LanguageTag == "vi-VN")
+            .ToDictionaryAsync(l => l.IdPoi);
+
+        var dtos = pois.Select(p =>
+        {
+            mediaMap.TryGetValue(p.Id, out var media);
+            langMap.TryGetValue(p.Id, out var lang);
+            return new PoiDto
+            {
+                Id              = p.Id,
+                Name            = p.Name,
+                Description     = p.Description,
+                Latitude        = p.Latitude,
+                Longitude       = p.Longitude,
+                RadiusMeters    = p.RadiusMeters,
+                CooldownSeconds = p.CooldownSeconds,
+                IsActive        = p.IsActive,
+                PriorityLevel   = p.PriorityLevel,
+                UpdatedAt       = p.UpdatedAt,
+                ImageUrl        = media?.Image,
+                MapLink         = media?.MapLink,
+                AudioUrl        = null,
+                NarrationText   = lang?.TextToSpeech,
+                Language        = "vi-VN"
+            };
+        }).ToList();
+
+        return Ok(dtos);
+    }
+
+    [HttpGet("{id:int}")]
+    public async Task<IActionResult> GetPoiById(int id)
+    {
+        var p = await _db.Pois.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
+        if (p is null) return NotFound();
+
+        // 2 queries thay vì 4 queries riêng biệt
+        var media = await _db.PoiMedia.AsNoTracking().FirstOrDefaultAsync(m => m.IdPoi == id);
+        var lang  = await _db.PoiLanguages.AsNoTracking()
+            .FirstOrDefaultAsync(l => l.IdPoi == id && l.LanguageTag == "vi-VN");
+
+        return Ok(new PoiDto
+        {
+            Id              = p.Id,
+            Name            = p.Name,
+            Description     = p.Description,
+            Latitude        = p.Latitude,
+            Longitude       = p.Longitude,
+            RadiusMeters    = p.RadiusMeters,
+            CooldownSeconds = p.CooldownSeconds,
+            IsActive        = p.IsActive,
+            PriorityLevel   = p.PriorityLevel,
+            UpdatedAt       = p.UpdatedAt,
+            ImageUrl        = media?.Image,
+            MapLink         = media?.MapLink,
+            AudioUrl        = lang?.ProAudioUrl,
+            NarrationText   = lang?.TextToSpeech,
+            Language        = "vi-VN"
+        });
     }
 }
 
-// DTO để nhận dữ liệu từ Admin (Postman / Web Admin)
 public record PoiCreateDto(
-    string Name,              // Tên Tiếng Việt (bắt buộc)
-    string? Description,      // Mô tả Tiếng Việt
-    string? NarrationText,    // Thuyết minh Tiếng Việt
+    string Name,
+    string? Description,
+    string? NarrationText,
     double Lat,
     double Lng,
-    int Radius = 100
+    int Radius = 100,
+    int PriorityLevel = 0
 );
-// DTO để trả dữ liệu danh sách POI về cho App Mobile
+
 public record PoiDto
 {
     public int Id { get; set; }
@@ -100,8 +146,8 @@ public record PoiDto
     public int RadiusMeters { get; set; }
     public int CooldownSeconds { get; set; }
     public bool IsActive { get; set; }
+    public int PriorityLevel { get; set; }
     public DateTime UpdatedAt { get; set; }
-    // Các trường lấy từ các bảng phụ (Media & Language)
     public string? ImageUrl { get; set; }
     public string? MapLink { get; set; }
     public string? AudioUrl { get; set; }

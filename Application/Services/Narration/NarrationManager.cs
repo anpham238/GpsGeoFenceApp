@@ -1,4 +1,4 @@
-﻿using MauiApp1.Models;
+using MauiApp1.Models;
 using MauiApp1.Services;
 using MauiApp1.Services.Audio;
 using Microsoft.Maui.Media;
@@ -14,12 +14,13 @@ public sealed class NarrationManager : INarrationManager
     private readonly IAudioPlayer _player;
     private readonly AudioCache _cache;
     private readonly object _sync = new();
-    private readonly Queue<QueueItem> _queue = new();
+    private readonly List<QueueItem> _queue = new();
     private readonly SemaphoreSlim _queueSignal = new(0);
     private readonly Dictionary<string, DateTimeOffset> _recentEvents = new();
     private readonly CancellationTokenSource _serviceCts = new();
     private readonly Task _worker;
     private CancellationTokenSource? _currentCts;
+    private readonly SemaphoreSlim _audioQueue = new SemaphoreSlim(1, 1);
     public NarrationManager(IAudioPlayer player, AudioCache cache)
     {
         _player = player;
@@ -28,10 +29,10 @@ public sealed class NarrationManager : INarrationManager
     }
     public void Stop()
     {
-        Queue<QueueItem> pending;
+        List<QueueItem> pending;
         lock (_sync)
         {
-            pending = new Queue<QueueItem>(_queue);
+            pending = new List<QueueItem>(_queue);
             _queue.Clear();
             _currentCts?.Cancel();
         }
@@ -47,10 +48,29 @@ public sealed class NarrationManager : INarrationManager
         if (IsDuplicate(ann)) return;
 
         var item = new QueueItem(ann, overrideText, ct);
-        lock (_sync) _queue.Enqueue(item);
+        lock (_sync) 
+        {
+            _queue.Add(item);
+            _queue.Sort((a, b) => 
+            {
+                int priorityA = GetPriority(a.Announcement.EventType);
+                int priorityB = GetPriority(b.Announcement.EventType);
+                if (priorityA != priorityB)
+                    return priorityA.CompareTo(priorityB);
+                return a.Announcement.CreatedAtUtc.CompareTo(b.Announcement.CreatedAtUtc);
+            });
+        }
         _queueSignal.Release();
         await item.Completion.ConfigureAwait(false);
     }
+
+    private static int GetPriority(PoiEventType type) => type switch
+    {
+        PoiEventType.Tap => 1,
+        PoiEventType.Enter => 2,
+        PoiEventType.Near => 3,
+        _ => 4
+    };
 
     private async Task WorkerLoopAsync(CancellationToken serviceCt)
     {
@@ -69,7 +89,10 @@ public sealed class NarrationManager : INarrationManager
             lock (_sync)
             {
                 if (_queue.Count > 0)
-                    next = _queue.Dequeue();
+                {
+                    next = _queue[0];
+                    _queue.RemoveAt(0);
+                }
             }
             if (next is null) continue;
 

@@ -46,11 +46,11 @@ public static class MauiProgram
         // ── Audio & Narration ─────────────────────────────────────────
         builder.Services.AddSingleton<AudioCache>();
         builder.Services.AddSingleton<NarrationManager>();
-        // ── Local DB (SQLite) ─────────────────────────────────────────
+        builder.Services.AddSingleton<PoiNarrationHandler>();
         builder.Services.AddSingleton<PoiDatabase>();
         builder.Services.AddSingleton<SyncMetadataRepository>();
         builder.Services.AddSingleton<PoiNarrationCache>();
-        var defaultApiBaseUrl = "https://x45vvppz-7286.asse.devtunnels.ms/";
+        var defaultApiBaseUrl = "https://bhtgfcpw-7286.asse.devtunnels.ms/";
         var rawApiBaseUrl = Preferences.Default.Get("ApiBaseUrl", defaultApiBaseUrl);
         var apiBaseUrl = NormalizeApiBaseUrl(rawApiBaseUrl, defaultApiBaseUrl);
 
@@ -127,7 +127,6 @@ public static class MauiProgram
         builder.Services.AddTransient<VisitedHistoryPage>();
         return builder.Build();
     }
-
     private static string NormalizeApiBaseUrl(string? rawApiBaseUrl, string fallbackApiBaseUrl)
     {
         var apiBaseUrl = string.IsNullOrWhiteSpace(rawApiBaseUrl)
@@ -139,10 +138,7 @@ public static class MauiProgram
         {
             apiBaseUrl = "http://" + apiBaseUrl;
         }
-
 #if ANDROID
-        // Android không truy cập host machine qua localhost/127.0.0.1.
-        // Auto-fix về 10.0.2.2 để tránh trường hợp Preferences lưu URL sai.
         if (Uri.TryCreate(apiBaseUrl, UriKind.Absolute, out var parsed) &&
             (string.Equals(parsed.Host, "localhost", StringComparison.OrdinalIgnoreCase) ||
              parsed.Host == "127.0.0.1"))
@@ -152,7 +148,6 @@ public static class MauiProgram
             apiBaseUrl = $"{scheme}://10.0.2.2:{port}";
         }
 #endif
-
         return apiBaseUrl;
     }
 }

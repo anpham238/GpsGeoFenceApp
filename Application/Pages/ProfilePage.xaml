@@ -127,6 +127,27 @@
                                 <Button Grid.Column="0" Text="Hủy" BackgroundColor="#EEEEEE" TextColor="#3C4043" CornerRadius="8" Clicked="OnCancelEditClicked" />
                                 <Button Grid.Column="1" Text="Lưu" BackgroundColor="#1A73E8" TextColor="White" CornerRadius="8" Clicked="OnSaveProfileClicked" />
                             </Grid>
+
+                            <!-- Đổi mật khẩu -->
+                            <Label Text="Đổi mật khẩu" FontSize="13" TextColor="#8b93a7" Margin="0,20,0,4" />
+                            <Border BackgroundColor="#1a1d27" Stroke="#2a3040" StrokeThickness="1" Padding="12,4">
+                                <Border.StrokeShape><RoundRectangle CornerRadius="10"/></Border.StrokeShape>
+                                <Entry x:Name="EntCurrentPassword" Placeholder="Mật khẩu hiện tại" IsPassword="True"
+                                       PlaceholderColor="#555" TextColor="#e0e0e0" BackgroundColor="Transparent" FontSize="15"/>
+                            </Border>
+                            <Border BackgroundColor="#1a1d27" Stroke="#2a3040" StrokeThickness="1" Padding="12,4" Margin="0,8,0,0">
+                                <Border.StrokeShape><RoundRectangle CornerRadius="10"/></Border.StrokeShape>
+                                <Entry x:Name="EntNewPassword" Placeholder="Mật khẩu mới (tối thiểu 6 ký tự)" IsPassword="True"
+                                       PlaceholderColor="#555" TextColor="#e0e0e0" BackgroundColor="Transparent" FontSize="15"/>
+                            </Border>
+                            <Border BackgroundColor="#1a1d27" Stroke="#2a3040" StrokeThickness="1" Padding="12,4" Margin="0,8,0,0">
+                                <Border.StrokeShape><RoundRectangle CornerRadius="10"/></Border.StrokeShape>
+                                <Entry x:Name="EntConfirmPassword" Placeholder="Nhập lại mật khẩu mới" IsPassword="True"
+                                       PlaceholderColor="#555" TextColor="#e0e0e0" BackgroundColor="Transparent" FontSize="15"/>
+                            </Border>
+                            <Button Text="Đổi mật khẩu" Clicked="OnChangePasswordClicked"
+                                    BackgroundColor="#1a2535" TextColor="#64b5f6"
+                                    CornerRadius="10" Margin="0,10,0,0" FontSize="15" FontAttributes="Bold"/>
                         </VerticalStackLayout>
 
                         <BoxView HeightRequest="1" Color="#F5F5F5" Margin="20,0" />

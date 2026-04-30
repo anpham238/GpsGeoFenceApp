@@ -1,10 +1,9 @@
-﻿using MauiApp1.Models;
+using MauiApp1.Models;
 using MauiApp1.Services.Api;
 using MauiApp1.Services.Guest;
 using MauiApp1.Services.Narration;
 using MauiApp1.Services.Sync;
 using Microsoft.Maui.Controls.Maps;
-using Syncfusion.Maui.Toolkit.BottomSheet;
 
 namespace MauiApp1.Pages;
 
@@ -14,15 +13,12 @@ public partial class MapPage : ContentPage
     private readonly IGeofenceService _geofence;
     private readonly ILocationService _location;
     private readonly PoiDatabase _db;
-    private readonly NarrationManager _narration;
+    private readonly PoiNarrationHandler _narrationHandler;
     private readonly PoiSyncService _poiSync;
-    private readonly PlaybackApiClient _playback;
-    private readonly PoiNarrationApiClient _narrationApi;
-    private readonly PoiNarrationCache _narrationCache;
     private readonly TranslatorClient _translator;
-    private readonly AnalyticsClient _analytics;
     private readonly PoiApiClient _poiApi;
     private readonly UsageApiClient _usage;
+    private readonly ProfileApiClient _profileApi;
     private readonly GuestHeartbeatService _deviceRealtime;
     private CancellationTokenSource? _searchCts;
     private List<PoiSearchResult> _searchResults = new();
@@ -38,45 +34,36 @@ public partial class MapPage : ContentPage
     double _sheetStartPanY = 0;
     bool _sheetReady = false;
     const double SheetPeekHeight = 140;
-    private readonly ProfileApiClient _profileApi; // 👈 1. THÊM DÒNG NÀY
     private Polyline? _routePolyline;
+
     public MapPage(
         IGeofenceService geofence,
         ILocationService location,
         PoiDatabase db,
-        NarrationManager narration,
+        PoiNarrationHandler narrationHandler,
         PoiSyncService poiSync,
-        PlaybackApiClient playback,
-        PoiNarrationApiClient narrationApi,
-        PoiNarrationCache narrationCache,
         TranslatorClient translator,
-        AnalyticsClient analytics,
         PoiApiClient poiApi,
         ProfileApiClient profileApi,
         UsageApiClient usage,
         GuestHeartbeatService deviceRealtime)
     {
         InitializeComponent();
-        _geofence = geofence ?? throw new ArgumentNullException(nameof(geofence));
-        _location = location ?? throw new ArgumentNullException(nameof(location));
-        _db = db ?? throw new ArgumentNullException(nameof(db));
-        _narration = narration ?? throw new ArgumentNullException(nameof(narration));
-        _poiSync = poiSync ?? throw new ArgumentNullException(nameof(poiSync));
-        _playback = playback ?? throw new ArgumentNullException(nameof(playback));
-        _narrationApi = narrationApi ?? throw new ArgumentNullException(nameof(narrationApi));
-        _narrationCache = narrationCache ?? throw new ArgumentNullException(nameof(narrationCache));
-        _translator = translator ?? throw new ArgumentNullException(nameof(translator));
-        _analytics = analytics ?? throw new ArgumentNullException(nameof(analytics));
-        _geofence = geofence ?? throw new ArgumentNullException(nameof(geofence));
-        _poiApi = poiApi ?? throw new ArgumentNullException(nameof(poiApi));
-        _profileApi = profileApi;
-        _usage = usage ?? throw new ArgumentNullException(nameof(usage));
-        _deviceRealtime = deviceRealtime ?? throw new ArgumentNullException(nameof(deviceRealtime));
+        _geofence         = geofence         ?? throw new ArgumentNullException(nameof(geofence));
+        _location         = location         ?? throw new ArgumentNullException(nameof(location));
+        _db               = db               ?? throw new ArgumentNullException(nameof(db));
+        _narrationHandler = narrationHandler ?? throw new ArgumentNullException(nameof(narrationHandler));
+        _poiSync          = poiSync          ?? throw new ArgumentNullException(nameof(poiSync));
+        _translator       = translator       ?? throw new ArgumentNullException(nameof(translator));
+        _poiApi           = poiApi           ?? throw new ArgumentNullException(nameof(poiApi));
+        _profileApi       = profileApi       ?? throw new ArgumentNullException(nameof(profileApi));
+        _usage            = usage            ?? throw new ArgumentNullException(nameof(usage));
+        _deviceRealtime   = deviceRealtime   ?? throw new ArgumentNullException(nameof(deviceRealtime));
         BtnOpenInMaps.Clicked += async (_, _) => await OpenMapsAsync(_nearestPoi);
         BtnDirections.Clicked += async (_, _) => await DrawDirectionsAsync(_nearestPoi);
-        BtnListen.Clicked += async (_, _) => await OnListenButtonClickedAsync();
+        BtnListen.Clicked     += async (_, _) => await OnListenButtonClickedAsync();
         BottomSheet.SizeChanged += (_, _) => SetupBottomSheetOffsets();
-        this.SizeChanged += (_, _) => SetupBottomSheetOffsets();
+        this.SizeChanged        += (_, _) => SetupBottomSheetOffsets();
         _geofence.OnPoiEvent += OnGeofenceEvent;
     }
 
@@ -151,21 +138,8 @@ public partial class MapPage : ContentPage
             }
         });
 
-        if (!await EnsureUsageAllowedAsync("POI_LISTEN"))
-            return;
-
-        var started = DateTime.UtcNow;
-        var lang = LanguageService.Current;
-
-        var fullText = await GetNarrationTextAsync(poi.Id, evType, lang) ?? poi.NarrationText ?? poi.Description;
-
-        // ĐÃ SỬA CẤU TRÚC ANNOUNCEMENT TẠI ĐÂY
-        await _narration.HandleAsync(new Announcement(poi, lang, evType, started), overrideText: fullText);
-
-        var dur = (int)(DateTime.UtcNow - started).TotalSeconds;
-        _ = _playback.LogAsync(poi.Id, type, dur > 0 ? dur : null);
-        _ = _analytics.LogVisitAsync(poi.Id, type == "ENTER" ? "enter" : "near");
-        if (dur > 0) _ = _analytics.LogListenDurationAsync(poi.Id, dur);
+        if (!await EnsureUsageAllowedAsync("POI_LISTEN")) return;
+        await _narrationHandler.PlayAsync(poi, evType, type);
     }
 
     private void RefreshLangBar()
@@ -190,39 +164,10 @@ public partial class MapPage : ContentPage
         _currentLang = code;
         LanguageService.Set(code);
         RefreshLangBar();
-        try { _narration.Stop(); } catch { }
+        try { _narrationHandler.Stop(); } catch { }
         await Task.CompletedTask;
     }
 
-    private static byte ToEventByte(PoiEventType t) => t switch { PoiEventType.Enter => 0, PoiEventType.Near => 1, PoiEventType.Tap => 2, _ => 0 };
-    private static string ToEventName(PoiEventType t) => t switch { PoiEventType.Enter => "Enter", PoiEventType.Near => "Near", PoiEventType.Tap => "Tap", _ => "Enter" };
-
-    private async Task<string?> GetNarrationTextAsync(int poiId, PoiEventType evType, string lang, CancellationToken ct = default)
-    {
-        try
-        {
-            var evByte = ToEventByte(evType);
-            var cached = await _narrationCache.GetAsync(poiId, evByte, lang);
-            if (!string.IsNullOrWhiteSpace(cached)) return cached;
-
-            if (Connectivity.Current.NetworkAccess != NetworkAccess.None)
-            {
-                var dto = await _narrationApi.GetNarrationAsync(poiId, lang, ToEventName(evType), ct);
-                var text = dto?.NarrationText;
-                if (!string.IsNullOrWhiteSpace(text))
-                {
-                    // Dùng evByte (tính từ client) thay vì dto.EventType để key cache nhất quán
-                    await _narrationCache.UpsertAsync(poiId, evByte, dto!.Language, text);
-                    return text;
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[NarrationFetch] {ex.Message}");
-        }
-        return null;
-    }
 
     protected override void OnAppearing()
     {
@@ -235,23 +180,24 @@ public partial class MapPage : ContentPage
 
         if (isLoggedIn)
         {
-            // Lấy link Avatar từ bộ nhớ
             var avatarUrl = Preferences.Get("auth_avatar_url", "");
-            if (!string.IsNullOrWhiteSpace(avatarUrl))
-            {
-                // Có ảnh -> Ẩn chữ, hiện ảnh
-                AvatarLabel.IsVisible = false;
-                ImgAvatar.IsVisible = true;
+            var hasRealAvatar = !string.IsNullOrWhiteSpace(avatarUrl)
+                             && avatarUrl != "default-avatar.png"
+                             && !avatarUrl.Equals("default-avatar.png", StringComparison.OrdinalIgnoreCase);
 
-                // ✅ Lấy BaseUrl từ _poiApi (Dùng chung cho toàn app)
+            if (hasRealAvatar)
+            {
                 var baseUrl = _poiApi.BaseUrl.TrimEnd('/');
-                ImgAvatar.Source = avatarUrl.StartsWith("http")
-                    ? ImageSource.FromUri(new Uri(avatarUrl))
-                    : ImageSource.FromUri(new Uri(baseUrl + "/" + avatarUrl.TrimStart('/')));
+                var uri = avatarUrl.StartsWith("http")
+                    ? new Uri(avatarUrl)
+                    : new Uri(baseUrl + "/" + avatarUrl.TrimStart('/'));
+
+                ImgAvatar.Source = ImageSource.FromUri(uri);
+                ImgAvatar.IsVisible = true;
+                AvatarLabel.IsVisible = false;
             }
             else
             {
-                // Không có ảnh -> Ẩn ảnh, hiện chữ cái đầu
                 ImgAvatar.IsVisible = false;
                 AvatarLabel.IsVisible = true;
                 UpdateAvatarLabel(currentUser);
@@ -271,6 +217,31 @@ public partial class MapPage : ContentPage
             _isInitialized = true;
             _ = InitializeMapAsync();
         }
+
+        _ = HandlePendingDeepLinkAsync();
+    }
+
+    private async Task HandlePendingDeepLinkAsync()
+    {
+#if ANDROID
+        var raw = MauiApp1.DeepLinkHandler.PendingUri;
+        if (string.IsNullOrEmpty(raw)) return;
+        MauiApp1.DeepLinkHandler.PendingUri = null;
+
+        var parsed = MauiApp1.DeepLinkHandler.Parse(raw);
+        if (parsed is null) return;
+
+        var (poiId, lang) = parsed.Value;
+        var poi = await _db.GetByIdAsync(poiId);
+        if (poi is null) return;
+
+        await MainThread.InvokeOnMainThreadAsync(() =>
+        {
+            HighlightPoi(poi, "Deep link");
+            ShowDetail(poi);
+        });
+        await _narrationHandler.PlayAsync(poi, PoiEventType.Tap, "TAP");
+#endif
     }
 
     private async Task InitializeMapAsync()
@@ -363,16 +334,8 @@ public partial class MapPage : ContentPage
                         ShowDetail(p);
                         MyMap.MoveToRegion(MapSpan.FromCenterAndRadius(new Location(p.Latitude, p.Longitude), Distance.FromMeters(300)));
                         if (_sheetReady) _ = BottomSheet.TranslateToAsync(0, _sheetExpandedOffset, 250, Easing.CubicOut);
-                        if (!await EnsureUsageAllowedAsync("POI_LISTEN"))
-                            return;
-                        var started = DateTime.UtcNow;
-                        var lang = LanguageService.Current;
-                        var fullText = await GetNarrationTextAsync(p.Id, PoiEventType.Tap, lang) ?? p.NarrationText ?? p.Description;
-                        await _narration.HandleAsync(new Announcement(p, lang, PoiEventType.Tap, started), overrideText: fullText);
-                        var dur = (int)(DateTime.UtcNow - started).TotalSeconds;
-                        _ = _playback.LogAsync(p.Id, "TAP", dur > 0 ? dur : null);
-                        _ = _analytics.LogVisitAsync(p.Id, "tap");
-                        if (dur > 0) _ = _analytics.LogListenDurationAsync(p.Id, dur);
+                        if (!await EnsureUsageAllowedAsync("POI_LISTEN")) return;
+                        await _narrationHandler.PlayAsync(p, PoiEventType.Tap, "TAP");
                     };
                     _pinMap[p.Id] = pin;
                     MyMap.Pins.Add(pin);
@@ -423,7 +386,7 @@ public partial class MapPage : ContentPage
                 if (++routeTickCount >= 6)
                 {
                     routeTickCount = 0;
-                    _ = _analytics.LogRouteAsync(loc.Latitude, loc.Longitude);
+                    _narrationHandler.LogRoute(loc.Latitude, loc.Longitude);
                 }
 
                 _userLocation = loc;
@@ -451,14 +414,8 @@ public partial class MapPage : ContentPage
 
                     if (GeofenceEventGate.ShouldAccept(nearest.Id, "NEAR", 3, nearest.CooldownSeconds))
                     {
-                        if (!await EnsureUsageAllowedAsync("POI_LISTEN"))
-                            continue;
-
-                        var started = DateTime.UtcNow;
-                        var lang = LanguageService.Current;
-                        var fullText = await GetNarrationTextAsync(nearest.Id, PoiEventType.Near, lang, token);
-                        var dur = (int)(DateTime.UtcNow - started).TotalSeconds;
-                        _ = _playback.LogAsync(nearest.Id, "NEAR", dur > 0 ? dur : null);
+                        if (!await EnsureUsageAllowedAsync("POI_LISTEN")) continue;
+                        await _narrationHandler.PlayAsync(nearest, PoiEventType.Near, "NEAR", token);
                     }
                 }
             }
@@ -599,19 +556,8 @@ public partial class MapPage : ContentPage
     private async Task OnListenButtonClickedAsync()
     {
         if (_nearestPoi == null) return;
-
-        if (!await EnsureUsageAllowedAsync("POI_LISTEN"))
-            return;
-
-        var started = DateTime.UtcNow;
-        var lang = LanguageService.Current;
-        var fullText = await GetNarrationTextAsync(_nearestPoi.Id, PoiEventType.Tap, lang) ?? _nearestPoi.NarrationText ?? _nearestPoi.Description;
-        await _narration.HandleAsync(new Announcement(_nearestPoi, lang, PoiEventType.Tap, started), overrideText: fullText);
-
-        var dur = (int)(DateTime.UtcNow - started).TotalSeconds;
-        _ = _playback.LogAsync(_nearestPoi.Id, "TAP", dur > 0 ? dur : null);
-        _ = _analytics.LogVisitAsync(_nearestPoi.Id, "tap");
-        if (dur > 0) _ = _analytics.LogListenDurationAsync(_nearestPoi.Id, dur);
+        if (!await EnsureUsageAllowedAsync("POI_LISTEN")) return;
+        await _narrationHandler.PlayAsync(_nearestPoi, PoiEventType.Tap, "TAP");
     }
 
     private async Task<bool> EnsureUsageAllowedAsync(string actionType)
@@ -798,5 +744,41 @@ public partial class MapPage : ContentPage
         if (string.IsNullOrWhiteSpace(text) || fromLang == toLang) return text;
         try { return await _translator.TryTranslateAsync(text, toLang, fromLang, ct) ?? text; }
         catch { return text; }
+    }
+
+    private async void OnMapClicked(object? sender, MapClickedEventArgs e)
+    {
+        var clickLocation = e.Location;
+
+        // Tìm tất cả các POI mà điểm click nằm trong vòng tròn, sắp xếp theo khoảng cách gần nhất
+        var tappedPois = _pois
+            .Select(p => new { Poi = p, Distance = Location.CalculateDistance(clickLocation, new Location(p.Latitude, p.Longitude), DistanceUnits.Kilometers) * 1000 })
+            .Where(x => x.Distance <= x.Poi.RadiusMeters)
+            .OrderBy(x => x.Distance)
+            .ToList();
+
+        if (tappedPois.Count > 0)
+        {
+            // Chỉ hiển thị UI cho điểm gần nhất
+            var closestPoi = tappedPois[0].Poi;
+            HighlightPoi(closestPoi, "Đã chọn");
+            ShowDetail(closestPoi);
+            MyMap.MoveToRegion(MapSpan.FromCenterAndRadius(new Location(closestPoi.Latitude, closestPoi.Longitude), Distance.FromMeters(300)));
+            if (_sheetReady) _ = BottomSheet.TranslateToAsync(0, _sheetExpandedOffset, 250, Easing.CubicOut);
+            
+            if (!await EnsureUsageAllowedAsync("POI_LISTEN"))
+                return;
+            
+            var lang = LanguageService.Current;
+            
+            // Đẩy TẤT CẢ các điểm POI đã chạm vào hàng đợi thuyết minh
+            foreach (var item in tappedPois)
+            {
+                var p = item.Poi;
+                _ = _narrationHandler.PlayAsync(p, PoiEventType.Tap, "TAP");
+                // Delay nhỏ để CreatedAtUtc khác nhau → queue ưu tiên đúng thứ tự
+                await Task.Delay(10);
+            }
+        }
     }
 }

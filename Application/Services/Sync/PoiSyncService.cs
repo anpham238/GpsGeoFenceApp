@@ -3,6 +3,7 @@ using Microsoft.Maui.Storage;
 using MauiApp1.Data;
 using MauiApp1.Models;
 using MauiApp1.Services.Api;
+using MauiApp1.Services;
 
 namespace MauiApp1.Services.Sync;
 
@@ -77,6 +78,10 @@ public sealed class PoiSyncService
         var remote = await _api.GetAllAsync(lang: null, ct: ct);
         System.Diagnostics.Debug.WriteLine($"[PoiSync] Remote count = {remote.Count}");
 
+        // Đếm POI mới chưa có trong local DB
+        var existingIds = await _db.GetAllIdsAsync();
+        int newCount = remote.Count(r => !existingIds.Contains(r.Id));
+
         int saved = 0;
         foreach (var r in remote)
         {
@@ -102,6 +107,10 @@ public sealed class PoiSyncService
         }
         await _meta.SetLastSyncUtcAsync("pois", DateTime.UtcNow);
         Preferences.Set(VersionPrefKey, serverVersion);
-        System.Diagnostics.Debug.WriteLine($"[PoiSync] Saved/Upserted = {saved}");
+        System.Diagnostics.Debug.WriteLine($"[PoiSync] Saved/Upserted = {saved}, New = {newCount}");
+
+        // Hiển thị notification nếu có POI mới
+        if (newCount > 0)
+            NotificationService.ShowNewPoiNotification(newCount);
     }
 }

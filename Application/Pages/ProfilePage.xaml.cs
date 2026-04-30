@@ -148,4 +148,47 @@ public partial class ProfilePage : ContentPage
         Preferences.Remove("Email");
         await Shell.Current.GoToAsync("//map");
     }
+
+    private async void OnChangePasswordClicked(object sender, EventArgs e)
+    {
+        var current = EntCurrentPassword?.Text?.Trim() ?? "";
+        var newPwd  = EntNewPassword?.Text?.Trim() ?? "";
+        var confirm = EntConfirmPassword?.Text?.Trim() ?? "";
+
+        if (string.IsNullOrEmpty(current) || string.IsNullOrEmpty(newPwd))
+        {
+            await DisplayAlertAsync("Lỗi", "Vui lòng nhập đầy đủ thông tin.", "OK");
+            return;
+        }
+        if (newPwd != confirm)
+        {
+            await DisplayAlertAsync("Lỗi", "Mật khẩu mới không khớp.", "OK");
+            return;
+        }
+        if (newPwd.Length < 6)
+        {
+            await DisplayAlertAsync("Lỗi", "Mật khẩu mới phải có ít nhất 6 ký tự.", "OK");
+            return;
+        }
+
+        try
+        {
+            var ok = await _profileApi.ChangePasswordAsync(current, newPwd);
+            if (ok)
+            {
+                EntCurrentPassword.Text = "";
+                EntNewPassword.Text = "";
+                EntConfirmPassword.Text = "";
+                await DisplayAlertAsync("Thành công", "Đổi mật khẩu thành công.", "OK");
+            }
+            else
+            {
+                await DisplayAlertAsync("Lỗi", "Mật khẩu hiện tại không đúng hoặc có lỗi xảy ra.", "OK");
+            }
+        }
+        catch (Exception ex)
+        {
+            await DisplayAlertAsync("Lỗi", ex.Message, "OK");
+        }
+    }
 }

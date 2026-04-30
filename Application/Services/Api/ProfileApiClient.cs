@@ -95,6 +95,18 @@ public sealed class ProfileApiClient
         Preferences.Set("auth_plan_type", "PRO");
         return true;
     }
+
+    public async Task<bool> ChangePasswordAsync(string currentPassword, string newPassword, CancellationToken ct = default)
+    {
+        AttachToken();
+        try
+        {
+            var res = await _http.PutAsJsonAsync("/api/v1/profile/change-password",
+                new { currentPassword, newPassword }, ct);
+            return res.IsSuccessStatusCode;
+        }
+        catch { return false; }
+    }
 }
 
 public sealed class UserProfileDto

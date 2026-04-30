@@ -22,18 +22,20 @@ public sealed class AppDb(DbContextOptions<AppDb> options) : DbContext(options)
     public DbSet<SupportedLanguage> SupportedLanguages => Set<SupportedLanguage>();
     public DbSet<AppDownloadSource> AppDownloadSources => Set<AppDownloadSource>();
     public DbSet<AnalyticsAppDownloadScan> AnalyticsAppDownloadScans => Set<AnalyticsAppDownloadScan>();
+    public DbSet<WebNarrationUsage> WebNarrationUsages => Set<WebNarrationUsage>();
     protected override void OnModelCreating(ModelBuilder b)
     {
         b.Entity<Poi>(e =>
         {
             e.ToTable("Pois");
             e.HasKey(x => x.Id);
-            e.Property(x => x.Id).ValueGeneratedOnAdd();          // IDENTITY(1,1)
+            e.Property(x => x.Id).ValueGeneratedOnAdd();
             e.Property(x => x.Name).HasMaxLength(200).IsRequired();
             e.Property(x => x.Description).HasMaxLength(2000);
             e.Property(x => x.RadiusMeters).HasDefaultValue(120);
             e.Property(x => x.CooldownSeconds).HasDefaultValue(30);
             e.Property(x => x.IsActive).HasDefaultValue(true);
+            e.Property(x => x.PriorityLevel).HasDefaultValue(0);
             e.Property(x => x.CreatedAt).HasDefaultValueSql("SYSUTCDATETIME()");
             e.Property(x => x.UpdatedAt).HasDefaultValueSql("SYSUTCDATETIME()");
             e.HasIndex(x => new { x.IsActive, x.Name })
@@ -198,11 +200,26 @@ public sealed class AppDb(DbContextOptions<AppDb> options) : DbContext(options)
             e.Property(x => x.SourceId).IsRequired();
             e.Property(x => x.Platform).HasMaxLength(50).IsRequired();
             e.Property(x => x.ScannedAt).HasDefaultValueSql("SYSUTCDATETIME()");
-            
+
             e.HasOne<AppDownloadSource>().WithMany()
              .HasForeignKey(x => x.SourceId).OnDelete(DeleteBehavior.Cascade);
-             
+
             e.HasIndex(x => x.SourceId).HasDatabaseName("IX_Analytics_AppDownloadScans_SourceId");
+        });
+
+        b.Entity<WebNarrationUsage>(e =>
+        {
+            e.ToTable("WebNarrationUsage");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).ValueGeneratedOnAdd();
+            e.Property(x => x.PoiId).IsRequired();
+            e.Property(x => x.DeviceKey).HasMaxLength(200).IsRequired();
+            e.Property(x => x.PlayCount).HasDefaultValue(0);
+            e.Property(x => x.CreatedAt).HasDefaultValueSql("SYSUTCDATETIME()");
+            e.HasOne<Poi>().WithMany()
+             .HasForeignKey(x => x.PoiId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.PoiId, x.DeviceKey })
+             .IsUnique().HasDatabaseName("UX_WebNarrationUsage_Key");
         });
     }
 }

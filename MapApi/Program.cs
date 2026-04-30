@@ -1,6 +1,5 @@
-using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Text;
+using MapApi.Contracts;
 using MapApi.Contracts.Realtime;
 using MapApi.Data;
 using MapApi.Models;
@@ -16,7 +15,6 @@ var cs = builder.Configuration.GetConnectionString("Default")
 // 2) JWT config (lấy từ appsettings.json)
 var jwtSecret = builder.Configuration["Jwt:Secret"]
     ?? "CHANGE_THIS_SECRET_KEY_MIN_32_CHARS_PLEASE";
-var jwtKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret));
 
 // 3) EF Core
 builder.Services.AddDbContext<AppDb>(opt =>
@@ -33,7 +31,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         opt.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = jwtKey,
+            IssuerSigningKey = new SymmetricSecurityKey(
+                System.Text.Encoding.UTF8.GetBytes(jwtSecret)),
             ValidateIssuer = false,
             ValidateAudience = false,
             ClockSkew = TimeSpan.Zero
@@ -49,6 +48,8 @@ builder.Services.AddCors(opt =>
     opt.AddDefaultPolicy(p => p.AllowAnyHeader().AllowAnyMethod().AllowAnyOrigin()));
 builder.Services.AddHttpClient<TranslatorClient>();
 builder.Services.AddScoped<PoiManagementService>();
+builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<NarrationTextService>();
 builder.Services.AddHostedService<TranslationBackgroundService>();
 builder.Services.AddScoped<IHistoryService, HistoryService>();
 builder.Services.AddSingleton<IDevicePresenceService, DevicePresenceService>();
@@ -66,6 +67,51 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapGet("/health", () => Results.Ok(new { ok = true, time = DateTime.UtcNow }));
+
+// ============================================================
+// GET /api/v1/app/download?platform=android|ios
+// Phục vụ APK trực tiếp hoặc redirect về store
+// ============================================================
+app.MapGet("/api/v1/app/download", (string? platform, IWebHostEnvironment env) =>
+{
+    var isIos = string.Equals(platform, "ios", StringComparison.OrdinalIgnoreCase);
+    if (isIos)
+        return Results.Redirect("https://apps.apple.com/app/id000000000");
+
+    // Android: phục vụ APK nếu có trong wwwroot/downloads/app.apk
+    var apkPath = Path.Combine(env.WebRootPath, "downloads", "app.apk");
+    if (System.IO.File.Exists(apkPath))
+        return Results.File(apkPath, "application/vnd.android.package-archive", "SmartTourism.apk");
+
+    // Chưa có APK → báo lỗi rõ ràng
+    return Results.Problem(
+        title: "APK chưa sẵn sàng",
+        detail: "Vui lòng đặt file APK vào thư mục: MapApi/wwwroot/downloads/app.apk",
+        statusCode: 404);
+});
+
+// ============================================================
+// GET /api/v1/admin/server-info — Trả về LAN IP để admin tạo QR đúng URL
+// Luôn dùng HTTP (không HTTPS) vì phone không trust self-signed cert
+// ============================================================
+app.MapGet("/api/v1/admin/server-info", (IConfiguration config) =>
+{
+    var host = System.Net.Dns.GetHostName();
+    var lanIps = System.Net.Dns.GetHostAddresses(host)
+        .Where(a => a.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+        .Select(a => a.ToString())
+        .Where(a => a.StartsWith("192.168.") || a.StartsWith("10.") || a.StartsWith("172."))
+        .ToList();
+
+    // Luôn lấy cổng HTTP (5150) vì HTTPS self-signed cert không work trên điện thoại
+    var allUrls = (config["ASPNETCORE_URLS"] ?? "http://0.0.0.0:5150").Split(';');
+    var httpUrl = allUrls.FirstOrDefault(u => u.StartsWith("http://")) ?? "http://0.0.0.0:5150";
+    var httpPort = new Uri(httpUrl.Replace("0.0.0.0", "localhost").Replace("+", "localhost")).Port;
+
+    var suggestedUrls = lanIps.Select(ip => $"http://{ip}:{httpPort}").ToList();
+
+    return Results.Ok(new { hostname = host, lanIps, httpPort, suggestedUrls });
+});
 // ============================================================
 // GET /api/v1/admin/seed/status — Kiểm tra bảng PoiLanguage đã có bao nhiêu ngôn ngữ
 // ============================================================
@@ -162,48 +208,23 @@ app.MapGet("/api/v1/pois/{id}", async (int id, AppDb db) =>
 
 // ============================================================
 // GET /api/v1/pois/{id}/narration?lang=...&eventType=enter|near|tap
-// Near  (evt=1) → "[gần đến Name]. NarTTS"
-// Enter (evt=0) / Tap (evt=2) → "[đã đến Name]. NarTTS. Description"
 // ============================================================
-
-// Lời mở đầu đa ngôn ngữ — Near
-var NearPrefix = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-{
-    ["vi-VN"]  = "Bạn sắp đến {0}.",
-    ["en-US"]  = "You are approaching {0}.",
-    ["zh-Hans"]= "您即将到达{0}。",
-    ["ja-JP"]  = "{0}に近づいています。",
-    ["ko-KR"]  = "{0}에 가까워지고 있습니다.",
-    ["de-DE"]  = "Sie nähern sich {0}.",
-};
-
-// Lời mở đầu đa ngôn ngữ — Enter / Tap
-var EnterPrefix = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-{
-    ["vi-VN"]  = "Bạn đã đến {0}.",
-    ["en-US"]  = "You have arrived at {0}.",
-    ["zh-Hans"]= "您已到达{0}。",
-    ["ja-JP"]  = "{0}に到着しました。",
-    ["ko-KR"]  = "{0}에 도착하셨습니다.",
-    ["de-DE"]  = "Sie sind in {0} angekommen.",
-};
-
 app.MapGet("/api/v1/pois/{id}/narration", async (
     int id, string? lang, string? eventType,
-    HttpContext ctx, AppDb db, CancellationToken ct) =>
+    HttpContext ctx, AppDb db, NarrationTextService narSvc, CancellationToken ct) =>
 {
     var poi = await db.Pois.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id, ct);
     if (poi is null) return Results.NotFound(new { error = "POI not found" });
 
     var toLang = string.IsNullOrWhiteSpace(lang) ? "vi-VN" : lang.Trim();
-    var evt    = ParseEventTypeByte(eventType);
+    var evt    = NarrationTextService.ParseEventType(eventType);
 
     // Gate ngôn ngữ premium
     var langInfo = await db.SupportedLanguages.AsNoTracking()
         .FirstOrDefaultAsync(l => l.LanguageTag == toLang && l.IsActive, ct);
     if (langInfo?.IsPremium == true)
     {
-        var idClaimNar = ctx.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        var idClaimNar = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         var isPro = false;
         if (Guid.TryParse(idClaimNar, out var narUserId))
         {
@@ -219,19 +240,11 @@ app.MapGet("/api/v1/pois/{id}/narration", async (
     var poiLang = await db.PoiLanguages.AsNoTracking()
         .FirstOrDefaultAsync(n => n.IdPoi == id && n.LanguageTag == toLang, ct);
 
-    // Fallback về vi-VN nếu ngôn ngữ yêu cầu chưa được dịch
     if (poiLang is null && toLang != "vi-VN")
         poiLang = await db.PoiLanguages.AsNoTracking()
             .FirstOrDefaultAsync(n => n.IdPoi == id && n.LanguageTag == "vi-VN", ct);
 
-    // TextToSpeech đã chứa NarTTS + Description kết hợp (lưu lúc dịch)
-    var tts  = poiLang?.TextToSpeech ?? "";
-    var name = poi.Name;  // tên gốc — proper noun, dùng chung mọi ngôn ngữ
-
-    var prefixDict = evt == 1 ? NearPrefix : EnterPrefix;
-    var template   = prefixDict.TryGetValue(toLang, out var t) ? t : prefixDict["vi-VN"];
-    var prefix     = string.Format(template, name);
-    var narText    = string.IsNullOrWhiteSpace(tts) ? prefix : $"{prefix} {tts}";
+    var narText = narSvc.Build(poi.Name, poiLang?.TextToSpeech, toLang, evt);
 
     return Results.Ok(new
     {
@@ -245,164 +258,44 @@ app.MapGet("/api/v1/pois/{id}/narration", async (
 // ============================================================
 // POST /api/v1/auth/register  (multipart/form-data)
 // ============================================================
-app.MapPost("/api/v1/auth/register", async (HttpContext ctx, AppDb db, IWebHostEnvironment env) => {
-    var request = ctx.Request; // Thêm dòng này vào để bóc request ra
-    if (!request.HasFormContentType)
-        return Results.BadRequest(new { error = "Yêu cầu multipart/form-data" });
-    var form = await request.ReadFormAsync();
-    var username = form["Username"].ToString().Trim();
-    var mail     = form["Mail"].ToString().Trim().ToLowerInvariant();
-    var password = form["Password"].ToString();
-    var phone    = form["PhoneNumber"].ToString().Trim();
-
-    if (string.IsNullOrWhiteSpace(username) ||
-        string.IsNullOrWhiteSpace(mail) ||
-        string.IsNullOrWhiteSpace(password))
-        return Results.BadRequest(new { error = "Username, Mail và Password là bắt buộc" });
-
-    if (await db.Users.AnyAsync(u => u.Username == username))
-        return Results.Conflict(new { error = "Username đã tồn tại" });
-    if (await db.Users.AnyAsync(u => u.Mail == mail))
-        return Results.Conflict(new { error = "Email đã được đăng ký" });
-
-    var avatarUrl = "default-avatar.png";
-    var avatarFile = form.Files.GetFile("Avatar");
-    if (avatarFile is { Length: > 0 })
-    {
-        var ext = Path.GetExtension(avatarFile.FileName).ToLowerInvariant();
-        if (ext is ".jpg" or ".jpeg" or ".png")
-        {
-            var dir = Path.Combine(env.WebRootPath, "avatars");
-            Directory.CreateDirectory(dir);
-            var safeName = $"{Guid.NewGuid():N}{ext}";
-            await using var fs = System.IO.File.Create(Path.Combine(dir, safeName));
-            await avatarFile.CopyToAsync(fs);
-            avatarUrl = $"/avatars/{safeName}";
-        }
-    }
-
-    var user = new Users
-    {
-        UserId       = Guid.NewGuid(),
-        Username     = username,
-        Mail         = mail,
-        PhoneNumber  = string.IsNullOrWhiteSpace(phone) ? null : phone,
-        PasswordHash = BCrypt.Net.BCrypt.HashPassword(password),
-        AvatarUrl    = avatarUrl,
-        IsActive     = true,
-        CreatedAt    = DateTime.UtcNow
-    };
-
-    db.Users.Add(user);
-    await db.SaveChangesAsync();
-
-    return Results.Created($"/api/v1/auth/me", new { user.UserId, user.Username, user.Mail, user.AvatarUrl });
-});
+app.MapPost("/api/v1/auth/register", (HttpContext ctx, AuthService auth) => auth.RegisterAsync(ctx));
 
 // ============================================================
 // POST /api/v1/auth/login  — Smart Login (Username hoặc Email)
 // ============================================================
-app.MapPost("/api/v1/auth/login", async (LoginRequest req, AppDb db) =>
-{
-    if (string.IsNullOrWhiteSpace(req.Identifier) || string.IsNullOrWhiteSpace(req.Password))
-        return Results.BadRequest(new { error = "Identifier và Password là bắt buộc" });
-
-    var identifier = req.Identifier.Trim();
-    Users? user;
-
-    if (identifier.Contains('@'))
-        user = await db.Users.FirstOrDefaultAsync(u => u.Mail == identifier.ToLowerInvariant() && u.IsActive);
-    else
-        user = await db.Users.FirstOrDefaultAsync(u => u.Username == identifier && u.IsActive);
-
-    if (user is null || !BCrypt.Net.BCrypt.Verify(req.Password, user.PasswordHash))
-        return Results.Unauthorized();
-
-    var token = GenerateJwtToken(user, jwtKey);
-
-    return Results.Ok(new
-    {
-        Token     = token,
-        UserId    = user.UserId,
-        user.Username,
-        user.Mail,
-        user.AvatarUrl,
-        user.PlanType,
-        user.ProExpiryDate,
-        ExpiresAt = DateTime.UtcNow.AddHours(24)
-    });
-});
+app.MapPost("/api/v1/auth/login", (LoginRequest req, AuthService auth) => auth.LoginAsync(req));
 
 // ============================================================
 // GET /api/v1/auth/me  — Lấy profile từ JWT
 // ============================================================
-app.MapGet("/api/v1/auth/me", async (HttpContext ctx, AppDb db) =>
+app.MapGet("/api/v1/auth/me", (HttpContext ctx, AuthService auth) =>
 {
-    var idClaim = ctx.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-    if (!Guid.TryParse(idClaim, out var userId))
-        return Results.Unauthorized();
-
-    var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.UserId == userId && u.IsActive);
-    if (user is null) return Results.NotFound(new { error = "User not found" });
-
-    return Results.Ok(new
-    {
-        user.UserId,
-        user.Username,
-        user.Mail,
-        user.PhoneNumber,
-        user.AvatarUrl,
-        user.PlanType,
-        user.ProExpiryDate,
-        user.CreatedAt
-    });
+    var idClaim = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    return Guid.TryParse(idClaim, out var userId)
+        ? auth.GetProfileAsync(userId)
+        : Task.FromResult(Results.Unauthorized());
 }).RequireAuthorization();
 
 // ============================================================
 // PUT /api/v1/profile — Cập nhật thông tin cá nhân
 // ============================================================
-app.MapPut("/api/v1/profile", async (HttpContext ctx, AppDb db, IWebHostEnvironment env) =>
+app.MapPut("/api/v1/profile", (HttpContext ctx, AuthService auth) =>
 {
-    var idClaim = ctx.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-    if (!Guid.TryParse(idClaim, out var userId)) return Results.Unauthorized();
+    var idClaim = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    return Guid.TryParse(idClaim, out var userId)
+        ? auth.UpdateProfileAsync(userId, ctx)
+        : Task.FromResult(Results.Unauthorized());
+}).RequireAuthorization();
 
-    var user = await db.Users.FirstOrDefaultAsync(u => u.UserId == userId && u.IsActive);
-    if (user is null) return Results.NotFound(new { error = "User not found" });
-
-    if (!ctx.Request.HasFormContentType)
-        return Results.BadRequest(new { error = "Yêu cầu multipart/form-data" });
-
-    var form = await ctx.Request.ReadFormAsync();
-    var username = form["Username"].ToString().Trim();
-    var phone    = form["PhoneNumber"].ToString().Trim();
-
-    if (!string.IsNullOrWhiteSpace(username) && username != user.Username)
-    {
-        if (await db.Users.AnyAsync(u => u.Username == username && u.UserId != userId))
-            return Results.Conflict(new { error = "Username đã tồn tại" });
-        user.Username = username;
-    }
-
-    if (!string.IsNullOrWhiteSpace(phone))
-        user.PhoneNumber = phone;
-
-    var avatarFile = form.Files.GetFile("Avatar");
-    if (avatarFile is { Length: > 0 })
-    {
-        var ext = Path.GetExtension(avatarFile.FileName).ToLowerInvariant();
-        if (ext is ".jpg" or ".jpeg" or ".png")
-        {
-            var dir = Path.Combine(env.WebRootPath, "avatars");
-            Directory.CreateDirectory(dir);
-            var safeName = $"{Guid.NewGuid():N}{ext}";
-            await using var fs = System.IO.File.Create(Path.Combine(dir, safeName));
-            await avatarFile.CopyToAsync(fs);
-            user.AvatarUrl = $"/avatars/{safeName}";
-        }
-    }
-
-    await db.SaveChangesAsync();
-    return Results.Ok(new { user.UserId, user.Username, user.Mail, user.PhoneNumber, user.AvatarUrl, user.PlanType });
+// ============================================================
+// PUT /api/v1/profile/change-password — Đổi mật khẩu
+// ============================================================
+app.MapPut("/api/v1/profile/change-password", (HttpContext ctx, ChangePasswordRequest req, AuthService auth) =>
+{
+    var idClaim = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    return Guid.TryParse(idClaim, out var userId)
+        ? auth.ChangePasswordAsync(userId, req)
+        : Task.FromResult(Results.Unauthorized());
 }).RequireAuthorization();
 
 // ============================================================
@@ -547,19 +440,12 @@ app.MapGet("/api/v1/pois/{id}/directions", async (
 // ============================================================
 // POST /api/v1/profile/upgrade — Nâng cấp lên PRO (demo: +30 ngày)
 // ============================================================
-app.MapPost("/api/v1/profile/upgrade", async (HttpContext ctx, AppDb db) =>
+app.MapPost("/api/v1/profile/upgrade", (HttpContext ctx, AuthService auth) =>
 {
-    var idClaim = ctx.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-    if (!Guid.TryParse(idClaim, out var userId)) return Results.Unauthorized();
-
-    var user = await db.Users.FirstOrDefaultAsync(u => u.UserId == userId && u.IsActive);
-    if (user is null) return Results.NotFound();
-
-    user.PlanType = "PRO";
-    user.ProExpiryDate = DateTime.UtcNow.AddDays(30);
-    await db.SaveChangesAsync();
-
-    return Results.Ok(new { ok = true, PlanType = user.PlanType, ProExpiryDate = user.ProExpiryDate });
+    var idClaim = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    return Guid.TryParse(idClaim, out var userId)
+        ? auth.UpgradeAsync(userId)
+        : Task.FromResult(Results.Unauthorized());
 }).RequireAuthorization();
 
 // ============================================================
@@ -599,7 +485,7 @@ app.MapGet("/api/v1/admin/pois", async (AppDb db) =>
         .Select(p => new
         {
             p.Id, p.Name, p.Description, p.Latitude, p.Longitude,
-            p.RadiusMeters, p.CooldownSeconds, p.IsActive, p.CreatedAt, p.UpdatedAt
+            p.RadiusMeters, p.CooldownSeconds, p.IsActive, p.PriorityLevel, p.CreatedAt, p.UpdatedAt
         })
         .ToListAsync();
     return Results.Ok(pois);
@@ -619,6 +505,7 @@ app.MapPut("/api/v1/admin/pois/{id}", async (int id, PoiUpdateRequest req, AppDb
     if (req.Longitude.HasValue)                  poi.Longitude   = req.Longitude.Value;
     if (req.RadiusMeters.HasValue)               poi.RadiusMeters = req.RadiusMeters.Value;
     if (req.CooldownSeconds.HasValue)            poi.CooldownSeconds = req.CooldownSeconds.Value;
+    if (req.PriorityLevel.HasValue)              poi.PriorityLevel = req.PriorityLevel.Value;
     poi.UpdatedAt = DateTime.UtcNow;
 
     await db.SaveChangesAsync();
@@ -1115,55 +1002,3 @@ app.MapGet("/api/v1/pois/search", async (string? q, AppDb db) =>
 app.MapHub<MapApi.Hubs.DeviceHub>("/hubs/device");
 app.MapControllers();
 app.Run();
-// ─── Helpers ───────────────────────────────────────────────────────────────
-static byte ParseEventTypeByte(string? s) =>
-    (s ?? "").Trim().ToLowerInvariant() switch
-    {
-        "enter" => 0,
-        "near" => 1,
-        "tap" => 2,
-        _ => 0
-    };
-static string GenerateJwtToken(Users user, SymmetricSecurityKey key)
-{
-    var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-    var claims = new[]
-    {
-        new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
-        new Claim(ClaimTypes.Name, user.Username),
-        new Claim(ClaimTypes.Email, user.Mail)
-    };
-    var token = new JwtSecurityToken(
-        claims: claims,
-        expires: DateTime.UtcNow.AddHours(24),
-        signingCredentials: creds);
-    return new JwtSecurityTokenHandler().WriteToken(token);
-}
-
-// ─── Request DTOs ───────────────────────────────────────────────────────────
-public sealed record LoginRequest(string Identifier, string Password);
-public sealed class HistoryRequest
-{
-    public int PoiId { get; set; }
-    public Guid UserId { get; set; }
-    public int? DurationSeconds { get; set; }
-}
-public sealed class ProfileHistoryUpsertRequest
-{
-    public int PoiId { get; set; }
-    public int? DurationSeconds { get; set; }
-}
-public sealed class PoiUpdateRequest
-{
-    public string? Name { get; set; }
-    public string? Description { get; set; }
-    public double? Latitude { get; set; }
-    public double? Longitude { get; set; }
-    public int? RadiusMeters { get; set; }
-    public int? CooldownSeconds { get; set; }
-}
-public sealed record AnalyticsVisitRequest(Guid SessionId, int PoiId, string Action);
-public sealed record AnalyticsRouteRequest(Guid SessionId, double Latitude, double Longitude);
-public sealed record AnalyticsListenRequest(Guid SessionId, int PoiId, int DurationSeconds);
-public sealed record AdminUserUpdateRequest(string? PhoneNumber, string? PlanType, DateTime? ProExpiryDate);
-public sealed record UsageCheckRequest(string EntityId, string ActionType);
