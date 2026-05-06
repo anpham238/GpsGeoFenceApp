@@ -38,14 +38,41 @@ public sealed class NarrationQueueManager
             ReorderQueue();
 
             if (_currentPlaying == null && _queue.Count > 0)
-            {
                 PlayNextInternal();
-            }
             else
-            {
                 CurrentState = _queue.Count > 0 ? NarrationState.Queued : NarrationState.Idle;
-            }
         }
+    }
+
+    /// <summary>
+    /// Enqueue chỉ POI thắng trong nhóm chồng lấn (khi AllowQueueWhenConflict = false).
+    /// Loại bỏ toàn bộ các POI thua trong vùng xung đột — không xếp hàng chúng.
+    /// Ghi lại ID POI thắng để các nơi gọi có thể kiểm tra.
+    /// </summary>
+    public int? EnqueueConflictResolved(NarrationQueueItem winner)
+    {
+        lock (_sync)
+        {
+            // Nếu winner đang phát → bỏ qua, không reset
+            if (_currentPlaying?.PoiId == winner.PoiId)
+                return winner.PoiId;
+
+            // Xóa mọi item trong hàng đợi có score thấp hơn winner (các POI thua)
+            _queue.RemoveAll(q => q.FinalPriorityScore < winner.FinalPriorityScore);
+
+            // Chỉ thêm nếu chưa có trong hàng đợi
+            if (!_queue.Any(q => q.PoiId == winner.PoiId))
+                _queue.Add(winner);
+
+            ReorderQueue();
+
+            if (_currentPlaying == null && _queue.Count > 0)
+                PlayNextInternal();
+            else
+                CurrentState = _queue.Count > 0 ? NarrationState.Queued : NarrationState.Idle;
+        }
+
+        return winner.PoiId;
     }
 
     public void RemoveExpired(DateTime nowUtc)

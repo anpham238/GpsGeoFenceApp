@@ -1,0 +1,129 @@
+@startuml sequence-tc1-visitor-presence
+title TC1 — Quản lý du khách: n thiết bị → OnlineCount & TotalConnectionCount
+
+skinparam backgroundColor #0f1117
+skinparam sequence {
+    ArrowColor #90caf9
+    ActorBorderColor #90caf9
+    ActorBackgroundColor #1a1d27
+    ParticipantBorderColor #293043
+    ParticipantBackgroundColor #171b27
+    ParticipantFontColor #e0e0e0
+    LifeLineBorderColor #293043
+    LifeLineBackgroundColor #1a1d27
+    NoteBackgroundColor #1a2a3a
+    NoteBorderColor #293043
+    NoteFontColor #aaa
+}
+skinparam defaultFontColor #e0e0e0
+
+actor "Thiết bị 1\n(Android App)" as D1
+actor "Thiết bị 2\n(Android App)" as D2
+actor "Thiết bị N\n(Android App)" as DN
+
+participant "DeviceHub\n(SignalR)" as Hub
+participant "DevicePresenceService" as Presence
+database "GuestDevices\n(DB)" as DB
+participant "Admin Web\n(CMS)" as Admin
+
+== Thiết bị 1 kết nối (n=1) ==
+
+D1 -> Hub : Connect(?deviceId=DEV-001)
+activate Hub
+
+Hub -> Presence : MarkConnected("DEV-001", connId-A)
+activate Presence
+note right of Presence
+  _onlineConnections["DEV-001"] = { connId-A }
+  OnlineCount = 1
+  TotalConnectionCount = 1
+end note
+Presence --> Hub
+deactivate Presence
+
+Hub -> DB : Upsert GuestDevice(DEV-001)
+DB --> Hub
+
+Hub -> Admin : SendAsync("admin.devices.presence.changed.v1", \n{ deviceId: DEV-001, isOnline: true,\n  onlineCount: 1, totalConnectionCount: 1 })
+deactivate Hub
+
+Admin -> Admin : applyPresenceChangedEnvelope()\n_serverOnlineCount = 1\n_serverTotalConnCount = 1
+Admin -> Admin : renderDevicesTable()\ndevStatOnline = 1\ndevStatConnections = 1
+
+== Thiết bị 2 kết nối (n=2) ==
+
+D2 -> Hub : Connect(?deviceId=DEV-002)
+activate Hub
+
+Hub -> Presence : MarkConnected("DEV-002", connId-B)
+activate Presence
+note right of Presence
+  _onlineConnections["DEV-001"] = { connId-A }
+  _onlineConnections["DEV-002"] = { connId-B }
+  OnlineCount = 2
+  TotalConnectionCount = 2
+end note
+Presence --> Hub
+deactivate Presence
+
+Hub -> DB : Upsert GuestDevice(DEV-002)
+DB --> Hub
+
+Hub -> Admin : SendAsync("admin.devices.presence.changed.v1", \n{ onlineCount: 2, totalConnectionCount: 2 })
+deactivate Hub
+
+Admin -> Admin : devStatOnline = 2\ndevStatConnections = 2
+
+== Thiết bị 1 mở thêm tab/phiên thứ 2 ==
+
+D1 -> Hub : Connect(?deviceId=DEV-001) [phiên mới]
+activate Hub
+
+Hub -> Presence : MarkConnected("DEV-001", connId-C)
+activate Presence
+note right of Presence
+  _onlineConnections["DEV-001"] = { connId-A, connId-C }
+  OnlineCount = 2      ← vẫn 2 thiết bị duy nhất
+  TotalConnectionCount = 3  ← 3 kết nối tổng cộng
+end note
+Presence --> Hub
+deactivate Presence
+
+Hub -> Admin : SendAsync(..., { onlineCount: 2, totalConnectionCount: 3 })
+deactivate Hub
+
+Admin -> Admin : devStatOnline = 2\ndevStatConnections = 3
+
+note over Admin
+  **Kết quả hiển thị:**
+  📲 Tổng thiết bị: 2
+  🟢 Đang trực tuyến: 2  (unique device IDs)
+  🔗 Tổng kết nối: 3     (n=2 thiết bị × sessions)
+end note
+
+== N thiết bị kết nối (tổng quát) ==
+
+DN -> Hub : Connect(?deviceId=DEV-N)
+activate Hub
+Hub -> Presence : MarkConnected("DEV-N", connId-N)
+activate Presence
+note right of Presence
+  OnlineCount = N          (unique devices)
+  TotalConnectionCount = N*k  (k = số phiên mỗi thiết bị)
+end note
+Presence --> Hub
+deactivate Presence
+Hub -> Admin : { onlineCount: N, totalConnectionCount: N*k }
+deactivate Hub
+
+== Admin poll snapshot khi mở trang ==
+
+Admin -> Hub : GET /api/v1/admin/devices/realtime-snapshot
+Hub -> Presence : OnlineCount, TotalConnectionCount
+Presence --> Hub
+Hub -> DB : SELECT * FROM GuestDevices ORDER BY LastActiveAt DESC
+DB --> Hub
+Hub --> Admin : { onlineCount: N, totalConnectionCount: N*k,\n  devices: [...] }
+Admin -> Admin : Render bảng + 4 stat tiles
+
+@enduml

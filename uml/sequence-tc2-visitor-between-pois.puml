@@ -1,0 +1,131 @@
+@startuml sequence-tc2-visitor-between-pois
+title TC2 — Du khách giữa 2 POI: vị trí thiết bị → POI gần & hàng đợi audio
+
+skinparam backgroundColor #0f1117
+skinparam sequence {
+    ArrowColor #90caf9
+    ActorBorderColor #90caf9
+    ActorBackgroundColor #1a1d27
+    ParticipantBorderColor #293043
+    ParticipantBackgroundColor #171b27
+    ParticipantFontColor #e0e0e0
+    LifeLineBorderColor #293043
+    LifeLineBackgroundColor #1a1d27
+    NoteBackgroundColor #1a2a3a
+    NoteBorderColor #293043
+    NoteFontColor #aaa
+}
+skinparam defaultFontColor #e0e0e0
+
+== Phần A: Admin web xem du khách đang ở giữa 2 POI ==
+
+actor "Du khách\n(Android App)" as User
+participant "DeviceHub\n(SignalR)" as Hub
+database "GuestDevices\n(DB)" as DB
+database "Pois\n(DB)" as PoiDB
+participant "GET /nearby-pois\n(Program.cs)" as NearbyApi
+actor "Admin Web\n(CMS)" as Admin
+
+User -> Hub : SendLocation("DEV-001", lat=10.7798, lng=106.6991)
+activate Hub
+Hub -> DB : UPDATE GuestDevices\nSET LastLatitude=10.7798, LastLongitude=106.6991\nWHERE DeviceId="DEV-001"
+DB --> Hub
+deactivate Hub
+
+note over DB
+  Du khách đang ở giữa:
+  • POI A: Nhà thờ Đức Bà (r=120m, dist=95m) ← trong vùng
+  • POI B: Bưu điện TP (r=100m, dist=80m)  ← trong vùng
+  • POI C: Chợ Bến Thành (r=150m, dist=380m) ← ngoài vùng, trong 500m
+end note
+
+Admin -> NearbyApi : GET /api/v1/admin/devices/DEV-001/nearby-pois
+activate NearbyApi
+
+NearbyApi -> DB : SELECT * FROM GuestDevices\nWHERE DeviceId = "DEV-001"
+DB --> NearbyApi : { LastLatitude: 10.7798, LastLongitude: 106.6991 }
+
+NearbyApi -> PoiDB : SELECT * FROM Pois WHERE IsActive = 1
+PoiDB --> NearbyApi : [POI A, POI B, POI C, ...]
+
+NearbyApi -> NearbyApi : foreach poi:\n  dist = HaversineDistance(10.7798, 106.6991,\n                           poi.Lat, poi.Lng)\n  withinRadius = dist <= poi.RadiusMeters\n  filter: dist <= 500
+
+NearbyApi --> Admin : [\n  { poiId:1, name:"Nhà thờ Đức Bà",\n    distanceMeters:95, radiusMeters:120,\n    withinRadius:true },\n  { poiId:2, name:"Bưu điện TP HCM",\n    distanceMeters:80, radiusMeters:100,\n    withinRadius:true },\n  { poiId:3, name:"Chợ Bến Thành",\n    distanceMeters:380, radiusMeters:150,\n    withinRadius:false }\n]
+deactivate NearbyApi
+
+Admin -> Admin : showNearbyPois popup:\n● Nhà thờ Đức Bà  — 95m / r120m  [Trong vùng]\n● Bưu điện TP HCM — 80m / r100m  [Trong vùng]\n○ Chợ Bến Thành   — 380m / r150m [Ngoài vùng]
+
+== Phần B: Hàng đợi audio khi nhiều du khách cùng vào POI ==
+
+actor "Du khách 1\n(DEV-001)" as U1
+actor "Du khách 2\n(DEV-002)" as U2
+participant "AndroidGeofenceService" as Geo
+participant "PoiNarrationHandler\n(debounce 250ms)" as Handler
+participant "PoiNarrationRateLimiter\n(Semaphore/POI)" as Limiter
+participant "NarrationManager\n(worker loop)" as NM
+participant "Audio / TTS" as Audio
+
+note over Limiter
+  MaxConcurrentPerPoi = 10
+  SpreadDelayMs = 80ms
+end note
+
+U1 -> Geo : OnEnter(POI A)
+U2 -> Geo : OnEnter(POI A)
+
+Geo -> Handler : HandlePoiEnterAsync(DEV-001, POI A)
+Geo -> Handler : HandlePoiEnterAsync(DEV-002, POI A)
+
+activate Handler
+Handler -> Handler : debounce 250ms\n(gộp event nhanh)
+
+Handler -> Limiter : AcquireAsync(poiId=1, "DEV-001")
+activate Limiter
+note right of Limiter
+  SemaphoreSlim: currentCount > 0
+  → cho phép DEV-001
+end note
+Limiter --> Handler : acquired (slot 1/10)
+deactivate Limiter
+
+Handler -> NM : Enqueue(DEV-001, POI A, Enter)
+deactivate Handler
+
+Handler -> Limiter : AcquireAsync(poiId=1, "DEV-002")
+activate Limiter
+note right of Limiter
+  currentCount > 0
+  Delay(80ms * 1)  ← spread để tránh đụng độ
+  → cho phép DEV-002
+end note
+Limiter --> Handler : acquired (slot 2/10)
+deactivate Limiter
+
+Handler -> NM : Enqueue(DEV-002, POI A, Enter)
+
+activate NM
+NM -> NM : Sort queue: Tap(1) > Enter(2) > Near(3)\nDedup: IsDuplicate(poiId, deviceId, 2s)
+
+NM -> Audio : PlayAudio(DEV-001, POI A)
+note right of Audio
+  DEV-001 nghe audio trước
+end note
+Audio --> NM : onEnded
+
+NM -> Audio : PlayAudio(DEV-002, POI A)
+note right of Audio
+  DEV-002 vào hàng → nghe sau 80ms
+end note
+Audio --> NM : onEnded
+deactivate NM
+
+NM -> Limiter : Release(poiId=1, "DEV-001")
+NM -> Limiter : Release(poiId=1, "DEV-002")
+
+note over U1, Audio
+  **Kết quả:**
+  Cả 2 du khách đều nghe thuyết minh POI A
+  theo thứ tự vào hàng, không xung đột
+end note
+
+@enduml

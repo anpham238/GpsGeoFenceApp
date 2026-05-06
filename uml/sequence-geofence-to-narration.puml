@@ -1,45 +1,120 @@
 @startuml
-actor User
-participant MapPage
-participant LocationService
-participant GeofenceService
-participant EventGate as "GeofenceEventGate"
-participant NarrationManager
-participant API as "MapApi"
-database DB
+title Geofence → Priority Resolve → Narration (luồng chính)
 
-User -> MapPage: Open map
-MapPage -> API: GET /api/v1/sync/version
-API -> DB: Query latest POI version
-DB --> API: version
-API --> MapPage: version
+actor       User
+participant "MapPage"              as Map
+participant "ILocationService"     as Loc
+participant "IGeofenceService"     as Geo
+participant "GeofenceEventGate"    as Gate
+participant "PoiPriorityResolver"  as Resolver
+participant "NarrationQueueManager" as QMgr
+participant "PoiNarrationHandler"  as Handler
+participant "PoiNarrationCache"    as Cache
+participant "PoiNarrationApiClient" as NarApi
+participant "NarrationManager"     as Nar
+participant "IAudioPlayer / TTS"   as Audio
+participant "PlaybackApiClient"    as Playback
+participant "AnalyticsClient"      as Ana
+database    "Backend API + DB"     as API
 
-MapPage -> API: GET /api/v1/pois
-API -> DB: Query active POIs
-DB --> API: POI list
-API --> MapPage: POI list
+' ─── Khởi tạo ───
+User -> Map : Mở ứng dụng
+Map -> API  : GET /api/v1/sync/version
+API --> Map : version info
+Map -> API  : GET /api/v1/pois
+API --> Map : POI list (với PriorityLevel, CooldownSeconds, ConflictPolicy)
+Map -> Geo  : RegisterAsync(pois)
+Map -> Loc  : StartTracking()
 
-MapPage -> GeofenceService: RegisterAsync(pois)
-MapPage -> LocationService: StartTracking()
+' ─── Tracking loop ───
+loop App đang chạy
+  Loc --> Map : OnLocationChanged(lat, lng)
+  Geo --> Map : OnPoiEvent([PoiA, PoiB], ENTER | NEAR)
 
-LocationService --> MapPage: New location(lat,lng)
-GeofenceService --> MapPage: OnPoiEvent(poi, ENTER/NEAR)
-MapPage -> EventGate: ShouldAccept(poi,event)
+  ' Gate: debounce + cooldown per-POI
+  loop mỗi candidate POI
+    Map -> Gate : ShouldAccept(poiId, eventType,\n  debounceSec, cooldownSec)
+    Gate -> Gate : Preferences.Get(key) → check diff
+    alt Debounce hoặc Cooldown còn hiệu lực
+      Gate --> Map : false → bỏ qua POI này
+    else Hợp lệ
+      Gate --> Map : true
+      Gate -> Gate : Preferences.Set(key, now)
+    end
+  end
 
-alt accepted
-  MapPage -> API: GET /api/v1/pois/{id}/narration
-  API -> DB: Load narration by lang+event
-  DB --> API: narration text
-  API --> MapPage: narration payload
+  alt Không có POI nào pass gate
+    Map --> Map : Ignore — no event
+  else Có ít nhất 1 POI hợp lệ
 
-  MapPage -> NarrationManager: HandleAsync(announcement, text)
-  NarrationManager -> NarrationManager: Enqueue + worker process
-  NarrationManager --> MapPage: playback completed
+    ' ─── Priority resolver ───
+    Map -> Resolver : Resolve(candidates, nowUtc, tourStep?)
+    note right of Resolver
+      Điểm = PriorityLevel × 10
+        + TapBoost(5) nếu tapped
+        + DistanceNearBonus(3) nếu ≤ 10m
+        + 1 nếu ≤ 30m
+        − CooldownPenalty(10) nếu đang cooldown
+        + TourBoost(2) nếu đúng bước tour
+    end note
+    Resolver --> Map : List<NarrationQueueItem> (đã sort theo score)
 
-  MapPage -> API: POST /api/v1/analytics/visit
-  MapPage -> API: POST /api/v1/analytics/listen-duration
-else rejected
-  MapPage --> MapPage: Ignore duplicate/spam event
+    alt ConflictPolicy = PRIORITY_ONLY (default)
+      Map -> Resolver : ResolveConflictWinner(candidates)
+      Resolver --> Map : winner NarrationQueueItem
+      Map -> QMgr : EnqueueConflictResolved(winner)
+      QMgr -> QMgr : RemoveAll losers (score < winner)\nAdd winner if not exists
+    else ConflictPolicy = FIFO / AllowQueueWhenConflict = true
+      Map -> QMgr : EnqueueRange(allScoredItems)
+      QMgr -> QMgr : Dedup by PoiId, ReorderQueue
+    end
+
+    ' ─── NarrationQueueManager dispatcher ───
+    QMgr -> QMgr : PlayNextInternal()\n  → PlayRequested.Invoke(item)
+
+    ' ─── PoiNarrationHandler ───
+    QMgr -> Handler : PlayAsync(poi, evType, logLabel)
+    Handler -> Handler : IsDebounced(poiId)?\n  (250ms debounce per-POI)
+    alt Trong debounce
+      Handler --> QMgr : return (skip)
+    else OK
+
+      ' Fetch narration text
+      Handler -> Cache : GetAsync(poiId, evByte, lang)
+      alt Cache hit
+        Cache --> Handler : narrationText
+      else Cache miss
+        Handler -> NarApi : GetNarrationAsync(poiId, lang, event, ct)
+        NarApi -> API     : GET /api/v1/pois/{id}/narration?lang=&event=
+        API --> NarApi    : NarrationDto { narrationText, language }
+        NarApi --> Handler : dto
+        Handler -> Cache  : UpsertAsync(poiId, evByte, lang, text)
+      end
+
+      ' Play
+      Handler -> Nar : HandleAsync(Announcement(poi,lang,evType), overrideText)
+      Nar -> Nar     : IsDuplicate? (2s window per poi:event:lang)
+      alt Trùng lặp
+        Nar --> Handler : skip
+      else OK
+        Nar -> Nar : Enqueue QueueItem\n  sort: Tap(1) > Enter(2) > Near(3)
+        Nar -> Nar : WorkerLoop → PlayOneAsync
+        alt AudioUrl có sẵn (AudioSourceMode = AUDIO_FIRST | AUDIO_ONLY)
+          Nar -> Audio : PlayFileAsync(audioUrl, ct)
+        else TTS (AudioSourceMode = TTS_ONLY hoặc không có audio)
+          Nar -> Audio : TextToSpeech.SpeakAsync(text, options, ct)
+        end
+        Audio --> Nar : Completed / Cancelled
+        Nar --> Handler : task completed
+      end
+
+      ' Log sau khi phát
+      Handler -> Playback : LogAsync(poiId, logLabel, durationSec)
+      Handler -> Ana      : LogVisitAsync(poiId, action)
+      Handler -> Ana      : LogListenDurationAsync(poiId, dur)
+      Ana -> API          : POST /api/v1/analytics/visit\n  POST /api/v1/analytics/listen-duration
+    end
+  end
 end
 
 @enduml

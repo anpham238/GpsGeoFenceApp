@@ -32,9 +32,15 @@
 			</Grid>
 		</Grid>
 
-		<Grid VerticalOptions="Start" Margin="16, 40, 16, 0" ColumnDefinitions="Auto, *, Auto">
-			<Border Grid.Column="0" StrokeShape="RoundRectangle 25" BackgroundColor="#66000000" Stroke="Transparent" WidthRequest="44" HeightRequest="44">
-				<Label Text="✕" TextColor="White" FontSize="20" HorizontalOptions="Center" VerticalOptions="Center" />
+     <Grid VerticalOptions="Start" Margin="16, 40, 16, 0" ColumnDefinitions="Auto, *, Auto">
+			<Border Grid.Column="0" BackgroundColor="#88000000" Stroke="Transparent" WidthRequest="48" HeightRequest="48" Padding="0" AutomationProperties.Name="Close">
+				<Border.StrokeShape>
+					<RoundRectangle CornerRadius="12" />
+				</Border.StrokeShape>
+				<Border.Shadow>
+					<Shadow Brush="#000000" Radius="6" Opacity="0.35" />
+				</Border.Shadow>
+				<Label Text="✕" TextColor="White" FontSize="22" HorizontalOptions="Center" VerticalOptions="Center" />
 				<Border.GestureRecognizers>
 					<TapGestureRecognizer Tapped="OnCloseClicked" />
 				</Border.GestureRecognizers>
@@ -42,8 +48,14 @@
 
 			<Label x:Name="LblStatus" Grid.Column="1" Text="Sẵn sàng" TextColor="White" FontSize="14" HorizontalOptions="Center" VerticalOptions="Center" />
 
-			<Border Grid.Column="2" StrokeShape="RoundRectangle 25" BackgroundColor="#66000000" Stroke="Transparent" WidthRequest="44" HeightRequest="44">
-				<Label Text="⚡" TextColor="White" FontSize="20" HorizontalOptions="Center" VerticalOptions="Center" />
+			<Border Grid.Column="2" BackgroundColor="#88000000" Stroke="Transparent" WidthRequest="48" HeightRequest="48" Padding="0" AutomationProperties.Name="ToggleTorch">
+				<Border.StrokeShape>
+					<RoundRectangle CornerRadius="12" />
+				</Border.StrokeShape>
+				<Border.Shadow>
+					<Shadow Brush="#000000" Radius="6" Opacity="0.35" />
+				</Border.Shadow>
+				<Label Text="⚡" TextColor="White" FontSize="22" HorizontalOptions="Center" VerticalOptions="Center" />
 				<Border.GestureRecognizers>
 					<TapGestureRecognizer Tapped="OnToggleTorchClicked" />
 				</Border.GestureRecognizers>

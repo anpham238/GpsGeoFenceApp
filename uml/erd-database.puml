@@ -1,0 +1,178 @@
+@startuml
+title ERD — GpsGeoFenceApp Database (SQL Server)
+
+!define PK(x)  <b><color:#b8861b><&key></color> x</b>
+!define FK(x)  <color:#888888><&key></color> x
+!define COL(x) x
+
+' ── Core POI ──────────────────────────────
+entity "Pois" as Pois {
+  PK(Id) : int IDENTITY
+  COL(Name) : nvarchar(200)
+  COL(Description) : nvarchar(2000)
+  COL(Latitude) : float
+  COL(Longitude) : float
+  COL(RadiusMeters) : int = 120
+  COL(CooldownSeconds) : int = 30
+  COL(IsActive) : bit = 1
+  COL(PriorityLevel) : int = 0
+  COL(ConflictPolicy) : varchar(30) = 'PRIORITY_ONLY'
+  COL(AllowQueueWhenConflict) : bit = 0
+  COL(AudioSourceMode) : varchar(20) = 'AUDIO_FIRST'
+  COL(CreatedAt) : datetime2
+  COL(UpdatedAt) : datetime2
+}
+
+entity "PoiLanguage" as PoiLang {
+  PK(IdLang) : bigint IDENTITY
+  FK(IdPoi) : int → Pois
+  FK(LanguageTag) : nvarchar(10) → SupportedLanguages
+  COL(TextToSpeech) : nvarchar(4000)
+  COL(ProPodcastScript) : nvarchar(max)
+  COL(ProAudioUrl) : nvarchar(1000)
+}
+
+entity "PoiMedia" as PoiMedia {
+  PK(Idm) : bigint IDENTITY
+  FK(IdPoi) : int → Pois
+  COL(Image) : nvarchar(1000)
+  COL(MapLink) : nvarchar(1000)
+}
+
+entity "PoiImages" as PoiImages {
+  PK(Id) : bigint IDENTITY
+  FK(IdPoi) : int → Pois
+  COL(ImageUrl) : nvarchar(1000)
+  COL(SortOrder) : int
+  COL(CreatedAt) : datetime2
+}
+
+entity "PoiQrCodes" as QrCodes {
+  PK(Id) : bigint IDENTITY
+  FK(PoiId) : int → Pois
+  COL(PublicUrl) : nvarchar(1000)
+  COL(QrPayload) : nvarchar(2000)
+  COL(IsActive) : bit
+  COL(CreatedAt) : datetime2
+}
+
+' ── Tour ──────────────────────────────────
+entity "Tours" as Tours {
+  PK(Id) : int IDENTITY
+  COL(Name) : nvarchar(200)
+  COL(Description) : nvarchar(2000)
+  COL(IsActive) : bit
+  COL(CreatedAt) : datetime2
+}
+
+entity "TourPois" as TourPois {
+  FK(TourId) : int → Tours  <<PK>>
+  FK(PoiId)  : int → Pois   <<PK>>
+  COL(SortOrder) : int
+}
+
+' ── Language ──────────────────────────────
+entity "SupportedLanguages" as Langs {
+  PK(LanguageTag) : nvarchar(10)
+  COL(LanguageName) : nvarchar(50)
+  COL(IsPremium) : bit
+  COL(IsActive) : bit
+}
+
+' ── Users ─────────────────────────────────
+entity "Users" as Users {
+  PK(UserId) : uniqueidentifier
+  COL(Username) : nvarchar(100)
+  COL(Mail) : nvarchar(200)
+  COL(PhoneNumber) : varchar(20)
+  COL(PasswordHash) : nvarchar(256)
+  COL(AvatarUrl) : nvarchar(1000)
+  COL(PlanType) : varchar(20) = 'FREE'
+  COL(IsActive) : bit
+  COL(CreatedAt) : datetime2
+  COL(ProExpiryDate) : datetime2?
+}
+
+entity "HistoryPoi" as History {
+  PK(Id) : bigint IDENTITY
+  FK(IdPoi) : int → Pois
+  FK(IdUser) : uniqueidentifier → Users
+  COL(PoiName) : nvarchar(200)
+  COL(Quantity) : int
+  COL(LastVisitedAt) : datetime2
+  COL(TotalDurationSeconds) : int
+}
+
+' ── Guest Devices ─────────────────────────
+entity "GuestDevices" as Devices {
+  PK(DeviceId) : varchar(100)
+  COL(Platform) : nvarchar(20)
+  COL(AppVersion) : nvarchar(20)
+  COL(FirstSeenAt) : datetime2
+  COL(LastActiveAt) : datetime2
+}
+
+' ── Freemium ──────────────────────────────
+entity "DailyUsageTracking" as DailyUsage {
+  PK(EntityId)   : varchar(100)  <<PK>>
+  PK(ActionType) : varchar(20)   <<PK>>
+  COL(UsedCount) : int
+  COL(LastResetAt) : datetime2
+}
+
+entity "WebNarrationUsage" as WebUsage {
+  FK(PoiId)      : int → Pois   <<PK>>
+  PK(DeviceKey)  : varchar(200) <<PK>>
+  COL(PlayCount) : int = 0
+  COL(CreatedAt) : datetime2
+  COL(LastPlayedAt) : datetime2?
+}
+
+' ── App Download ──────────────────────────
+entity "AppDownloadSources" as DlSrc {
+  PK(SourceId) : int IDENTITY
+  COL(LocationName) : nvarchar(200)
+  COL(CampaignCode) : varchar(50)
+  COL(CreatedAt) : datetime2
+}
+
+entity "Analytics_AppDownloadScans" as DlScans {
+  PK(Id) : bigint IDENTITY
+  FK(SourceId) : int → AppDownloadSources
+  COL(Platform) : varchar(20)
+  COL(ScannedAt) : datetime2
+}
+
+' ── Analytics ─────────────────────────────
+entity "Analytics_Visit" as Visit {
+  PK(Id) : bigint IDENTITY
+  COL(SessionId) : uniqueidentifier
+  FK(PoiId) : int → Pois
+  COL(Action) : nvarchar(30)
+  COL(Timestamp) : datetime2
+}
+
+entity "Analytics_ListenDuration" as Listen {
+  PK(Id) : bigint IDENTITY
+  COL(SessionId) : uniqueidentifier
+  FK(PoiId) : int → Pois
+  COL(DurationSeconds) : int
+  COL(RecordedAt) : datetime2
+}
+
+' ── Relations ─────────────────────────────
+Pois       ||--o{ PoiLang   : "1:N (ngôn ngữ)"
+Pois       ||--o{ PoiMedia  : "1:N (media)"
+Pois       ||--o{ PoiImages : "1:N (ảnh)"
+Pois       ||--o{ QrCodes   : "1:N (QR)"
+Pois       ||--o{ TourPois  : "1:N"
+Pois       ||--o{ History   : "1:N"
+Pois       ||--o{ Visit     : "1:N (analytics)"
+Pois       ||--o{ Listen    : "1:N (analytics)"
+Pois       ||--o{ WebUsage  : "1:N (web quota)"
+Tours      ||--o{ TourPois  : "1:N"
+Users      ||--o{ History   : "1:N"
+Langs      ||--o{ PoiLang   : "1:N"
+DlSrc      ||--o{ DlScans   : "1:N"
+
+@enduml

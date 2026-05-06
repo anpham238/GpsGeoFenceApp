@@ -36,6 +36,11 @@ public sealed class PoiUpdateRequest
     public int? CooldownSeconds { get; set; }
     public int? PriorityLevel { get; set; }
     public string? ImageUrl { get; set; }
+    // Conflict policy: "PRIORITY_ONLY" | "FIFO"
+    public string? ConflictPolicy { get; set; }
+    public bool? AllowQueueWhenConflict { get; set; }
+    // Audio source mode: "AUDIO_FIRST" | "TTS_ONLY" | "AUDIO_ONLY"
+    public string? AudioSourceMode { get; set; }
 }
 
 public sealed record PoiAreaAssignRequest(int AreaId, int SortOrder = 0, bool IsPrimaryArea = false);

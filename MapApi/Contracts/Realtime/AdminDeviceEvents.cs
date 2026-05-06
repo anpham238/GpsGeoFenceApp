@@ -21,6 +21,7 @@ public sealed class DevicePresenceSnapshotEnvelope
     public int Version { get; init; } = 1;
     public DateTime EmittedAt { get; init; } = DateTime.UtcNow;
     public int OnlineCount { get; init; }
+    public int TotalConnectionCount { get; init; }
     public List<DevicePresenceDto> Devices { get; init; } = [];
 }
 
@@ -29,6 +30,7 @@ public sealed class DevicePresenceDto
     public string DeviceId { get; set; } = "";
     public bool IsOnline { get; set; }
     public int OnlineCount { get; set; }
+    public int TotalConnectionCount { get; set; }
     public DateTime LastActiveAt { get; set; }
     public DateTime FirstSeenAt { get; set; }
     public string? Platform { get; set; }

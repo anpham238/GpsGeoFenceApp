@@ -8,6 +8,7 @@ public interface IDevicePresenceService
     bool MarkDisconnected(string deviceId, string connectionId);
     bool IsOnline(string deviceId);
     int OnlineCount { get; }
+    int TotalConnectionCount { get; }
 }
 
 public sealed class DevicePresenceService : IDevicePresenceService
@@ -36,4 +37,7 @@ public sealed class DevicePresenceService : IDevicePresenceService
         _onlineConnections.TryGetValue(deviceId, out var conns) && !conns.IsEmpty;
 
     public int OnlineCount => _onlineConnections.Count(x => !x.Value.IsEmpty);
+
+    // Tổng số kết nối SignalR (n thiết bị × số tab/instance mỗi thiết bị)
+    public int TotalConnectionCount => _onlineConnections.Sum(x => x.Value.Count);
 }

@@ -9,7 +9,13 @@
       "Bash(python -m json.tool)",
       "WebSearch",
       "Bash(xargs grep *)",
-      "WebFetch(domain:commons.wikimedia.org)"
+      "WebFetch(domain:commons.wikimedia.org)",
+      "Bash(python -c ' *)",
+      "Bash(powershell -Command ' *)",
+      "Bash(r)",
+      "Bash(dotnet ef *)",
+      "Bash(cat appsettings.json)",
+      "Bash(cat appsettings.Development.json)"
     ]
   }
 }

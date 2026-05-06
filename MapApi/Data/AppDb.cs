@@ -51,6 +51,9 @@ public sealed class AppDb(DbContextOptions<AppDb> options) : DbContext(options)
             e.Property(x => x.CooldownSeconds).HasDefaultValue(30);
             e.Property(x => x.IsActive).HasDefaultValue(true);
             e.Property(x => x.PriorityLevel).HasDefaultValue(0);
+            e.Property(x => x.ConflictPolicy).HasMaxLength(30).HasDefaultValue("PRIORITY_ONLY");
+            e.Property(x => x.AllowQueueWhenConflict).HasDefaultValue(false);
+            e.Property(x => x.AudioSourceMode).HasMaxLength(20).HasDefaultValue("AUDIO_FIRST");
             e.Property(x => x.CreatedAt).HasDefaultValueSql("SYSUTCDATETIME()");
             e.Property(x => x.UpdatedAt).HasDefaultValueSql("SYSUTCDATETIME()");
             e.HasIndex(x => new { x.IsActive, x.Name })

@@ -1,5 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+	<!-- ═══════════════════════════════════════════════════════════════════════
+	     Debug dùng package ID riêng → VS deploy KHÔNG ghi đè Release APK.
+	     Release APK (từ web / AppBuildService) và Debug APK cùng tồn tại trên máy.
+	     ═══════════════════════════════════════════════════════════════════════ -->
+	<PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+		<ApplicationId>com.companyname.mauiapp1.debug</ApplicationId>
+		<ApplicationTitle>SmartTourism (Dev)</ApplicationTitle>
+	</PropertyGroup>
+
 	<PropertyGroup>
 		<!-- Chi build Android. Bo Windows de tranh loi MAUIX2000 MauiWinUIApplication -->
 		<TargetFrameworks>net10.0-android</TargetFrameworks>
@@ -106,4 +115,22 @@
 	<ItemGroup>
 	  <None Include="Application\Application.csproj" />
 	</ItemGroup>
+
+	<!-- Auto-copy Release APK to MapApi wwwroot after publish -->
+	<Target Name="CopyApkToWwwroot"
+	        AfterTargets="_CopyPackage"
+	        Condition="'$(Configuration)' == 'Release' AND $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+		<PropertyGroup>
+			<_SignedApk>$(OutputPath)$(AssemblyName)-Signed.apk</_SignedApk>
+			<_DestApk>$(MSBuildThisFileDirectory)..\MapApi\wwwroot\downloads\app.apk</_DestApk>
+		</PropertyGroup>
+		<Warning Condition="!Exists('$(_SignedApk)')" Text="[CopyApk] Signed APK not found at $(_SignedApk) — skipping copy." />
+		<Copy Condition="Exists('$(_SignedApk)')"
+		      SourceFiles="$(_SignedApk)"
+		      DestinationFiles="$(_DestApk)"
+		      OverwriteReadOnlyFiles="true" />
+		<Message Condition="Exists('$(_SignedApk)')"
+		         Text="[CopyApk] Copied $(_SignedApk) → $(_DestApk)"
+		         Importance="high" />
+	</Target>
 </Project>

@@ -1,30 +1,81 @@
 @startuml
+title Activity Diagram — Luồng tự động thuyết minh (Auto Narration Flow)
+
 start
 
-:Open MapPage;
-:Check location permission;
-if (Permission granted?) then (yes)
-  :Sync POI data from API;
-  :Register geofence regions;
-  :Start tracking location;
-else (no)
-  :Show permission required message;
+:Mở MapPage;
+:Yêu cầu quyền vị trí;
+if (Quyền được cấp?) then (Có)
+  :Sync POI từ API\n  (version check + GET /pois);
+  :Đăng ký Geofence regions (RegisterAsync);
+  :Bắt đầu tracking vị trí;
+else (Không)
+  :Hiển thị thông báo yêu cầu quyền;
   stop
 endif
 
-while (App running?) is (yes)
-  :Receive current location;
-  :Detect nearest POI / geofence transition;
-  if (Event accepted by debounce+cooldown?) then (yes)
-    :Load narration text/audio;
-    :Enqueue narration request;
-    :Play narration (audio or TTS);
-    :Log playback + analytics;
-  else (no)
-    :Ignore duplicated event;
-  endif
-endwhile (no)
+while (App đang chạy?) is (Có)
 
-:Stop tracking;
+  :Nhận cập nhật vị trí mới (lat, lng);
+  :Geofence phát hiện sự kiện POI\n  (ENTER / NEAR / EXIT);
+
+  if (Có candidate POI?) then (Có)
+
+    :GeofenceEventGate.ShouldAccept()\n  kiểm tra debounce + cooldown per-POI;
+
+    if (Gate chấp nhận?) then (Có)
+
+      if (Nhiều POI chồng lấn?) then (Có)
+        :PoiPriorityResolver.Resolve()\n  tính điểm: PriorityLevel×10\n  + TapBoost, DistanceNearBonus\n  − CooldownPenalty, TourBoost;
+        if (ConflictPolicy = PRIORITY_ONLY?) then (Có)
+          :ResolveConflictWinner()\n  → chỉ lấy POI điểm cao nhất;
+          :NarrationQueueManager\n  .EnqueueConflictResolved(winner)\n  → xóa losers khỏi queue;
+        else (Không — FIFO / AllowQueue)
+          :NarrationQueueManager\n  .EnqueueRange(allScored)\n  → xếp hàng theo thứ tự điểm;
+        endif
+      else (Chỉ 1 POI)
+        :NarrationQueueManager\n  .EnqueueRange([singlePoi]);
+      endif
+
+      :NarrationQueueManager phát POI đầu hàng đợi\n  (PlayNextInternal → PlayRequested);
+      :PoiNarrationHandler.PlayAsync(poi, evType)\n  kiểm tra debounce 250ms per-POI;
+
+      if (Trong debounce 250ms?) then (Có)
+        :Bỏ qua — không gửi request;
+      else (Không)
+
+        :FetchTextAsync()\n  1. Check PoiNarrationCache (local)\n  2. Nếu miss → GET /api/v1/pois/{id}/narration\n  3. Cache kết quả;
+
+        :NarrationManager.HandleAsync(Announcement)\n  kiểm tra IsDuplicate (2s window);
+
+        if (Trùng lặp trong 2s?) then (Có)
+          :Bỏ qua;
+        else (Không)
+          :Enqueue QueueItem (sort: Tap>Enter>Near)\n  WorkerLoop nhận tín hiệu;
+          :PlayOneAsync();
+
+          if (AudioUrl có sẵn?) then (Có)
+            :IAudioPlayer.PlayFileAsync(audioUrl);
+          else (Không)
+            :ComposeFallbackText() hoặc dùng overrideText\n  Phát TTS qua TextToSpeech.SpeakAsync\n  (chia từng câu theo . ! ? 。！？);
+          endif
+
+          :PlaybackApiClient.LogAsync(poiId, label, dur);
+          :AnalyticsClient.LogVisitAsync()\n  + LogListenDurationAsync();
+        endif
+      endif
+
+    else (Không — bị chặn)
+      :Bỏ qua — debounce / cooldown;
+    endif
+
+  else (Không có POI)
+    :Tiếp tục tracking;
+  endif
+
+endwhile (Không)
+
+:Dừng tracking;
 stop
+
 @enduml

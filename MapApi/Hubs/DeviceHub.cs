@@ -54,6 +54,7 @@ public class DeviceHub : Hub
                 IsOnline = true,
                 LastActiveAt = now,
                 OnlineCount = _presence.OnlineCount,
+                TotalConnectionCount = _presence.TotalConnectionCount,
                 FirstSeenAt = device.FirstSeenAt,
                 Platform = device.Platform,
                 AppVersion = device.AppVersion,
@@ -87,34 +88,25 @@ public class DeviceHub : Hub
                 await _db.SaveChangesAsync();
             }
 
-            await Clients.All.SendAsync(AdminDeviceEvents.PresenceChangedV1, new DevicePresenceChangedEnvelope
-            {
-                EmittedAt = now,
-                Data = new DevicePresenceDto
-                {
-                    DeviceId = deviceId,
-                    IsOnline = isStillOnline,
-                    LastActiveAt = now,
-                    OnlineCount = _presence.OnlineCount,
-                    FirstSeenAt = device?.FirstSeenAt ?? now,
-                    Platform = device?.Platform,
-                    AppVersion = device?.AppVersion,
-                    LastLatitude = device?.LastLatitude,
-                    LastLongitude = device?.LastLongitude
-                }
-            });
-            await Clients.All.SendAsync("DeviceStatusChanged", new DevicePresenceDto
+            var disconnectDto = new DevicePresenceDto
             {
                 DeviceId = deviceId,
                 IsOnline = isStillOnline,
                 LastActiveAt = now,
                 OnlineCount = _presence.OnlineCount,
+                TotalConnectionCount = _presence.TotalConnectionCount,
                 FirstSeenAt = device?.FirstSeenAt ?? now,
                 Platform = device?.Platform,
                 AppVersion = device?.AppVersion,
                 LastLatitude = device?.LastLatitude,
                 LastLongitude = device?.LastLongitude
+            };
+            await Clients.All.SendAsync(AdminDeviceEvents.PresenceChangedV1, new DevicePresenceChangedEnvelope
+            {
+                EmittedAt = now,
+                Data = disconnectDto
             });
+            await Clients.All.SendAsync("DeviceStatusChanged", disconnectDto);
         }
         await base.OnDisconnectedAsync(exception);
     }

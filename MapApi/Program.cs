@@ -52,6 +52,8 @@ builder.Services.AddScoped<NarrationTextService>();
 builder.Services.AddHostedService<TranslationBackgroundService>();
 builder.Services.AddScoped<IHistoryService, HistoryService>();
 builder.Services.AddSingleton<IDevicePresenceService, DevicePresenceService>();
+builder.Services.AddSingleton<PoiNarrationRateLimiter>();
+builder.Services.AddSingleton<AppBuildService>();
 builder.Services.AddSignalR();
 var app = builder.Build();
 app.UseCors();
@@ -146,6 +148,7 @@ app.MapPost("/api/v1/admin/translate-all", async (
     var log   = new List<string>();
     int done  = 0, skipped = 0;
 
+
     foreach (var poi in pois)
     {
         // Kiểm tra đã dịch đủ chưa (nếu không overwrite): vi-VN + 5 ngôn ngữ = 6
@@ -207,52 +210,68 @@ app.MapGet("/api/v1/pois/{id}", async (int id, AppDb db) =>
 
 // ============================================================
 // GET /api/v1/pois/{id}/narration?lang=...&eventType=enter|near|tap
+// Rate-limited per POI để tránh dồn request khi nhiều user cùng vào một vùng geofence
 // ============================================================
 app.MapGet("/api/v1/pois/{id}/narration", async (
     int id, string? lang, string? eventType,
-    HttpContext ctx, AppDb db, NarrationTextService narSvc, CancellationToken ct) =>
+    HttpContext ctx, AppDb db, NarrationTextService narSvc,
+    PoiNarrationRateLimiter rateLimiter, CancellationToken ct) =>
 {
-    var poi = await db.Pois.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id, ct);
-    if (poi is null) return Results.NotFound(new { error = "POI not found" });
+    var acquired = await rateLimiter.TryAcquireAsync(id, ct);
+    if (!acquired)
+        return Results.Json(
+            new { error = "Hệ thống đang xử lý quá nhiều yêu cầu cho POI này. Vui lòng thử lại sau.", retryAfterMs = 200 },
+            statusCode: 429);
 
-    var toLang = string.IsNullOrWhiteSpace(lang) ? "vi-VN" : lang.Trim();
-    var evt    = NarrationTextService.ParseEventType(eventType);
-
-    // Gate ngôn ngữ premium
-    var langInfo = await db.SupportedLanguages.AsNoTracking()
-        .FirstOrDefaultAsync(l => l.LanguageTag == toLang && l.IsActive, ct);
-    if (langInfo?.IsPremium == true)
+    try
     {
-        var idClaimNar = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        var isPro = false;
-        if (Guid.TryParse(idClaimNar, out var narUserId))
+        var poi = await db.Pois.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id, ct);
+        if (poi is null) return Results.NotFound(new { error = "POI not found" });
+
+        var toLang = string.IsNullOrWhiteSpace(lang) ? "vi-VN" : lang.Trim();
+        var evt    = NarrationTextService.ParseEventType(eventType);
+
+        // Gate ngôn ngữ premium
+        var langInfo = await db.SupportedLanguages.AsNoTracking()
+            .FirstOrDefaultAsync(l => l.LanguageTag == toLang && l.IsActive, ct);
+        if (langInfo?.IsPremium == true)
         {
-            var u = await db.Users.AsNoTracking().FirstOrDefaultAsync(x => x.UserId == narUserId && x.IsActive, ct);
-            isPro = u?.PlanType == "PRO";
+            var idClaimNar = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var isPro = false;
+            if (Guid.TryParse(idClaimNar, out var narUserId))
+            {
+                var u = await db.Users.AsNoTracking().FirstOrDefaultAsync(x => x.UserId == narUserId && x.IsActive, ct);
+                isPro = u?.PlanType == "PRO";
+            }
+            if (!isPro)
+                return Results.Json(
+                    new { error = "Ngôn ngữ này nằm trong gói Premium. Vui lòng nâng cấp.", requirePro = true },
+                    statusCode: StatusCodes.Status403Forbidden);
         }
-        if (!isPro)
-            return Results.Json(
-                new { error = "Ngôn ngữ này nằm trong gói Premium. Vui lòng nâng cấp.", requirePro = true },
-                statusCode: StatusCodes.Status403Forbidden);
+
+        var poiLang = await db.PoiLanguages.AsNoTracking()
+            .FirstOrDefaultAsync(n => n.IdPoi == id && n.LanguageTag == toLang, ct);
+
+        if (poiLang is null && toLang != "vi-VN")
+            poiLang = await db.PoiLanguages.AsNoTracking()
+                .FirstOrDefaultAsync(n => n.IdPoi == id && n.LanguageTag == "vi-VN", ct);
+
+        var narText = narSvc.Build(poi.Name, poiLang?.TextToSpeech, toLang, evt);
+
+        return Results.Ok(new
+        {
+            PoiId         = id,
+            EventType     = evt,
+            Language      = toLang,
+            NarrationText = narText,
+            AudioUrl      = poiLang?.ProAudioUrl,
+            Cached        = poiLang != null
+        });
     }
-
-    var poiLang = await db.PoiLanguages.AsNoTracking()
-        .FirstOrDefaultAsync(n => n.IdPoi == id && n.LanguageTag == toLang, ct);
-
-    if (poiLang is null && toLang != "vi-VN")
-        poiLang = await db.PoiLanguages.AsNoTracking()
-            .FirstOrDefaultAsync(n => n.IdPoi == id && n.LanguageTag == "vi-VN", ct);
-
-    var narText = narSvc.Build(poi.Name, poiLang?.TextToSpeech, toLang, evt);
-
-    return Results.Ok(new
+    finally
     {
-        PoiId         = id,
-        EventType     = evt,
-        Language      = toLang,
-        NarrationText = narText,
-        Cached        = poiLang != null
-    });
+        rateLimiter.Release(id);
+    }
 });
 // ============================================================
 // POST /api/v1/auth/register  (multipart/form-data)
@@ -484,7 +503,9 @@ app.MapGet("/api/v1/admin/pois", async (AppDb db) =>
         .Select(p => new
         {
             p.Id, p.Name, p.Description, p.Latitude, p.Longitude,
-            p.RadiusMeters, p.CooldownSeconds, p.IsActive, p.PriorityLevel, p.CreatedAt, p.UpdatedAt
+            p.RadiusMeters, p.CooldownSeconds, p.IsActive, p.PriorityLevel,
+            p.ConflictPolicy, p.AllowQueueWhenConflict, p.AudioSourceMode,
+            p.CreatedAt, p.UpdatedAt
         })
         .ToListAsync();
     return Results.Ok(pois);
@@ -505,6 +526,19 @@ app.MapPut("/api/v1/admin/pois/{id}", async (int id, PoiUpdateRequest req, AppDb
     if (req.RadiusMeters.HasValue)               poi.RadiusMeters = req.RadiusMeters.Value;
     if (req.CooldownSeconds.HasValue)            poi.CooldownSeconds = req.CooldownSeconds.Value;
     if (req.PriorityLevel.HasValue)              poi.PriorityLevel = req.PriorityLevel.Value;
+    if (!string.IsNullOrWhiteSpace(req.ConflictPolicy))
+    {
+        var valid = new[] { "PRIORITY_ONLY", "FIFO" };
+        if (valid.Contains(req.ConflictPolicy.ToUpperInvariant()))
+            poi.ConflictPolicy = req.ConflictPolicy.ToUpperInvariant();
+    }
+    if (req.AllowQueueWhenConflict.HasValue)     poi.AllowQueueWhenConflict = req.AllowQueueWhenConflict.Value;
+    if (!string.IsNullOrWhiteSpace(req.AudioSourceMode))
+    {
+        var validModes = new[] { "AUDIO_FIRST", "TTS_ONLY", "AUDIO_ONLY" };
+        if (validModes.Contains(req.AudioSourceMode.ToUpperInvariant()))
+            poi.AudioSourceMode = req.AudioSourceMode.ToUpperInvariant();
+    }
     poi.UpdatedAt = DateTime.UtcNow;
 
     await db.SaveChangesAsync();
@@ -536,6 +570,47 @@ app.MapDelete("/api/v1/admin/pois/{id}", async (int id, AppDb db) =>
     poi.UpdatedAt = DateTime.UtcNow;
     await db.SaveChangesAsync();
     return Results.Ok(new { ok = true });
+});
+
+// ============================================================
+// GET /api/v1/admin/pois/{id}/narration-status — Trạng thái narration web của POI
+// Admin xem POI có audio / TTS / QR / web narration không
+// ============================================================
+app.MapGet("/api/v1/admin/pois/{id:int}/narration-status", async (int id, AppDb db, CancellationToken ct) =>
+{
+    var poi = await db.Pois.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id, ct);
+    if (poi is null) return Results.NotFound(new { error = "POI not found" });
+
+    var langs = await db.PoiLanguages.AsNoTracking()
+        .Where(l => l.IdPoi == id)
+        .Select(l => new
+        {
+            l.LanguageTag,
+            HasAudio   = l.ProAudioUrl != null && l.ProAudioUrl != "",
+            HasTts     = l.TextToSpeech != null && l.TextToSpeech != "",
+            AudioUrl   = l.ProAudioUrl,
+            TtsPreview = l.TextToSpeech != null ? l.TextToSpeech.Substring(0, Math.Min(80, l.TextToSpeech.Length)) : null
+        })
+        .ToListAsync(ct);
+
+    var webUsage = await db.WebNarrationUsages.AsNoTracking()
+        .Where(w => w.PoiId == id)
+        .SumAsync(w => (int?)w.PlayCount, ct) ?? 0;
+
+    return Results.Ok(new
+    {
+        PoiId              = id,
+        PoiName            = poi.Name,
+        IsActive           = poi.IsActive,
+        PriorityLevel      = poi.PriorityLevel,
+        ConflictPolicy     = poi.ConflictPolicy,
+        AllowQueueWhenConflict = poi.AllowQueueWhenConflict,
+        AudioSourceMode    = poi.AudioSourceMode,
+        HasWebLanding      = true,
+        LandingUrl         = $"/p/{id}",
+        TotalWebPlays      = webUsage,
+        Languages          = langs
+    });
 });
 
 // ============================================================
@@ -744,29 +819,73 @@ app.MapGet("/api/v1/admin/devices/realtime-snapshot", async (
     AppDb db, IDevicePresenceService presence, CancellationToken ct) =>
 {
     var onlineCount = presence.OnlineCount;
-    var devices = await db.GuestDevices.AsNoTracking()
+    var totalConnCount = presence.TotalConnectionCount;
+    var rawDevices = await db.GuestDevices.AsNoTracking()
         .OrderByDescending(x => x.LastActiveAt)
-        .Select(x => new DevicePresenceDto
-        {
-            DeviceId = x.DeviceId,
-            IsOnline = presence.IsOnline(x.DeviceId),
-            OnlineCount = onlineCount,
-            LastActiveAt = x.LastActiveAt,
-            FirstSeenAt = x.FirstSeenAt,
-            Platform = x.Platform,
-            AppVersion = x.AppVersion,
-            LastLatitude = x.LastLatitude,
-            LastLongitude = x.LastLongitude
-        })
         .ToListAsync(ct);
+
+    var devices = rawDevices.Select(x => new DevicePresenceDto
+    {
+        DeviceId = x.DeviceId,
+        IsOnline = presence.IsOnline(x.DeviceId),
+        OnlineCount = onlineCount,
+        TotalConnectionCount = totalConnCount,
+        LastActiveAt = x.LastActiveAt,
+        FirstSeenAt = x.FirstSeenAt,
+        Platform = x.Platform,
+        AppVersion = x.AppVersion,
+        LastLatitude = x.LastLatitude,
+        LastLongitude = x.LastLongitude
+    }).ToList();
 
     return Results.Ok(new DevicePresenceSnapshotEnvelope
     {
         EmittedAt = DateTime.UtcNow,
         OnlineCount = onlineCount,
+        TotalConnectionCount = totalConnCount,
         Devices = devices
     });
 });
+
+// ============================================================
+// GET /api/v1/admin/devices/{deviceId}/nearby-pois
+// Trả về danh sách POI gần thiết bị (trong vòng 500m), kèm khoảng cách
+// ============================================================
+app.MapGet("/api/v1/admin/devices/{deviceId}/nearby-pois", async (
+    string deviceId, AppDb db, CancellationToken ct) =>
+{
+    var device = await db.GuestDevices.AsNoTracking()
+        .FirstOrDefaultAsync(d => d.DeviceId == deviceId, ct);
+
+    if (device is null) return Results.NotFound(new { message = "Device not found." });
+    if (device.LastLatitude is null || device.LastLongitude is null)
+        return Results.Ok(new { deviceId, nearbyPois = Array.Empty<object>() });
+
+    var pois = await db.Pois.AsNoTracking()
+        .Where(p => p.IsActive)
+        .ToListAsync(ct);
+
+    var nearby = pois
+        .Select(p =>
+        {
+            var dist = HaversineDistance(device.LastLatitude.Value, device.LastLongitude.Value,
+                                         p.Latitude, p.Longitude);
+            return new
+            {
+                poiId = p.Id,
+                name = p.Name,
+                distanceMeters = (int)dist,
+                radiusMeters = p.RadiusMeters,
+                withinRadius = dist <= p.RadiusMeters
+            };
+        })
+        .Where(x => x.distanceMeters <= 500)
+        .OrderBy(x => x.distanceMeters)
+        .Take(10)
+        .ToList();
+
+    return Results.Ok(new { deviceId, nearbyPois = nearby });
+}).RequireAuthorization();
 
 // ============================================================
 // POST /api/v1/usage/check — Kiểm tra & tăng lượt dùng Freemium
@@ -1694,6 +1813,44 @@ app.MapPost("/api/v1/payment/callback", async (
     return Results.Ok(new { ok = true, status = newStatus });
 });
 
+// ============================================================
+// GET /api/public/app/build/status — Trạng thái build APK (public)
+// ============================================================
+app.MapGet("/api/public/app/build/status", (AppBuildService build) =>
+    Results.Ok(new
+    {
+        status      = build.Status.ToString().ToLowerInvariant(),
+        apkReady    = build.ApkReady,
+        lastBuiltAt = build.LastBuiltAt,
+        lastError   = build.LastError,
+        logTail     = build.GetLogTail(40)
+    }));
+
+// ============================================================
+// POST /api/public/app/build — Kích hoạt build APK (public, one at a time)
+// ============================================================
+app.MapPost("/api/public/app/build", (AppBuildService build) =>
+{
+    if (build.Status == AppBuildStatus.Building)
+        return Results.Ok(new { started = false, message = "Build đang chạy, vui lòng chờ." });
+
+    var ok = build.TriggerBuild();
+    return ok
+        ? Results.Accepted("/api/public/app/build/status", new { started = true, message = "Build đã bắt đầu." })
+        : Results.Ok(new { started = false, message = "Không thể khởi động build." });
+});
+
 app.MapHub<MapApi.Hubs.DeviceHub>("/hubs/device");
 app.MapControllers();
 app.Run();
+
+static double HaversineDistance(double lat1, double lon1, double lat2, double lon2)
+{
+    const double R = 6_371_000;
+    var dLat = (lat2 - lat1) * Math.PI / 180;
+    var dLon = (lon2 - lon1) * Math.PI / 180;
+    var a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2)
+          + Math.Cos(lat1 * Math.PI / 180) * Math.Cos(lat2 * Math.PI / 180)
+          * Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
+    return R * 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+}

@@ -50,7 +50,14 @@ public static class MauiProgram
         builder.Services.AddSingleton<PoiDatabase>();
         builder.Services.AddSingleton<SyncMetadataRepository>();
         builder.Services.AddSingleton<PoiNarrationCache>();
-        var defaultApiBaseUrl = "https://95sccqzq-7286.asse.devtunnels.ms/";
+
+        // Ưu tiên:
+        //  1. Preferences (user hoặc Settings page đã lưu)
+        //  2. server_url.txt được AppBuildService bake vào APK lúc build
+        //  3. Fallback hardcode (Dev Tunnels / LAN)
+        const string FallbackApiUrl = "https://95sccqzq-7286.asse.devtunnels.ms/";
+        var embeddedUrl     = TryReadEmbeddedServerUrl();
+        var defaultApiBaseUrl = embeddedUrl ?? FallbackApiUrl;
         var rawApiBaseUrl = Preferences.Default.Get("ApiBaseUrl", defaultApiBaseUrl);
         var apiBaseUrl = NormalizeApiBaseUrl(rawApiBaseUrl, defaultApiBaseUrl);
 
@@ -130,6 +137,22 @@ public static class MauiProgram
         builder.Services.AddTransient<VisitedHistoryPage>();
         return builder.Build();
     }
+    /// <summary>
+    /// Đọc URL server được AppBuildService ghi vào Resources/Raw/server_url.txt trước khi build.
+    /// Trả về null nếu file rỗng hoặc không tồn tại (Debug từ VS sẽ dùng Preferences / fallback).
+    /// </summary>
+    private static string? TryReadEmbeddedServerUrl()
+    {
+        try
+        {
+            using var stream = FileSystem.OpenAppPackageFileAsync("server_url.txt").GetAwaiter().GetResult();
+            using var reader = new StreamReader(stream);
+            var url = reader.ReadToEnd().Trim();
+            return string.IsNullOrWhiteSpace(url) ? null : url;
+        }
+        catch { return null; }
+    }
+
     private static string NormalizeApiBaseUrl(string? rawApiBaseUrl, string fallbackApiBaseUrl)
     {
         var apiBaseUrl = string.IsNullOrWhiteSpace(rawApiBaseUrl)

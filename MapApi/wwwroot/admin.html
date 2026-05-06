@@ -824,6 +824,14 @@
                 display: flex;
             }
 
+        #nearbyPoisPopup.show {
+            display: flex !important;
+        }
+
+        #autoQrPopup.show {
+            display: flex !important;
+        }
+
         #locationPopupCard {
             width: 100%;
             max-width: 680px;
@@ -1074,12 +1082,17 @@
                         <div class="summary-tile">
                             <div class="label">🟢 Đang trực tuyến</div>
                             <div class="value" id="devStatOnline" style="color:#a5d6a7;">—</div>
-                            <div class="meta">Hoạt động trong 5 phút gần nhất</div>
+                            <div class="meta">Thiết bị duy nhất đang kết nối</div>
                         </div>
                         <div class="summary-tile">
                             <div class="label">⚪ Ngoại tuyến</div>
                             <div class="value" id="devStatOffline" style="color:#8b93a7;">—</div>
                             <div class="meta">Không có tín hiệu &gt; 5 phút</div>
+                        </div>
+                        <div class="summary-tile">
+                            <div class="label">🔗 Tổng kết nối SignalR</div>
+                            <div class="value" id="devStatConnections" style="color:#90caf9;">—</div>
+                            <div class="meta">n thiết bị × số phiên mỗi thiết bị</div>
                         </div>
                     </div>
                     <div class="card users-panel">
@@ -1097,6 +1110,7 @@
                                         <th>Hoạt động cuối</th>
                                         <th>Trạng thái</th>
                                         <th>Vị trí</th>
+                                        <th>POI gần</th>
                                     </tr>
                                 </thead>
                                 <tbody id="tblDevices"></tbody>
@@ -1286,6 +1300,36 @@
                 <button class="modal-close" onclick="closeLocationPopup()">Đóng</button>
             </div>
             <div id="locationMap"></div>
+        </div>
+    </div>
+
+    <!-- AUTO QR POPUP (hiện khi tạo POI mới) -->
+    <div id="autoQrPopup" style="position:fixed;inset:0;background:rgba(6,10,18,.82);display:none;align-items:center;justify-content:center;padding:20px;z-index:9999;"
+         onclick="if(event.target.id==='autoQrPopup')closeAutoQrPopup()">
+        <div style="width:100%;max-width:400px;background:#171b27;border:1px solid #293043;border-radius:14px;overflow:hidden;text-align:center;">
+            <div style="padding:14px 18px;background:#131722;border-bottom:1px solid #23293a;display:flex;justify-content:space-between;align-items:center;">
+                <h3 style="color:#a5d6a7;margin:0;font-size:0.95rem;">✅ POI tạo thành công & QR tự động</h3>
+                <button class="modal-close" onclick="closeAutoQrPopup()">Đóng</button>
+            </div>
+            <div style="padding:20px;">
+                <p style="color:#90caf9;margin-bottom:12px;">Địa điểm <strong id="autoQrPoiId"></strong> đã được tạo cùng mã QR thuyết minh.</p>
+                <img id="autoQrImg" src="" alt="QR Code" style="width:220px;height:220px;border-radius:8px;background:#fff;padding:8px;" />
+                <p style="margin-top:10px;font-size:0.8rem;color:#aaa;">Mã vé: <code id="autoQrCode" style="color:#ffb74d;"></code></p>
+                <p style="font-size:0.78rem;color:#666;margin-top:4px;">Ngôn ngữ: vi-VN · Tối đa 5 lượt quét</p>
+                <button class="btn btn-primary" style="margin-top:14px;" onclick="closeAutoQrPopup()">Xong</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NEARBY POIs POPUP -->
+    <div id="nearbyPoisPopup" style="position:fixed;inset:0;background:rgba(6,10,18,.75);display:none;align-items:center;justify-content:center;padding:20px;z-index:9998;"
+         onclick="if(event.target.id==='nearbyPoisPopup')closeNearbyPoisPopup()">
+        <div style="width:100%;max-width:640px;background:#171b27;border:1px solid #293043;border-radius:14px;overflow:hidden;">
+            <div style="padding:14px 18px;background:#131722;border-bottom:1px solid #23293a;display:flex;justify-content:space-between;align-items:center;">
+                <h3 id="nearbyPoisTitle" style="color:#90caf9;margin:0;font-size:0.95rem;">POI gần thiết bị</h3>
+                <button class="modal-close" onclick="closeNearbyPoisPopup()">Đóng</button>
+            </div>
+            <div id="nearbyPoisBody" style="padding:16px;max-height:400px;overflow-y:auto;"></div>
         </div>
     </div>
 
@@ -1553,7 +1597,15 @@
                     }
                 }
 
-                toast(id ? `Đã cập nhật POI #${targetId}` : 'Tạo POI thành công!');
+                if (!id) {
+                    toast('Tạo POI thành công! Đang tạo QR code...');
+                    await autoCreatePoiQr(targetId);
+                } else {
+                    toast(`Đã cập nhật POI #${targetId}`);
+                    clearForm();
+                    showSection('secPois');
+                    return;
+                }
             }
 
             clearForm();
@@ -1569,6 +1621,29 @@
             document.getElementById('audioModeUrl').checked = true;
             toggleAudioMode();
             document.getElementById('formTitle').textContent = '➕ Thêm POI mới';
+        }
+
+        async function autoCreatePoiQr(poiId) {
+            const res = await authFetch('/api/v1/admin/qr/narration', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ poiId, languageTag: 'vi-VN', maxUses: 0 })
+            });
+            if (!res?.ok) {
+                toast('POI đã tạo, nhưng không tự tạo được QR. Vào "Tạo mã QR" để tạo thủ công.', true);
+                return;
+            }
+            const qr = await res.json();
+            document.getElementById('autoQrPoiId').textContent = `POI #${poiId}`;
+            document.getElementById('autoQrImg').src = `data:image/png;base64,${qr.qrImageBase64}`;
+            document.getElementById('autoQrCode').textContent = qr.ticketCode;
+            document.getElementById('autoQrPopup').classList.add('show');
+        }
+
+        function closeAutoQrPopup() {
+            document.getElementById('autoQrPopup').classList.remove('show');
+            clearForm();
+            showSection('secPois');
         }
 
         function toggleAudioMode() {
@@ -1851,6 +1926,8 @@
 
         let _locationMap = null;
         let _locationMarker = null;
+        let _serverOnlineCount = null;
+        let _serverTotalConnCount = null;
 
         async function loadDevices() {
             const res = await authFetch('/api/v1/admin/devices/realtime-snapshot');
@@ -1862,6 +1939,8 @@
 
         function applyDeviceSnapshot(snapshot) {
             _deviceMap = new Map();
+            if (snapshot?.onlineCount != null) _serverOnlineCount = snapshot.onlineCount;
+            if (snapshot?.totalConnectionCount != null) _serverTotalConnCount = snapshot.totalConnectionCount;
             const devices = Array.isArray(snapshot?.devices) ? snapshot.devices : [];
             for (const item of devices) {
                 const dto = normalizeDeviceDto(item);
@@ -1870,9 +1949,12 @@
         }
 
         function applyPresenceChangedEnvelope(envelope) {
-            const dto = normalizeDeviceDto(envelope?.data || {});
+            const data = envelope?.data || {};
+            const dto = normalizeDeviceDto(data);
             if (!dto.deviceId) return;
             _deviceMap.set(dto.deviceId, dto);
+            if (data.onlineCount != null) _serverOnlineCount = data.onlineCount;
+            if (data.totalConnectionCount != null) _serverTotalConnCount = data.totalConnectionCount;
         }
 
         function normalizeDeviceDto(raw) {
@@ -1888,14 +1970,55 @@
             };
         }
 
+        async function showNearbyPois(deviceId) {
+            const res = await authFetch(`/api/v1/admin/devices/${encodeURIComponent(deviceId)}/nearby-pois`);
+            if (!res) return;
+            const data = await res.json();
+            const pois = data.nearbyPois || [];
+            const label = deviceId.slice(0, 8);
+            if (!pois.length) {
+                toast(`Thiết bị ${label}… không có POI nào trong vòng 500m`);
+                return;
+            }
+            const rows = pois.map(p => {
+                const badge = p.withinRadius
+                    ? '<span style="color:#a5d6a7;font-weight:600;">● Trong vùng</span>'
+                    : `<span style="color:#ffb74d;">${p.distanceMeters}m</span>`;
+                return `<tr>
+                  <td>${p.poiId}</td>
+                  <td>${escapeHtml(p.name)}</td>
+                  <td>${p.distanceMeters}m / bán kính ${p.radiusMeters}m</td>
+                  <td>${badge}</td>
+                </tr>`;
+            }).join('');
+            document.getElementById('nearbyPoisTitle').textContent = `POI gần thiết bị: ${label}…`;
+            document.getElementById('nearbyPoisBody').innerHTML = `
+              <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
+                <thead><tr style="color:#90caf9;">
+                  <th style="padding:6px;text-align:left;">ID</th>
+                  <th style="padding:6px;text-align:left;">Tên POI</th>
+                  <th style="padding:6px;text-align:left;">Khoảng cách</th>
+                  <th style="padding:6px;text-align:left;">Trạng thái</th>
+                </tr></thead>
+                <tbody>${rows}</tbody>
+              </table>`;
+            document.getElementById('nearbyPoisPopup').classList.add('show');
+        }
+
+        function closeNearbyPoisPopup() {
+            document.getElementById('nearbyPoisPopup').classList.remove('show');
+        }
+
         function renderDevicesTable() {
             const devices = Array.from(_deviceMap.values())
                 .sort((a, b) => new Date(b.lastActiveAt || 0) - new Date(a.lastActiveAt || 0));
             const online = devices.filter(d => d.isOnline).length;
             const offline = devices.length - online;
+            // Use server-authoritative counts from latest snapshot/event
             document.getElementById('devStatTotal').textContent = devices.length;
-            document.getElementById('devStatOnline').textContent = online;
-            document.getElementById('devStatOffline').textContent = offline;
+            document.getElementById('devStatOnline').textContent = _serverOnlineCount ?? online;
+            document.getElementById('devStatOffline').textContent = devices.length - (_serverOnlineCount ?? online);
+            document.getElementById('devStatConnections').textContent = _serverTotalConnCount ?? '—';
             const tbody = document.getElementById('tblDevices');
             const empty = document.getElementById('devicesEmptyState');
             if (!devices.length) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
@@ -1912,6 +2035,9 @@
               <td>${(d.lastLatitude && d.lastLongitude)
                     ? `<button class="btn btn-primary btn-sm" onclick="showLocation(${d.lastLatitude},${d.lastLongitude},'${escapeHtml(d.deviceId.slice(0, 8))}')">🗺 Xem vị trí</button>`
                     : '<span class="subtle-text">Chưa có</span>'}</td>
+              <td>${(d.lastLatitude && d.lastLongitude)
+                    ? `<button class="btn btn-sm" style="background:#1a3a2a;border:1px solid #2e7d32;color:#81c784;" onclick="showNearbyPois('${escapeHtml(d.deviceId)}')">📍 Xem POI</button>`
+                    : '<span class="subtle-text">—</span>'}</td>
             </tr>`).join('');
         }
         async function initDevicesRealtime() {

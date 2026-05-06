@@ -11,6 +11,9 @@ public sealed class PoiPriorityResolver
 
     public PoiPriorityResolver() : this(new PriorityResolverOptions()) { }
 
+    /// <summary>
+    /// Tính điểm ưu tiên cho tất cả candidates và trả về danh sách đã sắp xếp.
+    /// </summary>
     public List<NarrationQueueItem> Resolve(
         IEnumerable<PoiCandidate> candidates,
         DateTime nowUtc,
@@ -65,4 +68,28 @@ public sealed class PoiPriorityResolver
             .ThenBy(x => x.TriggeredAt)
             .ToList();
     }
+
+    /// <summary>
+    /// Xử lý xung đột khi nhiều POI chồng lấn: chỉ trả về POI thắng duy nhất.
+    /// Tie-break: điểm cao hơn → gần hơn → được tap → chưa phát gần đây hơn.
+    /// Dùng khi AllowQueueWhenConflict = false (mặc định).
+    /// </summary>
+    public NarrationQueueItem? ResolveConflictWinner(
+        IEnumerable<PoiCandidate> candidates,
+        DateTime nowUtc,
+        int? currentTourStep = null)
+    {
+        var scored = Resolve(candidates, nowUtc, currentTourStep);
+        if (scored.Count == 0) return null;
+
+        // Đã sắp xếp: phần tử đầu là winner
+        return scored[0];
+    }
+
+    /// <summary>
+    /// Kiểm tra xem danh sách candidates có chứa POI chồng lấn không
+    /// (>= 2 POI active trong cùng khoảng không gian).
+    /// </summary>
+    public static bool HasConflict(IReadOnlyList<PoiCandidate> candidates) =>
+        candidates.Count >= 2;
 }
