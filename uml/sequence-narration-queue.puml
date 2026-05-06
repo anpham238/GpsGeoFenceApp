@@ -1,73 +1,34 @@
-@startuml
-title NarrationManager — Hàng đợi nội bộ + Worker Loop
+@startuml sequence-narration-queue
+title NarrationManager — Queue nội bộ + Worker Loop
+skinparam defaultFontSize 11
 
-participant "Caller\n(PoiNarrationHandler)" as Caller
-participant "NarrationManager"              as Nar
-participant "QueueItem"                     as Item
-participant "WorkerLoop (Task)"             as Worker
-participant "IAudioPlayer"                  as Audio
-participant "TextToSpeech"                  as TTS
+participant "NarrationHandler" as H
+participant "NarrationManager" as Nar
+participant "WorkerLoop"       as W
+participant "Audio/TTS"        as Audio
 
-note over Nar
-  NarrationManager giữ 1 worker loop chạy nền.
-  Hàng đợi bên trong sort: Tap(1) > Enter(2) > Near(3).
-  Tất cả request đều serialize qua worker — không bị overlap.
-end note
-
-Caller -> Nar : HandleAsync(Announcement, overrideText?, ct)
-Nar -> Nar    : IsDuplicate?\n  key = poiId:eventType:lang\n  window = 2 giây
-alt Trùng lặp trong 2s
-  Nar --> Caller : return (skip silently)
-else Hợp lệ
-  Nar -> Item   : new QueueItem(ann, overrideText, ct)
-  Nar -> Nar    : lock → _queue.Add(item)\n  sort by (priority, createdAt)
-  Nar -> Nar    : _queueSignal.Release()
-  Nar --> Caller : await item.Completion (suspended)
-
-  ' ─── Worker loop ───
-  Worker -> Worker : _queueSignal.WaitAsync(serviceCt)
-  Worker -> Nar    : lock → dequeue next QueueItem
-  alt item.IsCancelled (external ct đã cancel)
-    Worker -> Item : TryCancel()
-  else OK
-    Worker -> Worker : CreateLinkedCts(serviceCt, item.ExternalToken)
-    Worker -> Worker : PlayOneAsync(ann, overrideText, linkedCts.Token)
-
-    alt ann.Poi.AudioUrl có sẵn\n(AudioSourceMode = AUDIO_FIRST | AUDIO_ONLY)
-      Worker -> Audio : PlayFileAsync(audioUrl, ct)
-      Audio --> Worker : Completed / OperationCanceled
-    else TTS\n(AudioSourceMode = TTS_ONLY hoặc không có audio)
-      Worker -> Worker : ComposeFallbackText(ann)\n  hoặc dùng overrideText
-      Worker -> TTS    : GetLocalesAsync() → match locale
-      loop mỗi sentence part (split bởi . ! ? 。 ！ ？)
-        Worker -> TTS  : SpeakAsync(part, SpeechOptions, ct)
-        TTS --> Worker : Done / Cancelled
-      end
+H -> Nar : HandleAsync(announcement)
+Nar -> Nar : IsDuplicate? key=poi:event:lang, window=2s
+alt Trùng lặp → skip
+else
+  Nar -> Nar : Winner-only check\n(so sánh PriorityLevel với queue)
+  alt POI khác có PriorityLevel cao hơn
+    Nar --> H : return (loser discarded)
+  else Thắng → xóa losers, enqueue
+    Nar -> Nar : Enqueue, sort: Tap(1) > Enter(2) > Near(3)
+    W -> W     : Dequeue next item
+    alt AudioUrl có sẵn
+      W -> Audio : PlayFileAsync(audioUrl)
+    else TTS fallback
+      W -> Audio : SpeakAsync(text) — chia câu . ! ?
     end
-
-    alt Phát thành công
-      Worker -> Item : TrySetResult()
-      Item --> Caller : Completion resolved
-    else OperationCanceledException
-      Worker -> Item : TryCancel()
-    else Exception khác
-      Worker -> Item : TrySetResult() (không crash worker)
-    end
+    Audio --> W : Completed / Cancelled
+    W -> H      : Completion resolved
   end
 end
 
-note over Worker
-  Worker loop tiếp tục với item tiếp theo
-  cho đến khi queue rỗng hoặc service shutdown.
-end note
-
-== Stop() được gọi (vd: user thoát POI / mở app mới) ==
-
-Caller -> Nar : Stop()
-Nar -> Nar    : lock → copy pending, clear _queue\n  _currentCts?.Cancel()
-loop mỗi pending item
-  Nar -> Item : TryCancel()
-end
-Nar -> Audio  : Stop()
-
+== Stop() ==
+H -> Nar  : Stop()
+Nar -> Nar : Clear queue, Cancel current
+Nar -> Audio : Stop()
 @enduml

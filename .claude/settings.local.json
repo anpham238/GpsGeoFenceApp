@@ -15,7 +15,11 @@
       "Bash(r)",
       "Bash(dotnet ef *)",
       "Bash(cat appsettings.json)",
-      "Bash(cat appsettings.Development.json)"
+      "Bash(cat appsettings.Development.json)",
+      "Bash(dir *)",
+      "Bash(pandoc --version)",
+      "PowerShell(pip show *)",
+      "PowerShell(powershell -ExecutionPolicy Bypass -File \"C:\\\\Users\\\\Admin\\\\source\\\\repos\\\\uml\\\\export_prd.ps1\" 2>&1)"
     ]
   }
 }

@@ -1,0 +1,27 @@
+@startuml seq-prd-priority
+title TN-01 — Ưu Tiên Thuyết Minh Khi Đứng Giữa 2 POI
+skinparam defaultFontSize 11
+skinparam backgroundColor #FFFFFF
+
+actor       "Du khách"     as U
+participant "EventGate"    as Gate
+participant "NarrationMgr" as Nar
+participant "Audio/TTS"    as Audio
+
+U -> Gate : Enter POI-A (level=2) & POI-B (level=1)
+Gate -> Gate : debounce + cooldown → pass
+
+Gate -> Nar : HandleAsync(POI-A, level=2)
+note right of Nar : Queue rỗng → POI-A thắng
+Nar -> Audio : Play POI-A 🔊
+
+Gate -> Nar : HandleAsync(POI-B, level=1)
+note right of Nar
+  POI-A (level=2) đang queue
+  POI-B (level=1) < 2 → **loại bỏ** ✗
+end note
+Nar --> Gate : discarded
+
+Audio --> U : 🔊 Chỉ nghe POI-A
+note over U : POI-B không phát — không hàng đợi
+@enduml

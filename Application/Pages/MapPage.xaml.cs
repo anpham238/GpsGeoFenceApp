@@ -833,17 +833,9 @@ public partial class MapPage : ContentPage
             
             if (!await EnsureUsageAllowedAsync("POI_LISTEN", closestPoi.Id))
                 return;
-            
-            var lang = LanguageService.Current;
-            
-            // Đẩy TẤT CẢ các điểm POI đã chạm vào hàng đợi thuyết minh
-            foreach (var item in tappedPois)
-            {
-                var p = item.Poi;
-                _ = _narrationHandler.PlayAsync(p, PoiEventType.Tap, "TAP");
-                // Delay nhỏ để CreatedAtUtc khác nhau → queue ưu tiên đúng thứ tự
-                await Task.Delay(10);
-            }
+
+            // Chỉ phát POI gần nhất — không xếp hàng các POI thua
+            await _narrationHandler.PlayAsync(closestPoi, PoiEventType.Tap, "TAP");
         }
     }
 }

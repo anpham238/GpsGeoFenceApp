@@ -1,122 +1,34 @@
 @startuml sequence-tc3-create-poi-auto-qr
-title TC3 — Quản lý địa điểm: Tạo POI → Tự động sinh mã QR thuyết minh
+title TC3 — Tạo POI → Tự động sinh QR thuyết minh
+skinparam defaultFontSize 11
 
-skinparam backgroundColor #0f1117
-skinparam sequence {
-    ArrowColor #90caf9
-    ActorBorderColor #90caf9
-    ActorBackgroundColor #1a1d27
-    ParticipantBorderColor #293043
-    ParticipantBackgroundColor #171b27
-    ParticipantFontColor #e0e0e0
-    LifeLineBorderColor #293043
-    LifeLineBackgroundColor #1a1d27
-    NoteBackgroundColor #1a2a3a
-    NoteBorderColor #293043
-    NoteFontColor #aaa
-}
-skinparam defaultFontColor #e0e0e0
+actor "Admin"     as A
+participant "Admin Web" as Web
+participant "POST /api/v1/pois" as PoiApi
+participant "POST /api/v1/admin/qr/narration" as QrApi
+participant "QRCoder"  as QR
+database    "DB"       as DB
 
-actor "Admin" as Admin
-participant "Admin Web\n(admin.html)" as Web
-participant "POST /api/v1/pois\n(PoiController)" as PoiApi
-participant "PoiManagementService\n+ TranslatorClient" as PoiSvc
-participant "POST /api/v1/admin/qr/narration\n(AdminQrController)" as QrApi
-participant "QRCoder\n(PNG generator)" as QRLib
-database "Pois + PoiLanguage\n+ PoiMedia (DB)" as DB
-database "PoiTickets\n(DB)" as TicketDB
+A   -> Web   : Điền form POI → Nhấn Lưu
+Web -> PoiApi : { name, lat, lng, narrationText, ... }
+PoiApi -> DB  : INSERT Pois → poiId=42
+PoiApi -> DB  : INSERT PoiLanguage × 5 ngôn ngữ\n(auto-translate Azure Translator)
+PoiApi --> Web : { poiId: 42 }
 
-== Bước 1: Admin nhập thông tin địa điểm ==
+Web -> QrApi : { poiId:42, languageTag:"vi-VN" }
+QrApi -> DB  : INSERT PoiTickets { ticketCode:"QR-A3F7", MaxUses:5 }
+QrApi -> QR  : GenerateQrPng(JSON payload)
+QR --> QrApi : byte[] png
+QrApi --> Web : { ticketCode, qrImageBase64 }
 
-Admin -> Web : Điền form:\n  Tên: "Nhà thờ Đức Bà"\n  Lat: 10.779811, Lng: 106.699099\n  Bán kính: 120m\n  Thuyết minh TTS: "Nhà thờ Đức Bà..."
-Admin -> Web : Nhấn 💾 Lưu → submitPoi()
+Web -> A : Popup: ✅ POI #42 tạo xong\n[QR IMAGE]  Mã: QR-A3F7
 
-activate Web
+== Du khách quét QR ==
+actor "Du khách" as U
+participant "Landing /p/QR-A3F7" as Page
 
-Web -> Web : Validate:\n  name ✓, lat/lng ✓\n  editPoiId = "" → CREATE mode
-
-== Bước 2: Tạo POI + dịch đa ngôn ngữ ==
-
-Web -> PoiApi : POST /api/v1/pois\n{ name, description, narrationText,\n  lat, lng, radius, priorityLevel }
-activate PoiApi
-
-PoiApi -> PoiSvc : AddOrUpdatePoiWithAutoTranslationAsync(\n  poi, viNarration, viDesc)
-activate PoiSvc
-
-PoiSvc -> DB : INSERT INTO Pois\n→ poi.Id = 42
-DB --> PoiSvc
-
-PoiSvc -> PoiSvc : TranslateAsync("vi-VN" → ["en-US","ja-JP","ko-KR","de-DE"])
-note right of PoiSvc
-  Gọi Azure Translator API
-  cho từng ngôn ngữ
-end note
-
-PoiSvc -> DB : INSERT INTO PoiLanguage\n  (IdPoi=42, vi-VN, TextToSpeech)\n  (IdPoi=42, en-US, ...)\n  (IdPoi=42, ja-JP, ...)\n  ...
-DB --> PoiSvc
-
-PoiSvc --> PoiApi
-deactivate PoiSvc
-
-PoiApi --> Web : 200 OK { message: "Lưu thành công!", poiId: 42 }
-deactivate PoiApi
-
-Web -> Web : targetId = 42\ntoast("Tạo POI thành công! Đang tạo QR...")
-
-== Bước 3: Tự động sinh QR thuyết minh ==
-
-Web -> QrApi : POST /api/v1/admin/qr/narration\n{ poiId: 42, languageTag: "vi-VN", maxUses: 0 }
-activate QrApi
-
-QrApi -> DB : SELECT * FROM Pois WHERE Id=42 AND IsActive=1
-DB --> QrApi : exists ✓
-
-QrApi -> DB : SELECT * FROM SupportedLanguages\nWHERE LanguageTag="vi-VN" AND IsActive=1
-DB --> QrApi : exists ✓
-
-QrApi -> QrApi : ticketCode = "QR-" + GUID[..8].ToUpper()\n→ "QR-A3F7C2B1"
-
-QrApi -> TicketDB : INSERT INTO PoiTickets {\n  TicketCode: "QR-A3F7C2B1",\n  IdPoi: 42,\n  LanguageTag: "vi-VN",\n  MaxUses: 5,    ← default khi maxUses <= 0\n  CurrentUses: 0,\n  CreatedAt: now\n}
-TicketDB --> QrApi : saved
-
-QrApi -> QrApi : payload = JSON {\n  type: "narration",\n  ticketCode: "QR-A3F7C2B1",\n  poiId: 42,\n  languageTag: "vi-VN"\n}
-
-QrApi -> QRLib : GenerateQrPng(JSON payload)
-activate QRLib
-QRLib --> QrApi : byte[] pngData
-deactivate QRLib
-
-QrApi --> Web : 200 OK {\n  ticketCode: "QR-A3F7C2B1",\n  qrImageBase64: "iVBORw0KGgo..."\n}
-deactivate QrApi
-
-== Bước 4: Hiện QR cho Admin ==
-
-Web -> Web : autoCreatePoiQr():\n  Set <img src="data:image/png;base64,..."\n  Set ticketCode = "QR-A3F7C2B1"\n  autoQrPopup.classList.add("show")
-
-Web -> Admin : Hiển thị popup:\n  ✅ POI #42 tạo thành công\n  [QR IMAGE 220×220px]\n  Mã vé: QR-A3F7C2B1\n  vi-VN · 5 lượt quét
-
-Admin -> Web : Nhấn "Xong"
-Web -> Web : closeAutoQrPopup()\nclearForm()\nshowSection('secPois')
-
-== Bước 5: Du khách quét QR (luồng ngược) ==
-
-actor "Du khách" as Visitor
-participant "Landing Page\n/p/{ticketCode}" as Landing
-participant "LandingController" as LC
-participant "Web Speech API\n(TTS)" as TTS
-
-Visitor -> Landing : Quét QR bằng camera
-Landing -> LC : GET /p/QR-A3F7C2B1
-LC -> TicketDB : SELECT * FROM PoiTickets\nWHERE TicketCode = "QR-A3F7C2B1"\n→ JOIN Pois, PoiLanguage
-TicketDB --> LC : { poi: "Nhà thờ Đức Bà",\n  narration: "Nhà thờ Đức Bà...",\n  languageTag: "vi-VN" }
-LC --> Landing : HTML trang thuyết minh
-
-Landing -> TTS : speakText(narration)
-TTS --> Visitor : 🔊 Nghe thuyết minh tiếng Việt
-
-note over Landing, TTS
-  Freemium gate: tối đa 3 lần nghe/ngày
-  Sau 3 lần → hiện nút "Tải App" để nghe không giới hạn
-end note
-
+U -> Page : Quét QR
+Page -> DB : SELECT PoiTickets JOIN Pois + PoiLanguage
+DB --> Page : { name, narrationText, lang }
+Page -> U  : Render trang + phát TTS thuyết minh 🔊
 @enduml

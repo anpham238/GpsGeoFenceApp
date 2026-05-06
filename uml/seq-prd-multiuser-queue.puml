@@ -1,0 +1,38 @@
+@startuml seq-prd-multiuser-queue
+title TN-02 — Hàng Đợi Khi Nhiều Du Khách Cùng Vào 1 POI
+skinparam defaultFontSize 11
+skinparam backgroundColor #FFFFFF
+
+actor "DEV-001" as D1
+actor "DEV-002" as D2
+actor "DEV-003" as D3
+
+participant "QueueManager"   as Q
+participant "RateLimiter\n(Semaphore max=10)" as S
+participant "Audio/TTS"      as Audio
+
+D1 -> Q : Enqueue(DEV-001, POI-A, Enter)
+D2 -> Q : Enqueue(DEV-002, POI-A, Enter)
+D3 -> Q : Enqueue(DEV-003, POI-A, Enter)
+
+Q -> Q : Dedup 2s\nsort Tap>Enter>Near
+
+Q -> S  : Acquire(DEV-001) → slot 1/10 → delay 0ms
+S -> Audio : [t=0ms]   Play DEV-001
+
+Q -> S  : Acquire(DEV-002) → slot 2/10 → delay 80ms
+S -> Audio : [t=80ms]  Play DEV-002
+
+Q -> S  : Acquire(DEV-003) → slot 3/10 → delay 160ms
+S -> Audio : [t=160ms] Play DEV-003
+
+Audio --> S : Done × 3 → Release slots
+
+note over D1, Audio
+  ✅ 3 thiết bị đều nghe — spread 80ms/slot — max 10 đồng thời
+end note
+
+== Dedup: cùng thiết bị trigger 2 lần trong 2s ==
+D1 -> Q : Enqueue(DEV-001, POI-A) lần 2
+Q -> Q  : IsDuplicate = true → **SKIPPED**
+@enduml

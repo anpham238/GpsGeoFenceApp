@@ -1,328 +1,126 @@
-@startuml
+@startuml class-core
+title Class Diagram — GpsGeoFenceApp Core
 skinparam classAttributeIconSize 0
-skinparam style strictuml
 hide empty members
+skinparam defaultFontSize 10
 
-' ═══════════════════════════════════════════
-'  MOBILE APP
-' ═══════════════════════════════════════════
 package "Mobile App" #f0f4ff {
 
   class MapPage {
-    +InitializeMapAsync()
     +OnGeofenceEvent(poi, type)
     +StartTracking()
-    +StopTracking()
   }
 
-  ' --- Location & Geofence ---
-  interface ILocationService {
-    +StartTracking(onLocation)
-    +StopTracking()
-  }
-  interface IGeofenceService {
-    +RegisterAsync(pois)
-    +UnregisterAllAsync()
-    +OnPoiEvent: Action<Poi,PoiEventType>
-  }
-  interface IBackgroundLocationRuntime {
-    +StartAsync()
-    +StopAsync()
-  }
+  interface ILocationService   { +StartTracking() / StopTracking() }
+  interface IGeofenceService   { +RegisterAsync(pois) }
   class AndroidLocationService
   class AndroidGeofenceService
-  class AndroidBackgroundLocationRuntime
-  ILocationService        <|.. AndroidLocationService
-  IGeofenceService        <|.. AndroidGeofenceService
-  IBackgroundLocationRuntime <|.. AndroidBackgroundLocationRuntime
+  ILocationService  <|.. AndroidLocationService
+  IGeofenceService  <|.. AndroidGeofenceService
 
-  ' --- Geofence gate ---
   class GeofenceEventGate <<static>> {
     +ShouldAccept(poiId, eventType,\n  debounceSec, cooldownSec) : bool
   }
 
-  ' --- Priority resolver ---
-  class PoiCandidate {
-    +PoiId : int
-    +PoiName : string
-    +PriorityLevel : int
-    +PriorityType : string
-    +DistanceMeters : double
-    +CooldownSeconds : int
-    +LastPlayedAt : DateTime?
-    +IsTapped : bool
-    +AllowInterrupt : bool
-    +TourSortOrder : int?
-  }
-
-  class PriorityResolverOptions {
-    +MidZoneThresholdMeters : double = 5
-    +TapBoost : double = 5
-    +DistanceNearBonus : double = 3
-    +CooldownPenalty : double = 10
-    +TourBoost : double = 2
-    +EnableTourBoost : bool = true
-  }
-
   class PoiPriorityResolver {
-    -_options : PriorityResolverOptions
-    +Resolve(candidates, nowUtc, tourStep?) : List<NarrationQueueItem>
-    +ResolveConflictWinner(candidates, nowUtc, tourStep?) : NarrationQueueItem?
-    +HasConflict(candidates) : bool
+    +Resolve(candidates, nowUtc) : List<QueueItem>
+    +ResolveConflictWinner(candidates) : QueueItem?
   }
-  PoiPriorityResolver --> PriorityResolverOptions
 
-  ' --- Narration queue ---
+  class PoiCandidate {
+    +PoiId, PriorityLevel, DistanceMeters
+    +IsTapped, AllowInterrupt, TourSortOrder?
+  }
+
   class NarrationQueueItem {
-    +PoiId : int
-    +PoiName : string
-    +PriorityLevel : int
-    +PriorityType : string
-    +DistanceMeters : double
-    +FinalPriorityScore : double
-    +TriggeredAt : DateTime
-    +ExpiresAt : DateTime?
-    +AllowInterrupt : bool
-    +IsTapBoosted : bool
+    +PoiId, FinalPriorityScore
+    +AllowInterrupt, IsTapBoosted
   }
 
-  enum NarrationState {
-    Idle
-    Queued
-    Playing
-    Paused
-    Interrupted
-    Completed
-    Skipped
-  }
+  enum NarrationState { Idle / Queued / Playing / Interrupted / Completed }
 
   class NarrationQueueManager {
     +CurrentState : NarrationState
-    +Queue : IReadOnlyList<NarrationQueueItem>
-    +CurrentPlaying : NarrationQueueItem?
-    +PlayRequested : Action<NarrationQueueItem>?
-    +QueueEmpty : Action?
-    +EnqueueRange(items)
-    +EnqueueConflictResolved(winner) : int?
+    +EnqueueConflictResolved(winner)
     +TryInterrupt(incoming) : bool
-    +CompleteCurrentAndPlayNext() : NarrationQueueItem?
-    +RemoveExpired(nowUtc)
-    +SkipCurrent()
-    +Clear()
+    +CompleteCurrentAndPlayNext()
   }
-  NarrationQueueManager --> NarrationState
-  NarrationQueueManager "1" o-- "0..*" NarrationQueueItem
 
-  ' --- Narration handler ---
   class PoiNarrationHandler {
-    -DebounceMs : int = 250
-    +Stop()
-    +LogRoute(lat, lng)
-    +PlayAsync(poi, evType, logLabel, ct)
-    -IsDebounced(poiId) : bool
-    -FetchTextAsync(poi, evType, lang, ct) : string?
+    -DebounceMs = 250
+    +PlayAsync(poi, evType, ct)
   }
 
-  ' --- NarrationManager (TTS / Audio worker) ---
-  interface INarrationManager {
-    +HandleAsync(announcement, overrideText, ct)
-    +Stop()
-  }
-  enum PoiEventType {
-    Enter
-    Near
-    Tap
-  }
-  class Announcement <<record>> {
-    +Poi : Poi
-    +Lang : string
-    +EventType : PoiEventType
-    +CreatedAtUtc : DateTime
-  }
   class NarrationManager {
-    +HandleAsync(ann, overrideText, ct)
+    +HandleAsync(announcement, ct)
     +Stop()
-    -IsDuplicate(ann) : bool
-    -WorkerLoopAsync(ct)
-    -PlayOneAsync(ann, overrideText, ct)
-    -ComposeFallbackText(ann) : string
-    -SplitToParts(text) : IEnumerable<string>
-    -FindLocaleAsync(lang, ct) : Locale?
+    -IsDuplicate(ann, 2s) : bool
+    -WorkerLoopAsync()
   }
-  INarrationManager <|.. NarrationManager
 
-  interface IAudioPlayer {
-    +PlayFileAsync(url, ct)
-    +Stop()
-  }
+  interface IAudioPlayer { +PlayFileAsync(url, ct) / Stop() }
   class AndroidAudioPlayer
   IAudioPlayer <|.. AndroidAudioPlayer
-  NarrationManager --> IAudioPlayer
 
-  ' --- Sync & DB ---
-  class PoiSyncService {
-    +SyncAsync()
-  }
-  class PoiDatabase {
-    +SavePoisAsync(pois)
-    +LoadPoisAsync() : List<Poi>
-  }
   class PoiNarrationCache {
-    +GetAsync(poiId, evByte, lang) : string?
-    +UpsertAsync(poiId, evByte, lang, text)
+    +GetAsync(poiId, ev, lang) : string?
+    +UpsertAsync(...)
   }
-  class AudioCache
 
-  ' --- API clients ---
-  class PoiApiClient        { +GetPoisAsync() }
-  class TourApiClient       { +GetToursAsync() }
-  class PoiNarrationApiClient { +GetNarrationAsync(poiId, lang, event, ct) }
-  class PlaybackApiClient   { +LogAsync(poiId, label, dur?) }
+  class PoiSyncService  { +SyncAsync() }
+  class PoiDatabase     { +SavePoisAsync() / LoadPoisAsync() }
   class AnalyticsClient {
     +LogVisitAsync(poiId, action)
-    +LogRouteAsync(lat, lng)
     +LogListenDurationAsync(poiId, dur)
   }
-  class TranslatorClient    { +TranslateAsync(text, lang) }
-  class AuthApiClient       { +LoginAsync() / RegisterAsync() }
-  class GuestDeviceApiClient
-  class LanguageService <<static>> {
-    +Current : string
-    +SetLanguage(tag)
-  }
-  class GuestDeviceService
-  class GuestHeartbeatService
 }
 
-' ═══════════════════════════════════════════
-'  BACKEND API
-' ═══════════════════════════════════════════
-package "Backend API (MapApi)" #fff4e0 {
+package "Backend API" #fff4e0 {
 
   class PoiNarrationRateLimiter {
-    -MaxConcurrentPerPoi : int = 10
-    -SpreadDelayMs : int = 80
-    +TryAcquireAsync(poiId, ct) : bool
+    -MaxConcurrentPerPoi = 10
+    -SpreadDelayMs = 80
+    +AcquireAsync(poiId, ct)
     +Release(poiId)
   }
 
-  class LandingController {
-    +GetLandingInfo(id, lang) : IActionResult
-    +PlayNarration(id, req) : IActionResult
-    +DownloadApp(id) : IActionResult
+  class DevicePresenceService {
+    +OnlineCount : int
+    +TotalConnectionCount : int
+    +MarkConnected(deviceId, connId)
+    +MarkDisconnected(deviceId, connId)
   }
-  class PoiLandingPageController {
-    +LandingPage(id) : ContentResult
-  }
-  class PoiController
-  class AdminQrController
-  class QrController
-  class DownloadController
-  class TranslatorController
-  class GuestDevicesController
-  class TicketsController
-  class PoiMediaController
 
-  class AuthService       { +LoginAsync() / RegisterAsync() }
-  class DevicePresenceService
-  class HistoryService
-  class NarrationTextService
-  class PoiManagementService
-  class TranslationBackgroundService
   class AppBuildService {
     +TriggerBuildAsync()
-    +GetBuildStatus() : BuildStatusDto
-  }
-
-  class AppDb {
-    +Pois
-    +PoiLanguages
-    +PoiMedia
-    +PoiImages
-    +PoiQrCodes
-    +Tours / TourPois
-    +Users
-    +HistoryPoi
-    +GuestDevices
-    +DailyUsageTracking
-    +SupportedLanguages
-    +AnalyticsVisits
-    +AnalyticsListenDurations
-    +WebNarrationUsages
+    +Status : AppBuildStatus
   }
 
   class Poi {
-    +Id : int
-    +Name / Description
-    +Latitude / Longitude
-    +RadiusMeters : int = 120
-    +CooldownSeconds : int = 30
-    +IsActive : bool
-    +PriorityLevel : int = 0
-    +ConflictPolicy : string = "PRIORITY_ONLY"
-    +AllowQueueWhenConflict : bool = false
-    +AudioSourceMode : string = "AUDIO_FIRST"
-    +CreatedAt / UpdatedAt
+    +Id, Name, Latitude, Longitude
+    +RadiusMeters = 120
+    +PriorityLevel = 0
+    +AudioSourceMode = "AUDIO_FIRST"
   }
-  class PoiLanguage
-  class PoiMedia
-  class Users
-  class HistoryPoi
-  class AnalyticsVisit
-  class WebNarrationUsage {
-    +PoiId : int
-    +DeviceKey : string
-    +PlayCount : int
-    +CreatedAt / LastPlayedAt
+
+  class AppDb {
+    +Pois, PoiLanguages, PoiMedia
+    +Users, GuestDevices
+    +PoiTickets, WebNarrationUsages
+    +Analytics_Visit, Analytics_ListenDuration
   }
 }
 
-' ═══════════════════════════════════════════
-'  RELATIONS
-' ═══════════════════════════════════════════
-MapPage --> ILocationService
-MapPage --> IGeofenceService
+' Key relations
 MapPage --> GeofenceEventGate
 MapPage --> PoiPriorityResolver
 MapPage --> NarrationQueueManager
 MapPage --> PoiNarrationHandler
-MapPage --> INarrationManager
-MapPage --> PoiSyncService
-MapPage --> PoiDatabase
-MapPage --> AnalyticsClient
-MapPage --> TourApiClient
-MapPage --> PoiApiClient
-
+PoiPriorityResolver ..> NarrationQueueItem
+NarrationQueueManager o-- NarrationQueueItem
+NarrationQueueManager --> NarrationState
 PoiNarrationHandler --> NarrationManager
-PoiNarrationHandler --> PoiNarrationApiClient
 PoiNarrationHandler --> PoiNarrationCache
-PoiNarrationHandler --> PlaybackApiClient
-PoiNarrationHandler --> AnalyticsClient
-
-PoiPriorityResolver --> PoiCandidate
-PoiPriorityResolver --> NarrationQueueItem
-NarrationQueueManager --> NarrationQueueManager : self (worker loop)
-
 NarrationManager --> IAudioPlayer
-NarrationManager --> AudioCache
-PoiSyncService --> PoiDatabase
-PoiSyncService --> PoiApiClient
-
-LandingController --> AppDb
-LandingController --> WebNarrationUsage
-PoiController --> AppDb
-AdminQrController --> AppDb
-AuthService --> AppDb
-DevicePresenceService --> AppDb
-HistoryService --> AppDb
-NarrationTextService --> AppDb
-PoiManagementService --> AppDb
 AppDb --> Poi
-AppDb --> PoiLanguage
-AppDb --> PoiMedia
-AppDb --> Users
-AppDb --> HistoryPoi
-AppDb --> AnalyticsVisit
-AppDb --> WebNarrationUsage
-
 @enduml

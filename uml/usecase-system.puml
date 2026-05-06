@@ -1,85 +1,41 @@
-@startuml
+@startuml usecase-system
 left to right direction
 skinparam packageStyle rectangle
 skinparam actorStyle awesome
+skinparam defaultFontSize 11
 
-actor Guest  as "Guest User"
-actor User   as "Registered User"
+actor Guest  as "Guest"
+actor User   as "User\n(Registered)"
 actor Pro    as "PRO User"
 actor Admin  as "Admin"
-actor Ext    as "App Store / Play Store"
-actor Web    as "Web Browser (QR)"
+actor Web    as "Web Browser"
 
-rectangle "GPS GeoFence Tourism System" {
-
-  ' --- Core tracking & map ---
-  usecase UC1  as "Track Location\n(Foreground / Background)"
-  usecase UC2  as "View Map + Nearby POI"
-  usecase UC3  as "Auto Narration\n(Enter / Near / Tap)"
-  usecase UC4  as "Scan QR — App\n(Narration + Download)"
-  usecase UC5  as "Search & Filter POI"
-  usecase UC6  as "Switch Language\n(Multi-language)"
-
-  ' --- Freemium ---
-  usecase UC7  as "Check Freemium Quota\n(QR_SCAN / POI_LISTEN)"
-  usecase UC8  as "Upgrade Plan\n(FREE → Area → PRO)"
-
-  ' --- PRO / User exclusive ---
-  usecase UC9  as "View Travel History"
-  usecase UC10 as "Get Directions (OSRM)"
-
-  ' --- Web landing ---
-  usecase UC11 as "Web Landing Page\n(QR → Browser → Play 3x)"
-  usecase UC12 as "Download App\n(Android APK / iOS)"
-
-  ' --- Admin ---
-  usecase UC13 as "Manage POI / Tour / Media"
-  usecase UC14 as "Manage Areas / Pricing / Plans"
-  usecase UC15 as "Manage Users & Devices"
-  usecase UC16 as "Generate QR Codes"
-  usecase UC17 as "View Analytics Dashboard"
-  usecase UC18 as "Manage POI Conflict Policy\n& AudioSourceMode"
+rectangle "GpsGeoFenceApp" {
+  (Track GPS\nFG/BG)         as UC1
+  (Map + POI\nNearby)        as UC2
+  (Auto Narration\nEnter/Near/Tap) as UC3
+  (Scan QR)                  as UC4
+  (Freemium\nQuota Check)    as UC7
+  (Upgrade Plan)             as UC8
+  (Travel History)           as UC9
+  (Directions)               as UC10
+  (Web Landing\nNarration×3) as UC11
+  (Download APK)             as UC12
+  (Manage POI/Tour/QR)       as UC13
+  (Manage Users\n& Devices)  as UC15
+  (Analytics\nDashboard)     as UC17
+  (Conflict Policy\n& AudioMode) as UC18
 }
 
-' Guest
-Guest --> UC1
-Guest --> UC2
-Guest --> UC3
-Guest --> UC4
-Guest --> UC5
-Guest --> UC6
-Guest --> UC7
-Guest --> UC8
-Guest --> UC11
+Guest --> UC1 ; Guest --> UC2 ; Guest --> UC3
+Guest --> UC4 ; Guest --> UC7 ; Guest --> UC8 ; Guest --> UC11
+User --|> Guest ; User --> UC9
+Pro  --|> User  ; Pro  --> UC10
+Web  --> UC11   ; Web  --> UC12
+Admin --> UC13 ; Admin --> UC15 ; Admin --> UC17 ; Admin --> UC18
 
-' Registered
-User --> UC9
-User --|> Guest
-
-' PRO
-Pro --> UC10
-Pro --|> User
-
-' Web Browser
-Web --> UC11
-Web --> UC12
-
-' Admin
-Admin --> UC13
-Admin --> UC14
-Admin --> UC15
-Admin --> UC16
-Admin --> UC17
-Admin --> UC18
-
-' External
-UC10 --> Ext
-UC12 --> Ext
-
-' Include relations
 UC3  ..> UC1  : <<include>>
 UC3  ..> UC7  : <<include>>
 UC4  ..> UC7  : <<include>>
 UC11 ..> UC12 : <<extend>>\nquota exceeded
-
 @enduml

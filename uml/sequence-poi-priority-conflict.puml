@@ -1,79 +1,28 @@
-@startuml
-title POI Priority Conflict — PoiPriorityResolver + NarrationQueueManager
+@startuml sequence-poi-priority-conflict
+title POI Priority Conflict — Winner-Only Narration
+skinparam defaultFontSize 11
 
-participant "MapPage"               as Map
-participant "PoiPriorityResolver"   as Resolver
-participant "NarrationQueueManager" as QMgr
-participant "PoiNarrationHandler"   as Handler
-participant "NarrationManager"      as Nar
+actor       "Du khách"     as U
+participant "MapPage"      as Map
+participant "NarrationMgr" as Nar
+participant "Audio/TTS"    as Audio
 
-note over Map
-  User đứng giữa vùng chồng lấn nhiều POI.
-  Geofence trả về candidates: [PoiA (level=2), PoiB (level=1)]
+note over U : Đứng giữa vùng chồng lấn\n[POI-A level=2, POI-B level=1]
+
+U -> Map : GeofenceEvent(POI-A, ENTER)
+U -> Map : GeofenceEvent(POI-B, ENTER)
+
+Map -> Nar : HandleAsync(POI-A, level=2)
+note right of Nar : Queue rỗng → thêm POI-A
+Nar -> Audio : Play POI-A 🔊
+
+Map -> Nar : HandleAsync(POI-B, level=1)
+note right of Nar
+  Kiểm tra queue:
+  POI-A (level=2) > POI-B (level=1)
+  → **Loại bỏ POI-B** ✗
 end note
+Nar --> Map : (return — discarded)
 
-Map -> Resolver : Resolve(candidates, nowUtc)
-
-group Tính điểm từng candidate
-  loop mỗi PoiCandidate c
-    Resolver -> Resolver : score = c.PriorityLevel × 10
-    opt c.IsTapped
-      Resolver -> Resolver : score += 5  (TapBoost)
-    end
-    opt c.DistanceMeters ≤ 10m
-      Resolver -> Resolver : score += 3  (DistanceNearBonus)
-    else c.DistanceMeters ≤ 30m
-      Resolver -> Resolver : score += 1
-    end
-    opt còn trong cooldown
-      Resolver -> Resolver : score −= 10 (CooldownPenalty)
-    end
-    opt tour đúng bước
-      Resolver -> Resolver : score += 2  (TourBoost)
-    end
-    Resolver -> Resolver : tạo NarrationQueueItem(score)
-  end
-  Resolver -> Resolver : sort: ↓ score → ↑ distance → ↑ triggeredAt
-end
-
-Resolver --> Map : List<NarrationQueueItem> (đã sort)
-
-alt Poi.ConflictPolicy = "PRIORITY_ONLY" (default)
-  Map -> Resolver : ResolveConflictWinner(candidates)
-  Resolver --> Map : winner = scored[0]
-  Map -> QMgr     : EnqueueConflictResolved(winner)
-  QMgr -> QMgr    : if currentPlaying?.PoiId == winner → skip
-  QMgr -> QMgr    : RemoveAll q where q.Score < winner.Score
-  QMgr -> QMgr    : Add winner if not in queue
-  QMgr -> QMgr    : ReorderQueue()
-  alt currentPlaying == null
-    QMgr -> QMgr   : PlayNextInternal() → fire PlayRequested
-    QMgr -> Handler : PlayAsync(winner)
-  else đang phát
-    QMgr -> QMgr   : CurrentState = Queued (chờ phát tiếp)
-    opt winner.AllowInterrupt && winner.Score > current.Score
-      Map -> QMgr   : TryInterrupt(winner)
-      QMgr -> QMgr  : Push current → back of queue\nSet _currentPlaying = winner
-      QMgr -> Handler : PlayAsync(winner) (interrupt)
-    end
-  end
-
-else Poi.AllowQueueWhenConflict = true
-  Map -> QMgr : EnqueueRange(allScoredItems)
-  QMgr -> QMgr : foreach item:\n  skip nếu PoiId đã phát hoặc trong queue\n  thêm vào _queue
-  QMgr -> QMgr : ReorderQueue()\n  sort: ↓ score → ↑ distance → ↑ triggeredAt
-  alt currentPlaying == null
-    QMgr -> QMgr  : PlayNextInternal()
-    QMgr -> Handler : PlayAsync(first item)
-  else đang phát
-    QMgr -> QMgr  : CurrentState = Queued\n  (phát tuần tự sau khi xong item hiện tại)
-  end
-end
-
-note over QMgr
-  CompleteCurrentAndPlayNext() được gọi
-  sau khi NarrationManager xong 1 POI.
-  Tự động phát POI kế tiếp trong queue.
-end note
-
+Audio --> U : 🔊 Nghe POI-A
 @enduml

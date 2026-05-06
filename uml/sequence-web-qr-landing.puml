@@ -1,112 +1,46 @@
-@startuml
-title Web QR Landing Page — Quét QR → Trình duyệt → Nghe / Tải App
+@startuml sequence-web-qr-landing
+title Web QR Landing — Quét QR → Nghe / Tải App
+skinparam defaultFontSize 11
 
-actor   "Du khách"                 as User
-participant "Browser (JS)"         as JS
-participant "PoiLandingPageController" as Page
-participant "LandingController"    as API
-participant "AppBuildService"      as Build
-database "AppDb (SQL Server)"      as DB
+actor       "Du khách"    as U
+participant "Browser JS"  as JS
+participant "API"         as API
+participant "BuildService" as Build
+database    "DB"          as DB
 
-== Bước 1: Quét QR → mở trang web ==
+U  -> JS  : Quét QR → mở /p/{poiId}
+JS -> API : GET /api/public/poi/{id}?lang=vi-VN
+API -> DB : SELECT Poi + PoiLanguage + PoiMedia
+DB --> API : payload
+API --> JS : { name, audioUrl, narrationText }
 
-User -> JS  : Quét mã QR\n  → mở URL: /p/{poiId}?lang=vi-VN
-JS -> Page  : GET /p/{id}
-Page --> JS : HTML page (CSS + JS bundle)
-
-== Bước 2: init() — tải thông tin POI ==
-
-JS -> API  : GET /api/public/poi/{id}?lang=vi-VN
-API -> DB  : SELECT Poi + PoiMedia + PoiLanguage WHERE IdPoi=id AND LanguageTag=lang
-DB --> API : { name, description, imageUrl, audioUrl, narrationText }
-API --> JS : POI payload
-JS -> JS   : Render name, desc, heroImg\n  Cache audioUrl & narrationText\n  Enable "Phát thuyết minh" button
-
-== Bước 3: Phát thuyết minh (user gesture) ==
-
-User -> JS : Click "Phát thuyết minh"
-
-note over JS
-  Mobile browser (Chrome/Safari) chặn audio.play()
-  sau async/await. Phải phát ngay trong user gesture
-  bằng cache, trước khi gọi API quota.
-end note
-
-alt audioUrl có sẵn từ cache
-  JS -> JS : playAudioUrl(_cachedAudioUrl)\n  audio.play() ngay — không await
-else narrationText có sẵn từ cache
-  JS -> JS : speakText(_cachedNarrationText)\n  SpeechSynthesis.speak() ngay
-else chưa có cache
-  JS -> JS : setPlayButtons('loading')
+U  -> JS  : Click "Phát thuyết minh"
+JS -> JS  : play() ngay từ cache (user gesture)
+JS -> API : POST /api/public/poi/{id}/play-narration\n{ deviceKey, lang }
+API -> DB : SELECT/UPDATE WebNarrationUsage
+alt PlayCount >= 3
+  API --> JS : { allowed:false }
+  JS --> U   : Toast "Hết lượt → Tải app"
+else
+  API --> JS : { allowed:true, playCount }
+  JS -> JS   : Cập nhật quota bar
 end
 
-JS -> API  : POST /api/public/poi/{id}/play-narration\n  body: { deviceKey, lang }
-note right of API
-  deviceKey = UUID từ localStorage._dk
-  (anonymous per-browser fingerprint)
-end note
-
-API -> DB  : SELECT WebNarrationUsage WHERE PoiId=id AND DeviceKey=deviceKey
-alt Usage chưa tồn tại
-  API -> DB : INSERT WebNarrationUsage { PlayCount=0 }
-end
-DB --> API : usage { PlayCount }
-
-alt PlayCount >= 3 (WebPlayQuota)
-  API --> JS : { allowed: false, message: "Hết 3 lượt..." }
-  JS -> JS   : stopNarration()
-  JS -> User : Toast "Hết lượt nghe. Tải app!"
-else Còn quota
-  API -> DB : UPDATE usage SET PlayCount += 1, LastPlayedAt = now
-  API -> DB : INSERT AnalyticsVisit { Action="WebNarrationPlay" }
-  DB --> API : OK
-  API --> JS : { allowed: true, playCount, audioUrl, narrationText }
-  JS -> JS   : Cập nhật quota bar\n  Hiển thị narrationText box
-  note over JS
-    Nếu đã phát từ cache → không phát lại.
-    Nếu cache rỗng → phát từ API response.
-  end note
-end
-
-== Bước 4: Tải ứng dụng ==
-
-User -> JS : Click "Tải ứng dụng Android"
-JS -> API  : GET /api/public/app/build/status
-API -> Build : GetBuildStatus()
-Build --> API : { apkReady, status: "idle"|"building"|"success"|"failed" }
-API --> JS   : build status
-
-alt APK đã sẵn sàng (apkReady=true, status != "building")
-  JS -> JS : window.location = '/api/v1/app/download?platform=android'
-else APK chưa có / cần build
-  JS -> JS : showBuildPanel("Đang khởi động build...")
+U  -> JS  : Click "Tải ứng dụng"
+JS -> API : GET /api/public/app/build/status
+alt APK sẵn sàng
+  JS --> U : Redirect download APK
+else Cần build
   JS -> API : POST /api/public/app/build
   API -> Build : TriggerBuildAsync()
-  Build --> API : { started }
-  API --> JS   : 202 Accepted
-
-  loop Poll mỗi 3 giây
-    JS -> API   : GET /api/public/app/build/status
+  loop Poll 3s đến khi done
+    JS -> API  : GET /build/status
     API -> Build : GetBuildStatus()
-    Build --> API : { status, logTail[] }
-    API --> JS   : { status, logTail }
-    JS -> JS    : Cập nhật log panel
-    alt status = "success"
-      JS -> JS  : Dừng poll\n  window.location = download APK
-    else status = "failed"
-      JS -> JS  : Dừng poll\n  Toast lỗi
-    end
+    Build --> JS : { status, logTail }
   end
+  JS --> U : Redirect download APK
 end
 
-== Bước 5: Mở app nếu đã cài ==
-
-User -> JS : Click "Mở ứng dụng"
-JS -> JS   : window.location = "smarttourism://poi/{id}?lang={lang}"
-alt App đã cài
-  JS -> JS : Deep link thành công → app mở
-else App chưa cài
-  JS -> JS : Sau 1.5s → Toast "Vui lòng cài ứng dụng"
-end
-
+U  -> JS  : Click "Mở ứng dụng"
+JS -> JS  : Deep link: smarttourism://poi/{id}
 @enduml

@@ -48,10 +48,19 @@ public sealed class NarrationManager : INarrationManager
         if (IsDuplicate(ann)) return;
 
         var item = new QueueItem(ann, overrideText, ct);
-        lock (_sync) 
+        lock (_sync)
         {
+            // Winner-only: khi nhiều POI chồng lấn, chỉ POI ưu tiên cao nhất được phát
+            if (_queue.Any(q => q.Announcement.Poi.Id != ann.Poi.Id
+                             && q.Announcement.Poi.PriorityLevel > ann.Poi.PriorityLevel))
+                return; // POI khác đã giữ ưu tiên cao hơn → loại bỏ POI này
+
+            // Xóa các POI có ưu tiên thấp hơn khỏi hàng đợi (POI hiện tại thắng)
+            _queue.RemoveAll(q => q.Announcement.Poi.Id != ann.Poi.Id
+                               && q.Announcement.Poi.PriorityLevel < ann.Poi.PriorityLevel);
+
             _queue.Add(item);
-            _queue.Sort((a, b) => 
+            _queue.Sort((a, b) =>
             {
                 int priorityA = GetPriority(a.Announcement.EventType);
                 int priorityB = GetPriority(b.Announcement.EventType);
