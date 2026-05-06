@@ -1,7 +1,15 @@
 {
   "permissions": {
     "allow": [
-      "Bash(ipconfig)"
+      "Bash(dotnet build *)",
+      "WebFetch(domain:9tw6zr02-7286.asse.devtunnels.ms)",
+      "Bash(curl -s http://localhost:5150/api/v1/pois/__TRACKED_VAR__/images)",
+      "Bash(curl *)",
+      "Bash(sqlcmd *)",
+      "Bash(python -m json.tool)",
+      "WebSearch",
+      "Bash(xargs grep *)",
+      "WebFetch(domain:commons.wikimedia.org)"
     ]
   }
 }

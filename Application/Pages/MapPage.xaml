@@ -190,6 +190,25 @@
                     </HorizontalStackLayout>
                 </Border>
             </Grid>
+
+            <!-- Usage Badge -->
+            <Border x:Name="UsageBadge"
+                    IsVisible="False"
+                    Margin="0,8,0,0"
+                    Padding="12,6"
+                    BackgroundColor="#FFF8E1"
+                    Stroke="#FFD54F"
+                    StrokeThickness="1"
+                    HorizontalOptions="Center">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="12" />
+                </Border.StrokeShape>
+                <Border.Shadow>
+                    <Shadow Brush="Black" Opacity="0.10" Offset="0,2" Radius="4" />
+                </Border.Shadow>
+                <Label x:Name="LblUsage" Text="🎧 Thuyết minh: 5/5 lượt (Free)" FontSize="13" TextColor="#F57F17" FontAttributes="Bold" />
+            </Border>
+
         </VerticalStackLayout>
         <!-- ═══════════════ END HEADER ═══════════════ -->
 
@@ -267,7 +286,13 @@
                                           HeightRequest="180">
                                 <CarouselView.ItemTemplate>
                                     <DataTemplate>
-                                        <Image Source="{Binding .}" Aspect="AspectFill" HeightRequest="180" />
+                                        <Grid HeightRequest="180">
+                                            <Image Source="{Binding .}"
+                                                   Aspect="AspectFill"
+                                                   HeightRequest="180"
+                                                   HorizontalOptions="Fill"
+                                                   VerticalOptions="Fill" />
+                                        </Grid>
                                     </DataTemplate>
                                 </CarouselView.ItemTemplate>
                             </CarouselView>

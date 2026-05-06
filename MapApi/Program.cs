@@ -508,6 +508,19 @@ app.MapPut("/api/v1/admin/pois/{id}", async (int id, PoiUpdateRequest req, AppDb
     poi.UpdatedAt = DateTime.UtcNow;
 
     await db.SaveChangesAsync();
+
+    // Cập nhật ImageUrl nếu có (URL ngoài hoặc nội bộ)
+    if (!string.IsNullOrWhiteSpace(req.ImageUrl))
+    {
+        var media = await db.PoiMedia.FirstOrDefaultAsync(m => m.IdPoi == id);
+        if (media is not null)
+            media.Image = req.ImageUrl;
+        else
+            db.PoiMedia.Add(new MapApi.Models.PoiMedia { IdPoi = id, Image = req.ImageUrl });
+
+        await db.SaveChangesAsync();
+    }
+
     return Results.Ok(new { ok = true, poiId = poi.Id });
 });
 
@@ -779,7 +792,7 @@ app.MapPost("/api/v1/usage/check", async (UsageCheckRequest req, HttpContext ctx
             return Results.Ok(new { allowed = true, bypassed = true, plan = "PRO" });
     }
 
-    var maxLimit = actionType == "QR_SCAN" ? 5 : 10;
+    var maxLimit = 5;
     var now = DateTime.UtcNow;
 
     var tracking = await db.DailyUsageTrackings
@@ -795,32 +808,68 @@ app.MapPost("/api/v1/usage/check", async (UsageCheckRequest req, HttpContext ctx
             LastResetAt = now
         });
         await db.SaveChangesAsync();
-        return Results.Ok(new { allowed = true, used = 1, limit = maxLimit, resetIn = "12h" });
+        return Results.Ok(new { allowed = true, used = 1, limit = maxLimit, resetIn = "24h" });
     }
 
-    // Reset sau 12 giờ
-    if ((now - tracking.LastResetAt).TotalHours >= 12)
+    // Reset sau 24 giờ
+    if ((now - tracking.LastResetAt).TotalHours >= 24)
     {
         tracking.UsedCount = 1;
         tracking.LastResetAt = now;
         await db.SaveChangesAsync();
-        return Results.Ok(new { allowed = true, used = 1, limit = maxLimit, resetIn = "12h" });
+        return Results.Ok(new { allowed = true, used = 1, limit = maxLimit, resetIn = "24h" });
     }
 
     if (tracking.UsedCount < maxLimit)
     {
         tracking.UsedCount++;
         await db.SaveChangesAsync();
-        var resetInHours = 12 - (now - tracking.LastResetAt).TotalHours;
+        var resetInHours = 24 - (now - tracking.LastResetAt).TotalHours;
         return Results.Ok(new { allowed = true, used = tracking.UsedCount, limit = maxLimit, resetInHours });
     }
 
     // Hết lượt → 402
-    var timeLeft = 12 - (now - tracking.LastResetAt).TotalHours;
+    var timeLeft = 24 - (now - tracking.LastResetAt).TotalHours;
     return Results.Json(
         new { allowed = false, used = tracking.UsedCount, limit = maxLimit, resetInHours = timeLeft,
               message = $"Hết lượt. Làm mới sau {timeLeft:F1} giờ nữa." },
         statusCode: 402);
+});
+
+// ============================================================
+// GET /api/v1/usage/status — Chỉ xem số lượt còn lại (không tiêu thụ)
+// ============================================================
+app.MapGet("/api/v1/usage/status", async (string entityId, string actionType, HttpContext ctx, AppDb db) =>
+{
+    if (string.IsNullOrWhiteSpace(entityId) || string.IsNullOrWhiteSpace(actionType))
+        return Results.BadRequest(new { error = "EntityId và ActionType là bắt buộc" });
+
+    actionType = actionType.ToUpperInvariant();
+    var idClaim = ctx.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    if (Guid.TryParse(idClaim, out var userId))
+    {
+        var u = await db.Users.AsNoTracking().FirstOrDefaultAsync(x => x.UserId == userId && x.IsActive);
+        if (u?.PlanType == "PRO")
+            return Results.Ok(new { allowed = true, bypassed = true, plan = "PRO", used = 0, limit = 9999, resetInHours = 0 });
+    }
+
+    var maxLimit = 5;
+    var now = DateTime.UtcNow;
+    var tracking = await db.DailyUsageTrackings.AsNoTracking()
+        .FirstOrDefaultAsync(x => x.EntityId == entityId && x.ActionType == actionType);
+
+    if (tracking is null)
+        return Results.Ok(new { allowed = true, used = 0, limit = maxLimit, resetInHours = 0 });
+
+    var elapsed = (now - tracking.LastResetAt).TotalHours;
+    if (elapsed >= 24)
+        return Results.Ok(new { allowed = true, used = 0, limit = maxLimit, resetInHours = 0 });
+
+    var timeLeft = 24 - elapsed;
+    if (tracking.UsedCount < maxLimit)
+        return Results.Ok(new { allowed = true, used = tracking.UsedCount, limit = maxLimit, resetInHours = timeLeft });
+
+    return Results.Ok(new { allowed = false, used = tracking.UsedCount, limit = maxLimit, resetInHours = timeLeft });
 });
 
 // ============================================================
@@ -968,6 +1017,78 @@ app.MapGet("/api/v1/tours/{id}/offline-pack", async (
 }).RequireAuthorization();
 
 // ============================================================
+// GET /api/v1/pois/{id}/images — Danh sách ảnh của POI
+// Gộp cả PoiImages (nhiều ảnh) và PoiMedia.Image (ảnh chính)
+// Hỗ trợ cả URL ngoài (http/https) và path nội bộ
+// ============================================================
+app.MapGet("/api/v1/pois/{id:int}/images", async (int id, AppDb db, CancellationToken ct) =>
+{
+    var images = new List<object>();
+
+    // Ảnh từ bảng PoiImages (nhiều ảnh, có SortOrder)
+    var poiImages = await db.PoiImages.AsNoTracking()
+        .Where(img => img.IdPoi == id)
+        .OrderBy(img => img.SortOrder)
+        .Select(img => new { img.Id, img.ImageUrl, img.SortOrder })
+        .ToListAsync(ct);
+
+    foreach (var img in poiImages)
+        images.Add(new { img.Id, img.ImageUrl, img.SortOrder, Source = "gallery" });
+
+    // Ảnh chính từ PoiMedia.Image (nếu chưa có trong gallery)
+    var media = await db.PoiMedia.AsNoTracking()
+        .FirstOrDefaultAsync(m => m.IdPoi == id, ct);
+
+    if (media is not null && !string.IsNullOrWhiteSpace(media.Image))
+    {
+        var alreadyIncluded = poiImages.Any(img =>
+            img.ImageUrl.Equals(media.Image, StringComparison.OrdinalIgnoreCase));
+
+        if (!alreadyIncluded)
+            images.Add(new { Id = 0, ImageUrl = media.Image, SortOrder = -1, Source = "media" });
+    }
+
+    return Results.Ok(images);
+});
+
+// ============================================================
+// POST /api/v1/admin/pois/{id}/images — Thêm ảnh (URL ngoài hoặc path nội bộ)
+// Body: { imageUrl, sortOrder? }
+// ============================================================
+app.MapPost("/api/v1/admin/pois/{id:int}/images", async (
+    int id, PoiImageAddRequest req, AppDb db, CancellationToken ct) =>
+{
+    if (string.IsNullOrWhiteSpace(req.ImageUrl))
+        return Results.BadRequest(new { error = "ImageUrl là bắt buộc" });
+
+    var poi = await db.Pois.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id, ct);
+    if (poi is null) return Results.NotFound(new { error = "POI không tồn tại" });
+
+    var img = new MapApi.Models.PoiImage
+    {
+        IdPoi     = id,
+        ImageUrl  = req.ImageUrl.Trim(),
+        SortOrder = req.SortOrder ?? 0,
+        CreatedAt = DateTime.UtcNow
+    };
+    db.PoiImages.Add(img);
+    await db.SaveChangesAsync(ct);
+
+    return Results.Ok(new { ok = true, id = img.Id, imageUrl = img.ImageUrl });
+});
+
+// DELETE /api/v1/admin/pois/{id}/images/{imageId} — Xóa ảnh
+app.MapDelete("/api/v1/admin/pois/{id:int}/images/{imageId:long}", async (
+    int id, long imageId, AppDb db, CancellationToken ct) =>
+{
+    var img = await db.PoiImages.FirstOrDefaultAsync(x => x.Id == imageId && x.IdPoi == id, ct);
+    if (img is null) return Results.NotFound();
+    db.PoiImages.Remove(img);
+    await db.SaveChangesAsync(ct);
+    return Results.Ok(new { ok = true });
+});
+
+// ============================================================
 // GET /api/v1/pois/search?q={keyword} — Tìm kiếm POI theo tên/mô tả
 // ============================================================
 app.MapGet("/api/v1/pois/search", async (string? q, AppDb db) =>
@@ -997,6 +1118,581 @@ app.MapGet("/api/v1/pois/search", async (string? q, AppDb db) =>
 })
 .WithName("SearchPois")
 .WithSummary("Tìm kiếm POI theo từ khóa (tên hoặc mô tả)");
+
+// ============================================================
+// POST /api/access/check-poi — Kiểm tra quyền truy cập POI
+// Body: { poiId, deviceId? }   Header: Bearer token (tùy chọn)
+// ============================================================
+app.MapPost("/api/access/check-poi", async (
+    AccessCheckPoiRequest req, HttpContext ctx, AppDb db, CancellationToken ct) =>
+{
+    if (req.PoiId <= 0)
+        return Results.BadRequest(new { error = "PoiId không hợp lệ" });
+
+    Guid? userId = null;
+    var idClaim = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    if (Guid.TryParse(idClaim, out var uid)) userId = uid;
+
+    var userParam   = new Microsoft.Data.SqlClient.SqlParameter("@UserId",   (object?)userId   ?? DBNull.Value);
+    var deviceParam = new Microsoft.Data.SqlClient.SqlParameter("@DeviceId", (object?)req.DeviceId ?? DBNull.Value);
+    var poiParam    = new Microsoft.Data.SqlClient.SqlParameter("@PoiId",    req.PoiId);
+
+    var rows = await db.Set<AccessCheckRow>()
+        .FromSqlRaw("EXEC dbo.CanAccessPoi @UserId, @DeviceId, @PoiId",
+            userParam, deviceParam, poiParam)
+        .AsNoTracking()
+        .ToListAsync(ct);
+
+    var row = rows.FirstOrDefault();
+    if (row is null)
+        return Results.Problem("Không thể kiểm tra quyền truy cập.");
+
+    if (!row.AccessGranted)
+        return Results.Json(new
+        {
+            accessGranted    = false,
+            accessReason     = row.AccessReason,
+            remainingFreeUses = 0,
+            showPaywall      = true,
+            poiId            = row.PoiId
+        }, statusCode: 402);
+
+    return Results.Ok(new
+    {
+        accessGranted     = true,
+        accessReason      = row.AccessReason,
+        remainingFreeUses = row.RemainingFreeUses,
+        matchedAreaId     = row.MatchedAreaId,
+        poiId             = row.PoiId
+    });
+});
+
+// ============================================================
+// POST /api/usage/consume-poi-listen — Ghi nhận sự kiện POI_LISTEN
+// Chỉ gọi khi đã có quyền truy cập (sau check-poi trả về 200)
+// Body: { poiId, areaId?, deviceId?, metadataJson? }
+// ============================================================
+app.MapPost("/api/usage/consume-poi-listen", async (
+    ConsumePoisListenRequest req, HttpContext ctx, AppDb db, CancellationToken ct) =>
+{
+    if (req.PoiId <= 0)
+        return Results.BadRequest(new { error = "PoiId không hợp lệ" });
+
+    Guid? userId = null;
+    var idClaim = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    if (Guid.TryParse(idClaim, out var uid)) userId = uid;
+
+    if (userId is null && string.IsNullOrWhiteSpace(req.DeviceId))
+        return Results.BadRequest(new { error = "Cần UserId (Bearer) hoặc DeviceId" });
+
+    var userParam     = new Microsoft.Data.SqlClient.SqlParameter("@UserId",       (object?)userId     ?? DBNull.Value);
+    var deviceParam   = new Microsoft.Data.SqlClient.SqlParameter("@DeviceId",     (object?)req.DeviceId ?? DBNull.Value);
+    var poiParam      = new Microsoft.Data.SqlClient.SqlParameter("@PoiId",        req.PoiId);
+    var areaParam     = new Microsoft.Data.SqlClient.SqlParameter("@AreaId",       (object?)req.AreaId ?? DBNull.Value);
+    var metaParam     = new Microsoft.Data.SqlClient.SqlParameter("@MetadataJson", (object?)req.MetadataJson ?? DBNull.Value);
+
+    await db.Database.ExecuteSqlRawAsync(
+        "EXEC dbo.ConsumePoisListenUsage @UserId, @DeviceId, @PoiId, @AreaId, @MetadataJson",
+        [userParam, deviceParam, poiParam, areaParam, metaParam], ct);
+
+    return Results.Ok(new { ok = true });
+});
+
+// ============================================================
+// GET /api/me/usage-status — Trạng thái quota hiện tại
+// Header: Bearer token (user) HOẶC query ?deviceId=... (guest)
+// ============================================================
+app.MapGet("/api/me/usage-status", async (
+    string? deviceId, HttpContext ctx, AppDb db, CancellationToken ct) =>
+{
+    Guid? userId = null;
+    var idClaim = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    if (Guid.TryParse(idClaim, out var uid)) userId = uid;
+
+    if (userId is null && string.IsNullOrWhiteSpace(deviceId))
+        return Results.BadRequest(new { error = "Cần Bearer token hoặc ?deviceId=..." });
+
+    var userParam   = new Microsoft.Data.SqlClient.SqlParameter("@UserId",   (object?)userId   ?? DBNull.Value);
+    var deviceParam = new Microsoft.Data.SqlClient.SqlParameter("@DeviceId", (object?)deviceId ?? DBNull.Value);
+
+    var rows = await db.Set<UsageStatusRow>()
+        .FromSqlRaw("EXEC dbo.GetUsageStatus @UserId, @DeviceId", userParam, deviceParam)
+        .AsNoTracking()
+        .ToListAsync(ct);
+
+    var row = rows.FirstOrDefault();
+    if (row is null) return Results.Problem("Không lấy được trạng thái quota.");
+
+    return Results.Ok(new
+    {
+        usedLast24h         = row.UsedLast24h,
+        remainingFreeUses   = row.RemainingFreeUses ?? 0,
+        hasActivePro        = row.HasActivePro,
+        isFreeLimitExceeded = row.IsFreeLimitExceeded,
+        resetInfo           = row.IsFreeLimitExceeded
+            ? "Lượt sẽ được làm mới sau 24 giờ kể từ lần dùng đầu tiên"
+            : null
+    });
+});
+
+// ============================================================
+// GET /api/me/entitlements — Danh sách gói đang active
+// Yêu cầu Bearer token
+// ============================================================
+app.MapGet("/api/me/entitlements", async (
+    HttpContext ctx, AppDb db, CancellationToken ct) =>
+{
+    var idClaim = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    if (!Guid.TryParse(idClaim, out var userId)) return Results.Unauthorized();
+
+    var userParam = new Microsoft.Data.SqlClient.SqlParameter("@UserId", userId);
+
+    var rows = await db.Set<UserEntitlementRow>()
+        .FromSqlRaw("EXEC dbo.GetUserEntitlements @UserId", userParam)
+        .AsNoTracking()
+        .ToListAsync(ct);
+
+    return Results.Ok(rows.Select(r => new
+    {
+        r.EntitlementId,
+        r.ProductCode,
+        r.ProductName,
+        r.ProductType,
+        r.EntitlementType,
+        r.StartsAt,
+        r.ExpiresAt,
+        r.Status,
+        r.IsValid,
+        areaCodes = r.AreaCodes?.Split(',', StringSplitOptions.RemoveEmptyEntries) ?? [],
+        areaIds   = r.AreaIds?.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                                .Select(int.Parse).ToArray() ?? []
+    }));
+}).RequireAuthorization();
+
+// ============================================================
+// GET /api/v1/products/areas — Danh sách khu vực kèm sản phẩm (MAUI)
+// ============================================================
+app.MapGet("/api/v1/products/areas", async (AppDb db, CancellationToken ct) =>
+{
+    var now = DateTime.UtcNow;
+    var data = await (
+        from p in db.Products
+        join pa in db.ProductAreas on p.ProductId equals pa.ProductId
+        join a in db.Areas on pa.AreaId equals a.AreaId
+        where p.IsActive && a.IsActive && p.ProductType == "AREA_PACK"
+        orderby a.Name
+        select new
+        {
+            a.AreaId,
+            AreaCode    = a.Code,
+            AreaName    = a.Name,
+            City        = a.City ?? a.Name,
+            p.ProductCode,
+            p.Price,
+            DurationHours = p.DurationHours ?? 24
+        }
+    ).AsNoTracking().ToListAsync(ct);
+
+    return Results.Ok(data);
+});
+
+// ============================================================
+// POST /api/v1/payments/purchase — Mua gói (demo: grant ngay)
+// Body: { productCode, paymentMethod }
+// ============================================================
+app.MapPost("/api/v1/payments/purchase", async (
+    PurchaseRequest req, HttpContext ctx, AppDb db, CancellationToken ct) =>
+{
+    var idClaim = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    if (!Guid.TryParse(idClaim, out var userId)) return Results.Unauthorized();
+
+    if (string.IsNullOrWhiteSpace(req.ProductCode))
+        return Results.BadRequest(new { error = "ProductCode là bắt buộc" });
+
+    var product = await db.Products
+        .AsNoTracking()
+        .FirstOrDefaultAsync(p => p.ProductCode == req.ProductCode && p.IsActive, ct);
+
+    if (product is null)
+        return Results.NotFound(new { error = "Sản phẩm không tồn tại hoặc đã ngừng bán" });
+
+    var now      = DateTime.UtcNow;
+    var expiresAt = product.DurationHours.HasValue
+        ? now.AddHours(product.DurationHours.Value)
+        : (DateTime?)null;
+
+    // Ghi transaction
+    db.PurchaseTransactions.Add(new PurchaseTransaction
+    {
+        UserId          = userId,
+        ProductId       = product.ProductId,
+        Amount          = product.Price,
+        Currency        = product.Currency,
+        PaymentProvider = req.PaymentMethod ?? "DEMO",
+        PaymentRef      = $"DEMO-{Guid.NewGuid():N}",
+        Status          = "PAID",
+        PaidAt          = now
+    });
+
+    // Cấp entitlement
+    db.UserEntitlements.Add(new UserEntitlement
+    {
+        UserId          = userId,
+        ProductId       = product.ProductId,
+        EntitlementType = product.ProductType,
+        StartsAt        = now,
+        ExpiresAt       = expiresAt,
+        Status          = "ACTIVE"
+    });
+
+    // Nếu PRO → cập nhật Users.PlanType
+    if (product.ProductType == "PRO")
+    {
+        var user = await db.Users.FindAsync([userId], ct);
+        if (user is not null)
+        {
+            user.PlanType      = "PRO";
+            user.ProExpiryDate = expiresAt;
+        }
+    }
+
+    await db.SaveChangesAsync(ct);
+
+    return Results.Ok(new
+    {
+        success     = true,
+        packageName = product.ProductName,
+        productType = product.ProductType,
+        expiresAt
+    });
+}).RequireAuthorization();
+
+// ============================================================
+// GET /api/v1/plans — Danh sách tất cả gói sản phẩm
+// ============================================================
+app.MapGet("/api/v1/plans", async (AppDb db, CancellationToken ct) =>
+{
+    var products = await db.Products.AsNoTracking()
+        .Where(p => p.IsActive)
+        .OrderBy(p => p.ProductType).ThenBy(p => p.Price)
+        .Select(p => new
+        {
+            p.ProductId, p.ProductCode, p.ProductName, p.ProductType,
+            p.Price, p.Currency, p.DurationHours, p.IsActive,
+            p.UnlockNarration, p.UnlockLanguages, p.UnlockQr, p.UnlockOffline
+        })
+        .ToListAsync(ct);
+    return Results.Ok(products);
+});
+
+// ============================================================
+// GET /api/v1/areas — Danh sách khu vực active (public)
+// ============================================================
+app.MapGet("/api/v1/areas", async (AppDb db, CancellationToken ct) =>
+{
+    var areas = await db.Areas.AsNoTracking()
+        .Where(a => a.IsActive)
+        .OrderBy(a => a.Name)
+        .Select(a => new
+        {
+            a.AreaId, a.Code, a.Name, a.City, a.Province, a.Description
+        })
+        .ToListAsync(ct);
+    return Results.Ok(areas);
+});
+
+// ============================================================
+// GET /api/v1/admin/revenue — Báo cáo doanh thu (Admin)
+// Query: ?from=yyyy-MM-dd&to=yyyy-MM-dd&areaCode=...
+// ============================================================
+app.MapGet("/api/v1/admin/revenue", async (
+    string? from, string? to, string? areaCode, AppDb db, CancellationToken ct) =>
+{
+    DateTime? fromDate = DateTime.TryParse(from, out var fd) ? fd.ToUniversalTime() : null;
+    DateTime? toDate   = DateTime.TryParse(to,   out var td) ? td.ToUniversalTime().AddDays(1) : null;
+
+    var q = db.PurchaseTransactions.AsNoTracking()
+        .Where(t => t.Status == "PAID");
+    if (fromDate.HasValue) q = q.Where(t => t.PaidAt >= fromDate);
+    if (toDate.HasValue)   q = q.Where(t => t.PaidAt <  toDate);
+
+    var txns = await (
+        from t in q
+        join p in db.Products on t.ProductId equals p.ProductId
+        select new { t.TransactionId, t.UserId, t.Amount, t.Currency, t.PaidAt,
+                     p.ProductCode, p.ProductName, p.ProductType }
+    ).ToListAsync(ct);
+
+    // Lọc theo khu vực nếu có
+    if (!string.IsNullOrWhiteSpace(areaCode))
+    {
+        var areaPackIds = await (
+            from p  in db.Products
+            join pa in db.ProductAreas on p.ProductId equals pa.ProductId
+            join a  in db.Areas        on pa.AreaId   equals a.AreaId
+            where a.Code == areaCode
+            select p.ProductCode
+        ).AsNoTracking().ToListAsync(ct);
+
+        txns = txns.Where(t => areaPackIds.Contains(t.ProductCode)).ToList();
+    }
+
+    var byProduct = txns
+        .GroupBy(t => new { t.ProductCode, t.ProductName, t.ProductType })
+        .Select(g => new
+        {
+            g.Key.ProductCode, g.Key.ProductName, g.Key.ProductType,
+            TotalRevenue = g.Sum(t => t.Amount),
+            TotalOrders  = g.Count()
+        })
+        .OrderByDescending(x => x.TotalRevenue)
+        .ToList();
+
+    var summary = new
+    {
+        TotalRevenue     = txns.Sum(t => t.Amount),
+        TotalOrders      = txns.Count,
+        TotalProRevenue  = txns.Where(t => t.ProductType == "PRO").Sum(t => t.Amount),
+        TotalAreaRevenue = txns.Where(t => t.ProductType == "AREA_PACK").Sum(t => t.Amount),
+        ByProduct        = byProduct
+    };
+
+    return Results.Ok(summary);
+});
+
+// ============================================================
+// GET /api/v1/admin/products — Quản lý sản phẩm (Admin)
+// ============================================================
+app.MapGet("/api/v1/admin/products", async (AppDb db, CancellationToken ct) =>
+{
+    var products = await (
+        from p in db.Products
+        let areaCount = db.ProductAreas.Count(pa => pa.ProductId == p.ProductId)
+        orderby p.ProductType, p.Price
+        select new
+        {
+            p.ProductId, p.ProductCode, p.ProductName, p.ProductType,
+            p.Price, p.Currency, p.DurationHours, p.IsActive, p.CreatedAt,
+            p.UnlockNarration, p.UnlockLanguages, p.UnlockQr, p.UnlockOffline,
+            AreaCount = areaCount
+        }
+    ).AsNoTracking().ToListAsync(ct);
+    return Results.Ok(products);
+});
+
+// PUT /api/v1/admin/products/{id} — Chỉnh sửa sản phẩm
+app.MapPut("/api/v1/admin/products/{id:int}", async (
+    int id, AdminProductUpdateRequest req, AppDb db, CancellationToken ct) =>
+{
+    var product = await db.Products.FirstOrDefaultAsync(p => p.ProductId == id, ct);
+    if (product is null) return Results.NotFound(new { error = "Sản phẩm không tồn tại" });
+
+    if (!string.IsNullOrWhiteSpace(req.ProductName)) product.ProductName = req.ProductName;
+    if (req.Price.HasValue)        product.Price        = req.Price.Value;
+    if (req.IsActive.HasValue)     product.IsActive     = req.IsActive.Value;
+    if (req.DurationHours.HasValue) product.DurationHours = req.DurationHours.Value;
+
+    await db.SaveChangesAsync(ct);
+    return Results.Ok(new { ok = true });
+});
+
+// ============================================================
+// GET /api/v1/admin/areas — Quản lý khu vực (Admin)
+// ============================================================
+app.MapGet("/api/v1/admin/areas", async (AppDb db, CancellationToken ct) =>
+{
+    var areas = await (
+        from a in db.Areas
+        let poiCount     = db.AreaPois.Count(ap => ap.AreaId == a.AreaId)
+        let productCount = db.ProductAreas.Count(pa => pa.AreaId == a.AreaId)
+        orderby a.Name
+        select new
+        {
+            a.AreaId, a.Code, a.Name, a.City, a.Province,
+            a.Description, a.IsActive, a.CreatedAt,
+            PoiCount = poiCount, ProductCount = productCount
+        }
+    ).AsNoTracking().ToListAsync(ct);
+    return Results.Ok(areas);
+});
+
+// ============================================================
+// GET /api/v1/admin/pois/{id}/areas — Lấy danh sách khu vực của POI
+// ============================================================
+app.MapGet("/api/v1/admin/pois/{id:int}/areas", async (int id, AppDb db, CancellationToken ct) =>
+{
+    var areas = await (
+        from ap in db.AreaPois
+        join a  in db.Areas on ap.AreaId equals a.AreaId
+        where ap.PoiId == id
+        orderby ap.IsPrimaryArea descending, ap.SortOrder
+        select new
+        {
+            a.AreaId, a.Code, a.Name, a.City,
+            ap.SortOrder, ap.IsPrimaryArea
+        }
+    ).AsNoTracking().ToListAsync(ct);
+    return Results.Ok(areas);
+});
+
+// ============================================================
+// POST /api/v1/admin/pois/{id}/areas — Gán khu vực cho POI
+// ============================================================
+app.MapPost("/api/v1/admin/pois/{id:int}/areas", async (
+    int id, PoiAreaAssignRequest req, AppDb db, CancellationToken ct) =>
+{
+    var poi = await db.Pois.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id, ct);
+    if (poi is null) return Results.NotFound(new { error = "POI không tồn tại" });
+
+    var area = await db.Areas.AsNoTracking().FirstOrDefaultAsync(a => a.AreaId == req.AreaId, ct);
+    if (area is null) return Results.NotFound(new { error = "Khu vực không tồn tại" });
+
+    var existing = await db.AreaPois
+        .FirstOrDefaultAsync(ap => ap.AreaId == req.AreaId && ap.PoiId == id, ct);
+
+    if (existing is not null)
+    {
+        existing.SortOrder     = req.SortOrder;
+        existing.IsPrimaryArea = req.IsPrimaryArea;
+    }
+    else
+    {
+        db.AreaPois.Add(new MapApi.Models.AreaPoi
+        {
+            AreaId        = req.AreaId,
+            PoiId         = id,
+            SortOrder     = req.SortOrder,
+            IsPrimaryArea = req.IsPrimaryArea
+        });
+    }
+
+    // Nếu đặt là Primary thì clear các area primary khác của POI này
+    if (req.IsPrimaryArea)
+    {
+        var others = await db.AreaPois
+            .Where(ap => ap.PoiId == id && ap.AreaId != req.AreaId && ap.IsPrimaryArea)
+            .ToListAsync(ct);
+        foreach (var o in others) o.IsPrimaryArea = false;
+    }
+
+    await db.SaveChangesAsync(ct);
+    return Results.Ok(new { ok = true, areaId = req.AreaId, poiId = id });
+});
+
+// DELETE /api/v1/admin/pois/{id}/areas/{areaId} — Xóa gán khu vực
+app.MapDelete("/api/v1/admin/pois/{id:int}/areas/{areaId:int}", async (
+    int id, int areaId, AppDb db, CancellationToken ct) =>
+{
+    var entry = await db.AreaPois
+        .FirstOrDefaultAsync(ap => ap.PoiId == id && ap.AreaId == areaId, ct);
+    if (entry is null) return Results.NotFound();
+    db.AreaPois.Remove(entry);
+    await db.SaveChangesAsync(ct);
+    return Results.Ok(new { ok = true });
+});
+
+// ============================================================
+// GET /api/v1/admin/users/{id} — Chi tiết user: plan + entitlements + lịch sử mua
+// ============================================================
+app.MapGet("/api/v1/admin/users/{id:guid}", async (Guid id, AppDb db, CancellationToken ct) =>
+{
+    var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.UserId == id, ct);
+    if (user is null) return Results.NotFound();
+
+    var entitlements = await (
+        from e in db.UserEntitlements
+        join p in db.Products on e.ProductId equals p.ProductId
+        where e.UserId == id
+        orderby e.StartsAt descending
+        select new
+        {
+            e.EntitlementId, p.ProductCode, p.ProductName, p.ProductType,
+            e.EntitlementType, e.StartsAt, e.ExpiresAt, e.Status,
+            IsValid = e.Status == "ACTIVE" && (e.ExpiresAt == null || e.ExpiresAt > DateTime.UtcNow)
+        }
+    ).AsNoTracking().ToListAsync(ct);
+
+    var transactions = await (
+        from t in db.PurchaseTransactions
+        join p in db.Products on t.ProductId equals p.ProductId
+        where t.UserId == id
+        orderby t.PaidAt descending
+        select new
+        {
+            t.TransactionId, p.ProductCode, p.ProductName, p.ProductType,
+            t.Amount, t.Currency, t.PaymentProvider, t.PaymentRef, t.Status, t.PaidAt
+        }
+    ).AsNoTracking().Take(20).ToListAsync(ct);
+
+    return Results.Ok(new
+    {
+        user.UserId, user.Username, user.Mail, user.PhoneNumber,
+        user.AvatarUrl, user.IsActive, user.CreatedAt,
+        user.PlanType, user.ProExpiryDate,
+        Entitlements = entitlements,
+        PurchaseHistory = transactions
+    });
+});
+
+// ============================================================
+// POST /api/v1/payment/callback — Webhook thanh toán từ payment gateway
+// Body: { paymentRef, status, provider, amount, currency }
+// ============================================================
+app.MapPost("/api/v1/payment/callback", async (
+    PaymentCallbackRequest req, AppDb db, CancellationToken ct) =>
+{
+    if (string.IsNullOrWhiteSpace(req.PaymentRef))
+        return Results.BadRequest(new { error = "PaymentRef là bắt buộc" });
+
+    var txn = await db.PurchaseTransactions
+        .FirstOrDefaultAsync(t => t.PaymentRef == req.PaymentRef, ct);
+
+    if (txn is null)
+        return Results.NotFound(new { error = "Không tìm thấy giao dịch" });
+
+    if (txn.Status == "PAID")
+        return Results.Ok(new { ok = true, message = "Giao dịch đã được xử lý trước đó" });
+
+    var newStatus = req.Status.ToUpperInvariant() == "SUCCESS" ? "PAID" : "FAILED";
+    txn.Status = newStatus;
+    if (newStatus == "PAID") txn.PaidAt = DateTime.UtcNow;
+
+    if (newStatus == "PAID")
+    {
+        var product = await db.Products.AsNoTracking()
+            .FirstOrDefaultAsync(p => p.ProductId == txn.ProductId, ct);
+
+        if (product is not null)
+        {
+            var now       = DateTime.UtcNow;
+            var expiresAt = product.DurationHours.HasValue
+                ? now.AddHours(product.DurationHours.Value) : (DateTime?)null;
+
+            db.UserEntitlements.Add(new MapApi.Models.UserEntitlement
+            {
+                UserId          = txn.UserId,
+                ProductId       = product.ProductId,
+                EntitlementType = product.ProductType,
+                StartsAt        = now,
+                ExpiresAt       = expiresAt,
+                Status          = "ACTIVE"
+            });
+
+            if (product.ProductType == "PRO")
+            {
+                var user = await db.Users.FindAsync([txn.UserId], ct);
+                if (user is not null)
+                {
+                    user.PlanType      = "PRO";
+                    user.ProExpiryDate = expiresAt;
+                }
+            }
+        }
+    }
+
+    await db.SaveChangesAsync(ct);
+    return Results.Ok(new { ok = true, status = newStatus });
+});
 
 app.MapHub<MapApi.Hubs.DeviceHub>("/hubs/device");
 app.MapControllers();

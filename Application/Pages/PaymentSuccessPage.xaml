@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="MauiApp1.Pages.PaymentSuccessPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Title="Thanh toán thành công"
+    BackgroundColor="#0D1B2A"
+    NavigationPage.HasNavigationBar="False">
+
+    <Grid RowDefinitions="*,Auto">
+
+        <!-- Nội dung chính -->
+        <VerticalStackLayout Grid.Row="0"
+                             VerticalOptions="Center"
+                             HorizontalOptions="Center"
+                             Padding="32,0"
+                             Spacing="0">
+
+            <!-- Icon thành công -->
+            <Border WidthRequest="100" HeightRequest="100"
+                    BackgroundColor="#1A3A1A"
+                    Stroke="#4CAF50"
+                    StrokeThickness="2"
+                    HorizontalOptions="Center"
+                    Margin="0,0,0,24">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="50" />
+                </Border.StrokeShape>
+                <Label Text="✅" FontSize="48"
+                       HorizontalOptions="Center"
+                       VerticalOptions="Center" />
+            </Border>
+
+            <Label Text="THANH TOÁN THÀNH CÔNG"
+                   FontSize="20" FontAttributes="Bold"
+                   TextColor="#4CAF50"
+                   HorizontalOptions="Center"
+                   HorizontalTextAlignment="Center"
+                   Margin="0,0,0,24" />
+
+            <!-- Card thông tin gói -->
+            <Border Padding="20"
+                    BackgroundColor="#1A2A3A"
+                    Stroke="#2A5A2A"
+                    StrokeThickness="1.5"
+                    Margin="0,0,0,32">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="16" />
+                </Border.StrokeShape>
+                <VerticalStackLayout Spacing="12">
+
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                        <Label Grid.Column="0" Text="Gói vừa kích hoạt:"
+                               FontSize="13" TextColor="#78909C"
+                               VerticalOptions="Center" />
+                        <Label Grid.Column="1" x:Name="LblPackage"
+                               FontSize="14" FontAttributes="Bold"
+                               TextColor="White"
+                               VerticalOptions="Center" />
+                    </Grid>
+
+                    <BoxView Color="#2A4A2A" HeightRequest="1" />
+
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" x:Name="ExpiryRow">
+                        <Label Grid.Column="0" Text="Hiệu lực đến:"
+                               FontSize="13" TextColor="#78909C"
+                               VerticalOptions="Center" />
+                        <Label Grid.Column="1" x:Name="LblExpiry"
+                               FontSize="13" FontAttributes="Bold"
+                               TextColor="#4CAF50"
+                               VerticalOptions="Center" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+
+        </VerticalStackLayout>
+
+        <!-- Nút hành động -->
+        <VerticalStackLayout Grid.Row="1" Padding="16,0,16,36" Spacing="10">
+
+            <Button Text="KHÁM PHÁ NGAY"
+                    BackgroundColor="#29B6F6"
+                    TextColor="#0D1B2A"
+                    FontAttributes="Bold"
+                    FontSize="16"
+                    CornerRadius="14"
+                    HeightRequest="52"
+                    Clicked="OnExploreClicked" />
+
+            <Button Text="Quay về trang chủ"
+                    BackgroundColor="Transparent"
+                    TextColor="#90CAF9"
+                    FontSize="14"
+                    CornerRadius="14"
+                    HeightRequest="44"
+                    BorderColor="#2A4A6A"
+                    BorderWidth="1"
+                    Clicked="OnHomeClicked" />
+        </VerticalStackLayout>
+
+    </Grid>
+</ContentPage>

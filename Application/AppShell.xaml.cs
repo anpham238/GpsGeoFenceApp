@@ -8,10 +8,13 @@ public partial class AppShell : Shell
     public AppShell()
     {
         InitializeComponent();
-        Routing.RegisterRoute("register",      typeof(RegisterPage));
-        Routing.RegisterRoute("qrscan",        typeof(Pages.QrScanPage));
-        Routing.RegisterRoute("proupgrade",    typeof(ProUpgradePage));
-        Routing.RegisterRoute("travelhistory", typeof(TravelHistoryPage));
+        Routing.RegisterRoute("register",       typeof(RegisterPage));
+        Routing.RegisterRoute("qrscan",         typeof(Pages.QrScanPage));
+        Routing.RegisterRoute("proupgrade",     typeof(ProUpgradePage));
+        Routing.RegisterRoute("areapackselect", typeof(AreaPackSelectPage));
+        Routing.RegisterRoute("payment",        typeof(PaymentPage));
+        Routing.RegisterRoute("paymentsuccess", typeof(PaymentSuccessPage));
+        Routing.RegisterRoute("travelhistory",  typeof(TravelHistoryPage));
         Routing.RegisterRoute("visitedhistory", typeof(VisitedHistoryPage));
 
         // ProfilePage được mở như modal (GoToAsync("profile")) từ avatar trên MapPage
@@ -30,13 +33,20 @@ public partial class AppShell : Shell
         if (string.IsNullOrEmpty(email))
             email = Preferences.Get("Email", "");
 
-        var planType = AuthApiClient.GetCurrentPlanType();
+        var planType    = AuthApiClient.GetCurrentPlanType();
+        var hasAreaPack = Preferences.Get("auth_has_area_pack", "false") == "true";
+        var areaCodes   = Preferences.Get("auth_area_codes", "");
 
         if (!string.IsNullOrEmpty(name))
         {
             MenuUserName.Text  = name;
             MenuUserEmail.Text = string.IsNullOrEmpty(email) ? "Thành viên Smart Tourism" : email;
-            MenuPlanBadge.Text = planType == "PRO" ? "🌟 Gói PRO" : "";
+            if (planType == "PRO")
+                MenuPlanBadge.Text = "🌟 Gói PRO";
+            else if (hasAreaPack && !string.IsNullOrEmpty(areaCodes))
+                MenuPlanBadge.Text = $"📍 Area Pack ({areaCodes.Split(',').Length} khu vực)";
+            else
+                MenuPlanBadge.Text = "";
         }
         else
         {

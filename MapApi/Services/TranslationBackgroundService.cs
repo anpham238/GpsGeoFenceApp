@@ -1,7 +1,6 @@
 using MapApi.Data;
 using MapApi.Services;
 using Microsoft.EntityFrameworkCore;
-
 namespace MapApi.Services;
 
 public sealed class TranslationBackgroundService : BackgroundService
@@ -32,7 +31,6 @@ public sealed class TranslationBackgroundService : BackgroundService
         while (!ct.IsCancellationRequested && await timer.WaitForNextTickAsync(ct))
             await RunTranslationAsync(ct);
     }
-
     private async Task RunTranslationAsync(CancellationToken ct)
     {
         try

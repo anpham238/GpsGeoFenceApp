@@ -123,6 +123,9 @@ public static class MauiProgram
         builder.Services.AddTransient<RegisterPage>();
         builder.Services.AddTransient<ProfilePage>();
         builder.Services.AddTransient<ProUpgradePage>();
+        builder.Services.AddTransient<AreaPackSelectPage>();
+        builder.Services.AddTransient<PaymentPage>();
+        builder.Services.AddTransient<PaymentSuccessPage>();
         builder.Services.AddTransient<TravelHistoryPage>();
         builder.Services.AddTransient<VisitedHistoryPage>();
         return builder.Build();

@@ -29,6 +29,9 @@ public partial class ProfilePage : ContentPage
 
     private async Task LoadProfileAsync()
     {
+        // Sync entitlements from server to update area pack state in Preferences
+        await _profileApi.RefreshUserStateAsync();
+
         var profile = await _profileApi.GetMeAsync();
 
         if (profile is null)
@@ -36,7 +39,7 @@ public partial class ProfilePage : ContentPage
             var name = AuthApiClient.GetCurrentUsername();
             LblGreeting.Text = string.IsNullOrWhiteSpace(name) ? "Xin chào!" : $"Xin chào, {name}!";
             LblEmail.Text = AuthApiClient.GetCurrentMail() ?? "";
-            UpdatePlanBadge(AuthApiClient.GetCurrentPlanType());
+            UpdatePlanBadge(Preferences.Get("auth_plan_type", "FREE"));
             return;
         }
 
@@ -52,8 +55,6 @@ public partial class ProfilePage : ContentPage
                 ? ImageSource.FromUri(new Uri(avatarUrl))
                 : ImageSource.FromUri(new Uri(baseUrl + "/" + avatarUrl.TrimStart('/')));
         }
-
-        Preferences.Set("auth_plan_type", profile.PlanType);
     }
 
     private async Task LoadHistoryCountAsync()
@@ -72,9 +73,21 @@ public partial class ProfilePage : ContentPage
         }
         else
         {
-            LblPlanBadge.Text = "Tài khoản Miễn phí";
-            BadgeBorder.BackgroundColor = Colors.White;
-            UpgradeBanner.IsVisible = true;
+            var hasAreaPack = Preferences.Get("auth_has_area_pack", "false") == "true";
+            var areaCodes   = Preferences.Get("auth_area_codes", "");
+            if (hasAreaPack && !string.IsNullOrEmpty(areaCodes))
+            {
+                var count = areaCodes.Split(',', StringSplitOptions.RemoveEmptyEntries).Length;
+                LblPlanBadge.Text = $"📍 Area Pack ({count} khu vực)";
+                BadgeBorder.BackgroundColor = Color.FromArgb("#E8F5E9");
+                UpgradeBanner.IsVisible = false;
+            }
+            else
+            {
+                LblPlanBadge.Text = "Tài khoản Miễn phí";
+                BadgeBorder.BackgroundColor = Colors.White;
+                UpgradeBanner.IsVisible = true;
+            }
         }
     }
 

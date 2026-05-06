@@ -1180,10 +1180,14 @@
                         <div style="margin-top:20px;">
                           <label style="font-weight:600;color:#b7c3d7;display:block;margin-bottom:8px;">🖼️ Gallery ảnh</label>
                           <div id="galleryGrid" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;min-height:60px;background:#1a1d27;border-radius:8px;padding:10px;"></div>
-                          <div style="display:flex;gap:8px;align-items:center;">
+                          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
                             <input id="galleryFileInput" type="file" accept="image/*" multiple style="display:none" onchange="uploadGalleryImages(currentEditPoiId)" />
                             <button class="btn" style="padding:8px 16px;background:#1a2a3a;border:1px solid #1976D2;color:#64b5f6;" onclick="document.getElementById('galleryFileInput').click()">+ Thêm ảnh</button>
                             <span style="font-size:0.78rem;color:#666;">Tối đa 5 ảnh, mỗi ảnh ≤ 5MB</span>
+                          </div>
+                          <div style="display:flex;gap:8px;align-items:center;margin-top:8px;">
+                            <input id="galleryUrlInput" type="url" placeholder="https://... nhập URL ảnh từ web" style="flex:1;background:#0f1117;border:1px solid #333;color:#e0e0e0;padding:7px 10px;border-radius:6px;font-size:0.85rem;" />
+                            <button class="btn" style="padding:8px 14px;background:#1a3a2a;border:1px solid #2e7d32;color:#81c784;white-space:nowrap;" onclick="addGalleryImageByUrl(currentEditPoiId)">+ Thêm từ URL</button>
                           </div>
                         </div>
 
@@ -1615,6 +1619,27 @@
             input.value = '';
             toast('Đã tải ảnh lên');
             await loadGallery(poiId);
+        }
+
+        async function addGalleryImageByUrl(poiId) {
+            const input = document.getElementById('galleryUrlInput');
+            const url = (input?.value || '').trim();
+            if (!url) { toast('Nhập URL ảnh trước', true); return; }
+            if (!url.startsWith('http://') && !url.startsWith('https://')) { toast('URL phải bắt đầu bằng http:// hoặc https://', true); return; }
+            if (!poiId) { toast('Chưa chọn POI', true); return; }
+            const res = await authFetch(`/api/v1/pois/${poiId}/images/url`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ imageUrl: url })
+            });
+            if (res && res.ok) {
+                input.value = '';
+                toast('Đã thêm ảnh từ URL');
+                await loadGallery(poiId);
+            } else {
+                const msg = res ? await res.text().catch(() => '') : '';
+                toast('Lỗi thêm ảnh: ' + (msg || res?.status), true);
+            }
         }
 
         async function deleteGalleryImage(poiId, imageId) {

@@ -8,6 +8,7 @@ namespace MapApi.Controllers;
 public sealed record SetMapLinkRequest(string MapLink);
 public sealed record SetAudioUrlRequest(string AudioUrl);
 public sealed record ReorderImagesRequest(List<long> OrderedIds);
+public sealed record AddImageUrlRequest(string ImageUrl);
 
 [ApiController]
 [Route("api/v1/pois/{id}")]
@@ -123,6 +124,27 @@ public class PoiMediaController : ControllerBase
         return Ok(images);
     }
 
+    [HttpPost("images/url")]
+    public async Task<IActionResult> AddImageByUrl(int id, [FromBody] AddImageUrlRequest req, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(req.ImageUrl)) return BadRequest("ImageUrl is required");
+        if (!Uri.TryCreate(req.ImageUrl.Trim(), UriKind.Absolute, out var uri) ||
+            (uri.Scheme != "http" && uri.Scheme != "https"))
+            return BadRequest("ImageUrl must be a valid http/https URL");
+
+        var poi = await _db.Pois.FindAsync(new object[] { id }, ct);
+        if (poi is null) return NotFound("Không tìm thấy địa điểm này.");
+
+        var nextOrder = await _db.PoiImages
+            .Where(x => x.IdPoi == id)
+            .MaxAsync(x => (int?)x.SortOrder, ct) ?? -1;
+
+        var entity = new PoiImage { IdPoi = id, ImageUrl = req.ImageUrl.Trim(), SortOrder = nextOrder + 1 };
+        _db.PoiImages.Add(entity);
+        await _db.SaveChangesAsync(ct);
+        return Ok(new { entity.Id, entity.ImageUrl, entity.SortOrder });
+    }
+
     [HttpPost("images")]
     public async Task<IActionResult> AddImage(int id, IFormFile file, CancellationToken ct)
     {
@@ -156,9 +178,12 @@ public class PoiMediaController : ControllerBase
         var img = await _db.PoiImages.FirstOrDefaultAsync(x => x.Id == imageId && x.IdPoi == id, ct);
         if (img is null) return NotFound();
 
-        var filePath = Path.Combine(_env.WebRootPath, img.ImageUrl.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
-        if (System.IO.File.Exists(filePath))
-            System.IO.File.Delete(filePath);
+        if (!img.ImageUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+        {
+            var filePath = Path.Combine(_env.WebRootPath, img.ImageUrl.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+            if (System.IO.File.Exists(filePath))
+                System.IO.File.Delete(filePath);
+        }
 
         _db.PoiImages.Remove(img);
         await _db.SaveChangesAsync(ct);
