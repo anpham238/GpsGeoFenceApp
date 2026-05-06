@@ -10,8 +10,7 @@ using Microsoft.IdentityModel.Tokens;
 var builder = WebApplication.CreateBuilder(args);
 // 1) Connection string
 var cs = builder.Configuration.GetConnectionString("Default")
-         ?? "Server=.\\SQLEXPRESS;Database=GpsApi;Trusted_Connection=True;"
-          + "Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=True";
+?? "Server=(localdb)\\MSSQLLocalDB;Database=GpsApi;Trusted_Connection=True;Encrypt=True;TrustServerCertificate=True;" + "Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=True";
 // 2) JWT config (lấy từ appsettings.json)
 var jwtSecret = builder.Configuration["Jwt:Secret"]
     ?? "CHANGE_THIS_SECRET_KEY_MIN_32_CHARS_PLEASE";

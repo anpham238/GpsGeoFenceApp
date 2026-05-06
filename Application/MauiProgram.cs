@@ -50,7 +50,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<PoiDatabase>();
         builder.Services.AddSingleton<SyncMetadataRepository>();
         builder.Services.AddSingleton<PoiNarrationCache>();
-        var defaultApiBaseUrl = "https://bhtgfcpw-7286.asse.devtunnels.ms/";
+        var defaultApiBaseUrl = "https://95sccqzq-7286.asse.devtunnels.ms/";
         var rawApiBaseUrl = Preferences.Default.Get("ApiBaseUrl", defaultApiBaseUrl);
         var apiBaseUrl = NormalizeApiBaseUrl(rawApiBaseUrl, defaultApiBaseUrl);
 
