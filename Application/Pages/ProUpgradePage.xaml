@@ -3,85 +3,99 @@
     x:Class="MauiApp1.Pages.ProUpgradePage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    Title="Nâng cấp PRO"
+    Title="Nâng cấp gói"
     BackgroundColor="#0D1B2A">
 
     <Shell.TitleView>
-        <Label Text="🌟 Gói PRO"
-               FontSize="18" FontAttributes="Bold"
+        <Label Text="Nâng cấp gói dịch vụ"
+               FontSize="17" FontAttributes="Bold"
                TextColor="White"
                VerticalOptions="Center"
                HorizontalOptions="Center" />
     </Shell.TitleView>
 
     <Grid>
-    <Button Text="✕"
-            Margin="16,40,0,0"
-            WidthRequest="34"
-            HeightRequest="34"
-            CornerRadius="17"
-            BackgroundColor="#1A2E1A"
-            TextColor="White"
-            HorizontalOptions="Start"
-            VerticalOptions="Start"
-            Clicked="OnCloseProfileClicked" />
+        <Button Text="✕"
+                Margin="12,44,0,0"
+                WidthRequest="34" HeightRequest="34"
+                CornerRadius="17"
+                BackgroundColor="#1A2A3A"
+                TextColor="White"
+                HorizontalOptions="Start"
+                VerticalOptions="Start"
+                Clicked="OnCloseClicked" />
 
-    <ScrollView>
-        <VerticalStackLayout Spacing="0" Padding="16,20,16,32">
+        <ScrollView>
+            <VerticalStackLayout Spacing="0" Padding="16,20,16,32">
 
-            <!-- ── Tiêu đề ── -->
-            <Label Text="Mở khóa trải nghiệm du lịch đỉnh cao"
-                   FontSize="22" FontAttributes="Bold"
-                   TextColor="White"
-                   HorizontalOptions="Center"
-                   HorizontalTextAlignment="Center"
-                   Margin="0,0,0,6" />
+                <!-- Tiêu đề -->
+                <Label Text="NÂNG CẤP GÓI DỊCH VỤ"
+                       FontSize="20" FontAttributes="Bold"
+                       TextColor="White"
+                       HorizontalOptions="Center"
+                       HorizontalTextAlignment="Center"
+                       Margin="0,0,0,4" />
+                <Label Text="Khám phá nhiều hơn với Free / Area / Pro"
+                       FontSize="13" TextColor="#90CAF9"
+                       HorizontalOptions="Center"
+                       HorizontalTextAlignment="Center"
+                       Margin="0,0,0,20" />
 
-            <Label Text="So sánh Gói Cơ bản và Gói PRO"
-                   FontSize="14"
-                   TextColor="#90CAF9"
-                   HorizontalOptions="Center"
-                   Margin="0,0,0,24" />
+                <!-- Banner paywall (ẩn mặc định, hiện khi hết quota) -->
+                <Border x:Name="PaywallBanner"
+                        IsVisible="False"
+                        Padding="14,12"
+                        BackgroundColor="#3A1A0A"
+                        Stroke="#FF6B35"
+                        StrokeThickness="1.5"
+                        Margin="0,0,0,16">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="12" />
+                    </Border.StrokeShape>
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="🚫 Bạn đã dùng hết 5 lượt FREE hôm nay"
+                               FontSize="14" FontAttributes="Bold"
+                               TextColor="#FF8A65"
+                               HorizontalOptions="Center"
+                               HorizontalTextAlignment="Center" />
+                        <Label Text="Mua Area Pack hoặc nâng cấp PRO để tiếp tục"
+                               FontSize="12" TextColor="#FFCCBC"
+                               HorizontalOptions="Center"
+                               HorizontalTextAlignment="Center" />
+                    </VerticalStackLayout>
+                </Border>
 
-            <!-- ── Bảng so sánh ── -->
-            <Grid ColumnDefinitions="*,*" ColumnSpacing="12" Margin="0,0,0,24">
-
-                <!-- CỘT FREE -->
-                <Border Grid.Column="0"
-                        Padding="16"
+                <!-- ── Card FREE ── -->
+                <Border Padding="16"
                         BackgroundColor="#1A2A3A"
                         Stroke="#2A4A6A"
-                        StrokeThickness="1.5">
+                        StrokeThickness="1.5"
+                        Margin="0,0,0,12">
                     <Border.StrokeShape>
                         <RoundRectangle CornerRadius="16" />
                     </Border.StrokeShape>
-                    <VerticalStackLayout Spacing="14">
-                        <Label Text="🆓" FontSize="28" HorizontalOptions="Center" />
-                        <Label Text="Gói Cơ bản"
-                               FontSize="16" FontAttributes="Bold"
-                               TextColor="White"
-                               HorizontalOptions="Center" />
-                        <Label Text="Miễn phí"
-                               FontSize="22" FontAttributes="Bold"
-                               TextColor="#90CAF9"
-                               HorizontalOptions="Center" />
+                    <VerticalStackLayout Spacing="12">
+                        <Grid ColumnDefinitions="Auto,*,Auto">
+                            <Label Grid.Column="0" Text="🆓" FontSize="24" VerticalOptions="Center" />
+                            <VerticalStackLayout Grid.Column="1" Margin="10,0,0,0" VerticalOptions="Center">
+                                <Label Text="FREE" FontSize="16" FontAttributes="Bold" TextColor="White" />
+                                <Label Text="Miễn phí" FontSize="13" TextColor="#90CAF9" />
+                            </VerticalStackLayout>
+                        </Grid>
 
-                        <BoxView Color="#2A4A6A" HeightRequest="1" Margin="0,4" />
+                        <BoxView Color="#2A4A6A" HeightRequest="1" />
 
-                        <VerticalStackLayout Spacing="10">
-                            <Label Text="✅ Khám phá POI" FontSize="13" TextColor="#B0BEC5" />
-                            <Label Text="✅ Nghe thuyết minh (giới hạn)" FontSize="13" TextColor="#B0BEC5" />
-                            <Label Text="✅ Quét QR (tối đa 5 lần/mã)" FontSize="13" TextColor="#B0BEC5" />
-                            <Label Text="❌ Chỉ đường trực tiếp" FontSize="13" TextColor="#546E7A" />
-                            <Label Text="❌ Nhật ký hành trình" FontSize="13" TextColor="#546E7A" />
-                            <Label Text="❌ QR vô hạn" FontSize="13" TextColor="#546E7A" />
-                        </VerticalStackLayout>
+                        <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" RowSpacing="8" ColumnSpacing="4">
+                            <Label Grid.Row="0" Grid.Column="0" Text="✅ 5 lượt POI / 24h" FontSize="12" TextColor="#B0BEC5" />
+                            <Label Grid.Row="0" Grid.Column="1" Text="✅ QR bình thường" FontSize="12" TextColor="#B0BEC5" />
+                            <Label Grid.Row="1" Grid.Column="0" Text="✅ Đầy đủ ngôn ngữ" FontSize="12" TextColor="#B0BEC5" />
+                            <Label Grid.Row="1" Grid.Column="1" Text="❌ Narration vô hạn" FontSize="12" TextColor="#546E7A" />
+                        </Grid>
 
-                        <Border Padding="12,10" BackgroundColor="#1E3A4A" Stroke="#00000000" Margin="0,8,0,0">
-                            <Border.StrokeShape>
-                                <RoundRectangle CornerRadius="10" />
-                            </Border.StrokeShape>
-                            <Label Text="Đang sử dụng"
+                        <Border x:Name="FreeStatusBadge" Padding="12,8" BackgroundColor="#1E3A4A" Stroke="#00000000">
+                            <Border.StrokeShape><RoundRectangle CornerRadius="10" /></Border.StrokeShape>
+                            <Label x:Name="FreeStatusLabel"
+                                   Text="ĐANG DÙNG"
                                    FontSize="13" FontAttributes="Bold"
                                    TextColor="#78909C"
                                    HorizontalOptions="Center" />
@@ -89,69 +103,105 @@
                     </VerticalStackLayout>
                 </Border>
 
-                <!-- CỘT PRO -->
-                <Border Grid.Column="1"
-                        Padding="16"
+                <!-- ── Card AREA PACK ── -->
+                <Border Padding="16"
+                        BackgroundColor="#0D2133"
+                        Stroke="#29B6F6"
+                        StrokeThickness="2"
+                        Margin="0,0,0,12">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="16" />
+                    </Border.StrokeShape>
+                    <Border.Shadow>
+                        <Shadow Brush="#29B6F6" Opacity="0.20" Offset="0,4" Radius="12" />
+                    </Border.Shadow>
+                    <VerticalStackLayout Spacing="12">
+                        <Grid ColumnDefinitions="Auto,*,Auto">
+                            <Label Grid.Column="0" Text="📍" FontSize="24" VerticalOptions="Center" />
+                            <VerticalStackLayout Grid.Column="1" Margin="10,0,0,0" VerticalOptions="Center">
+                                <Label Text="AREA PACK" FontSize="16" FontAttributes="Bold" TextColor="#29B6F6" />
+                                <Label Text="Mở khóa theo khu vực" FontSize="13" TextColor="#81D4FA" />
+                            </VerticalStackLayout>
+                        </Grid>
+
+                        <BoxView Color="#1A3A4A" HeightRequest="1" />
+
+                        <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" RowSpacing="8" ColumnSpacing="4">
+                            <Label Grid.Row="0" Grid.Column="0" Text="✅ Narration vô hạn" FontSize="12" TextColor="#B3E5FC" FontAttributes="Bold" />
+                            <Label Grid.Row="0" Grid.Column="1" Text="✅ QR trong khu vực" FontSize="12" TextColor="#B3E5FC" />
+                            <Label Grid.Row="1" Grid.Column="0" Text="✅ Đầy đủ ngôn ngữ" FontSize="12" TextColor="#B3E5FC" />
+                            <Label Grid.Row="1" Grid.Column="1" Text="📍 Giới hạn 1 khu vực" FontSize="12" TextColor="#81D4FA" />
+                        </Grid>
+
+                        <Label Text="Từ 39.000đ / 24 giờ" FontSize="13" FontAttributes="Bold"
+                               TextColor="#29B6F6" HorizontalOptions="Center" />
+
+                        <Button x:Name="BtnChooseArea"
+                                Text="CHỌN AREA"
+                                BackgroundColor="#29B6F6"
+                                TextColor="#0D1B2A"
+                                FontAttributes="Bold"
+                                FontSize="14"
+                                CornerRadius="10"
+                                Clicked="OnChooseAreaClicked" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- ── Card PRO PACK ── -->
+                <Border Padding="16"
                         BackgroundColor="#1A2E1A"
                         Stroke="#FFD700"
-                        StrokeThickness="2">
+                        StrokeThickness="2"
+                        Margin="0,0,0,16">
                     <Border.StrokeShape>
                         <RoundRectangle CornerRadius="16" />
                     </Border.StrokeShape>
                     <Border.Shadow>
                         <Shadow Brush="#FFD700" Opacity="0.25" Offset="0,4" Radius="12" />
                     </Border.Shadow>
-                    <VerticalStackLayout Spacing="14">
-                        <Label Text="🌟" FontSize="28" HorizontalOptions="Center" />
-                        <Label Text="Gói PRO"
-                               FontSize="16" FontAttributes="Bold"
-                               TextColor="#FFD700"
-                               HorizontalOptions="Center" />
-                        <Label Text="99.000đ/tháng"
-                               FontSize="18" FontAttributes="Bold"
-                               TextColor="White"
-                               HorizontalOptions="Center" />
+                    <VerticalStackLayout Spacing="12">
+                        <Grid ColumnDefinitions="Auto,*,Auto">
+                            <Label Grid.Column="0" Text="🌟" FontSize="24" VerticalOptions="Center" />
+                            <VerticalStackLayout Grid.Column="1" Margin="10,0,0,0" VerticalOptions="Center">
+                                <Label Text="PRO PACK" FontSize="16" FontAttributes="Bold" TextColor="#FFD700" />
+                                <Label Text="Mở khóa toàn bộ hệ thống" FontSize="13" TextColor="#FFF9C4" />
+                            </VerticalStackLayout>
+                        </Grid>
 
-                        <BoxView Color="#3A5A2A" HeightRequest="1" Margin="0,4" />
+                        <BoxView Color="#3A5A2A" HeightRequest="1" />
 
-                        <VerticalStackLayout Spacing="10">
-                            <Label Text="✅ Khám phá POI" FontSize="13" TextColor="#C8E6C9" />
-                            <Label Text="✅ Thuyết minh VÔ HẠN" FontSize="13" TextColor="#C8E6C9" FontAttributes="Bold" />
-                            <Label Text="✅ Quét QR VÔ HẠN" FontSize="13" TextColor="#C8E6C9" FontAttributes="Bold" />
-                            <Label Text="✅ Chỉ đường trực tiếp" FontSize="13" TextColor="#A5D6A7" FontAttributes="Bold" />
-                            <Label Text="✅ Nhật ký hành trình" FontSize="13" TextColor="#A5D6A7" FontAttributes="Bold" />
-                            <Label Text="✅ Ưu tiên hỗ trợ" FontSize="13" TextColor="#C8E6C9" />
-                        </VerticalStackLayout>
+                        <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="4">
+                            <Label Grid.Row="0" Grid.Column="0" Text="✅ Không giới hạn toàn app" FontSize="12" TextColor="#C8E6C9" FontAttributes="Bold" />
+                            <Label Grid.Row="0" Grid.Column="1" Text="✅ QR không giới hạn" FontSize="12" TextColor="#C8E6C9" FontAttributes="Bold" />
+                            <Label Grid.Row="1" Grid.Column="0" Text="✅ Toàn bộ ngôn ngữ" FontSize="12" TextColor="#C8E6C9" />
+                            <Label Grid.Row="1" Grid.Column="1" Text="✅ Chỉ đường trực tiếp" FontSize="12" TextColor="#A5D6A7" />
+                            <Label Grid.Row="2" Grid.Column="0" Text="✅ Tính năng đặc trưng PRO" FontSize="12" TextColor="#A5D6A7" FontAttributes="Bold" />
+                            <Label Grid.Row="2" Grid.Column="1" Text="✅ Offline pack" FontSize="12" TextColor="#C8E6C9" />
+                        </Grid>
 
-                        <Button x:Name="BtnUpgrade"
-                                Text="Nâng Cấp Ngay"
+                        <Label Text="199.000đ / 30 ngày" FontSize="16" FontAttributes="Bold"
+                               TextColor="#FFD700" HorizontalOptions="Center" />
+
+                        <Button x:Name="BtnUpgradePro"
+                                Text="NÂNG CẤP PRO"
                                 BackgroundColor="#FFD700"
                                 TextColor="#1A2E1A"
                                 FontAttributes="Bold"
                                 FontSize="14"
                                 CornerRadius="10"
-                                Margin="0,8,0,0"
-                                Clicked="OnUpgradeNowClicked" />
+                                Clicked="OnUpgradeProClicked" />
                     </VerticalStackLayout>
                 </Border>
-            </Grid>
 
-            <!-- ── Cam kết ── -->
-            <Border Padding="16,12" BackgroundColor="#1A2A3A" Stroke="#2A4A6A">
-                <Border.StrokeShape>
-                    <RoundRectangle CornerRadius="12" />
-                </Border.StrokeShape>
-                <VerticalStackLayout Spacing="6">
-                    <Label Text="🔒  Thanh toán an toàn  |  Hủy bất kỳ lúc nào"
-                           FontSize="12" TextColor="#90CAF9"
-                           HorizontalOptions="Center" />
-                    <Label Text="Gói PRO có hiệu lực 30 ngày kể từ khi kích hoạt"
+                <!-- Cam kết -->
+                <Border Padding="14,10" BackgroundColor="#111D2A" Stroke="#1E3A5A">
+                    <Border.StrokeShape><RoundRectangle CornerRadius="10" /></Border.StrokeShape>
+                    <Label Text="🔒 Thanh toán an toàn  |  Hủy bất kỳ lúc nào"
                            FontSize="12" TextColor="#78909C"
                            HorizontalOptions="Center" />
-                </VerticalStackLayout>
-            </Border>
+                </Border>
 
-        </VerticalStackLayout>
-    </ScrollView>
+            </VerticalStackLayout>
+        </ScrollView>
     </Grid>
 </ContentPage>

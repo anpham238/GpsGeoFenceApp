@@ -8,6 +8,11 @@ public sealed record AnalyticsListenRequest(Guid SessionId, int PoiId, int Durat
 public sealed record AdminUserUpdateRequest(string? PhoneNumber, string? PlanType, DateTime? ProExpiryDate);
 public sealed record UsageCheckRequest(string EntityId, string ActionType);
 
+// Freemium / Access Control
+public sealed record AccessCheckPoiRequest(int PoiId, string? DeviceId);
+public sealed record ConsumePoisListenRequest(int PoiId, int? AreaId, string? DeviceId, string? MetadataJson);
+public sealed record PurchaseRequest(string ProductCode, string? PaymentMethod);
+
 public sealed class HistoryRequest
 {
     public int PoiId { get; set; }
@@ -30,4 +35,15 @@ public sealed class PoiUpdateRequest
     public int? RadiusMeters { get; set; }
     public int? CooldownSeconds { get; set; }
     public int? PriorityLevel { get; set; }
+    public string? ImageUrl { get; set; }
 }
+
+public sealed record PoiAreaAssignRequest(int AreaId, int SortOrder = 0, bool IsPrimaryArea = false);
+
+public sealed record PoiImageAddRequest(string ImageUrl, int? SortOrder);
+
+public sealed record PaymentCallbackRequest(
+    string PaymentRef, string Status, string Provider, decimal Amount, string Currency);
+
+public sealed record AdminProductUpdateRequest(
+    string? ProductName, decimal? Price, bool? IsActive, int? DurationHours);

@@ -23,6 +23,21 @@ public sealed class AppDb(DbContextOptions<AppDb> options) : DbContext(options)
     public DbSet<AppDownloadSource> AppDownloadSources => Set<AppDownloadSource>();
     public DbSet<AnalyticsAppDownloadScan> AnalyticsAppDownloadScans => Set<AnalyticsAppDownloadScan>();
     public DbSet<WebNarrationUsage> WebNarrationUsages => Set<WebNarrationUsage>();
+
+    // Freemium / Paywall
+    public DbSet<Area>               Areas               => Set<Area>();
+    public DbSet<AreaPoi>            AreaPois            => Set<AreaPoi>();
+    public DbSet<Product>            Products            => Set<Product>();
+    public DbSet<ProductArea>        ProductAreas        => Set<ProductArea>();
+    public DbSet<UserEntitlement>    UserEntitlements    => Set<UserEntitlement>();
+    public DbSet<PurchaseTransaction> PurchaseTransactions => Set<PurchaseTransaction>();
+    public DbSet<UsageEvent>         UsageEvents         => Set<UsageEvent>();
+
+    // Keyless SP result types
+    public DbSet<AccessCheckRow>     AccessCheckRows     => Set<AccessCheckRow>();
+    public DbSet<UsageStatusRow>     UsageStatusRows     => Set<UsageStatusRow>();
+    public DbSet<UserEntitlementRow> UserEntitlementRows => Set<UserEntitlementRow>();
+
     protected override void OnModelCreating(ModelBuilder b)
     {
         b.Entity<Poi>(e =>
@@ -221,5 +236,102 @@ public sealed class AppDb(DbContextOptions<AppDb> options) : DbContext(options)
             e.HasIndex(x => new { x.PoiId, x.DeviceKey })
              .IsUnique().HasDatabaseName("UX_WebNarrationUsage_Key");
         });
+
+        // ── Freemium / Paywall ─────────────────────────────────────────────
+
+        b.Entity<Area>(e =>
+        {
+            e.ToTable("Areas");
+            e.HasKey(x => x.AreaId);
+            e.Property(x => x.AreaId).ValueGeneratedOnAdd();
+            e.Property(x => x.Code).HasMaxLength(50).IsRequired();
+            e.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            e.Property(x => x.Description).HasMaxLength(2000);
+            e.Property(x => x.City).HasMaxLength(100);
+            e.Property(x => x.Province).HasMaxLength(100);
+            e.Property(x => x.IsActive).HasDefaultValue(true);
+            e.Property(x => x.CreatedAt).HasDefaultValueSql("SYSUTCDATETIME()");
+            e.Property(x => x.UpdatedAt).HasDefaultValueSql("SYSUTCDATETIME()");
+            e.HasIndex(x => x.Code).IsUnique();
+        });
+
+        b.Entity<Product>(e =>
+        {
+            e.ToTable("Products");
+            e.HasKey(x => x.ProductId);
+            e.Property(x => x.ProductId).ValueGeneratedOnAdd();
+            e.Property(x => x.ProductCode).HasMaxLength(50).IsRequired();
+            e.Property(x => x.ProductName).HasMaxLength(200).IsRequired();
+            e.Property(x => x.ProductType).HasMaxLength(30).IsRequired();
+            e.Property(x => x.Price).HasColumnType("decimal(18,2)");
+            e.Property(x => x.Currency).HasMaxLength(10).HasDefaultValue("VND");
+            e.Property(x => x.IsActive).HasDefaultValue(true);
+            e.Property(x => x.CreatedAt).HasDefaultValueSql("SYSUTCDATETIME()");
+            e.HasIndex(x => x.ProductCode).IsUnique();
+        });
+
+        b.Entity<AreaPoi>(e =>
+        {
+            e.ToTable("AreaPois");
+            e.HasKey(x => new { x.AreaId, x.PoiId });
+            e.Property(x => x.SortOrder).HasDefaultValue(0);
+            e.Property(x => x.IsPrimaryArea).HasDefaultValue(false);
+            e.HasOne<Area>().WithMany().HasForeignKey(x => x.AreaId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<Poi>().WithMany().HasForeignKey(x => x.PoiId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<ProductArea>(e =>
+        {
+            e.ToTable("ProductAreas");
+            e.HasKey(x => new { x.ProductId, x.AreaId });
+        });
+
+        b.Entity<UserEntitlement>(e =>
+        {
+            e.ToTable("UserEntitlements");
+            e.HasKey(x => x.EntitlementId);
+            e.Property(x => x.EntitlementId).ValueGeneratedOnAdd();
+            e.Property(x => x.EntitlementType).HasMaxLength(30).IsRequired();
+            e.Property(x => x.Status).HasMaxLength(20).HasDefaultValue("ACTIVE");
+            e.Property(x => x.StartsAt).HasDefaultValueSql("SYSUTCDATETIME()");
+            e.Property(x => x.CreatedAt).HasDefaultValueSql("SYSUTCDATETIME()");
+            e.HasOne<Users>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<Product>().WithMany().HasForeignKey(x => x.ProductId).OnDelete(DeleteBehavior.Restrict);
+            e.HasIndex(x => new { x.UserId, x.Status, x.ExpiresAt })
+             .HasDatabaseName("IX_UserEntitlements_User_Status_Expiry");
+        });
+
+        b.Entity<PurchaseTransaction>(e =>
+        {
+            e.ToTable("PurchaseTransactions");
+            e.HasKey(x => x.TransactionId);
+            e.Property(x => x.TransactionId).ValueGeneratedOnAdd();
+            e.Property(x => x.Amount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.Currency).HasMaxLength(10).HasDefaultValue("VND");
+            e.Property(x => x.PaymentProvider).HasMaxLength(50);
+            e.Property(x => x.PaymentRef).HasMaxLength(200);
+            e.Property(x => x.Status).HasMaxLength(20).HasDefaultValue("PAID");
+            e.Property(x => x.CreatedAt).HasDefaultValueSql("SYSUTCDATETIME()");
+            e.HasOne<Users>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<Product>().WithMany().HasForeignKey(x => x.ProductId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        b.Entity<UsageEvent>(e =>
+        {
+            e.ToTable("UsageEvents");
+            e.HasKey(x => x.UsageEventId);
+            e.Property(x => x.UsageEventId).ValueGeneratedOnAdd();
+            e.Property(x => x.SubjectType).HasMaxLength(20).IsRequired();
+            e.Property(x => x.SubjectId).HasMaxLength(100).IsRequired();
+            e.Property(x => x.ActionType).HasMaxLength(30).IsRequired();
+            e.Property(x => x.OccurredAt).HasDefaultValueSql("SYSUTCDATETIME()");
+            e.HasIndex(x => new { x.SubjectType, x.SubjectId, x.ActionType, x.OccurredAt })
+             .HasDatabaseName("IX_UsageEvents_Subject_Action_Time");
+        });
+
+        // Keyless SP result types – không map table, chỉ dùng cho FromSqlRaw
+        b.Entity<AccessCheckRow>().HasNoKey().ToView(null);
+        b.Entity<UsageStatusRow>().HasNoKey().ToView(null);
+        b.Entity<UserEntitlementRow>().HasNoKey().ToView(null);
     }
 }

@@ -107,6 +107,74 @@ public sealed class ProfileApiClient
         }
         catch { return false; }
     }
+
+    public async Task<List<AreaProductDto>> GetAreasWithProductsAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            return await _http.GetFromJsonAsync<List<AreaProductDto>>("/api/v1/products/areas", ct) ?? [];
+        }
+        catch { return []; }
+    }
+
+    public async Task<PurchaseResultDto?> BuyPackAsync(
+        string productCode, string paymentMethod, CancellationToken ct = default)
+    {
+        AttachToken();
+        try
+        {
+            var resp = await _http.PostAsJsonAsync(
+                "/api/v1/payments/purchase",
+                new { productCode, paymentMethod }, ct);
+            if (!resp.IsSuccessStatusCode) return null;
+            var result = await resp.Content.ReadFromJsonAsync<PurchaseResultDto>(ct);
+            if (result is { Success: true })
+            {
+                if (result.ProductType == "PRO")
+                    Preferences.Set("auth_plan_type", "PRO");
+                // Refresh entitlements sau khi mua bất kỳ gói nào
+                await RefreshUserStateAsync(ct);
+            }
+            return result;
+        }
+        catch { return null; }
+    }
+
+    public async Task<List<EntitlementDto>> GetEntitlementsAsync(CancellationToken ct = default)
+    {
+        AttachToken();
+        try
+        {
+            return await _http.GetFromJsonAsync<List<EntitlementDto>>("/api/me/entitlements", ct) ?? [];
+        }
+        catch { return []; }
+    }
+
+    public async Task<bool> RefreshUserStateAsync(CancellationToken ct = default)
+    {
+        AttachToken();
+        try
+        {
+            var profile = await GetMeAsync(ct);
+            if (profile is null) return false;
+
+            Preferences.Set("auth_plan_type", profile.PlanType ?? "FREE");
+
+            var entitlements = await GetEntitlementsAsync(ct);
+            var valid = entitlements.Where(e => e.IsValid).ToList();
+
+            var areaCodes = valid
+                .Where(e => e.ProductType == "AREA_PACK")
+                .SelectMany(e => e.AreaCodes)
+                .Distinct()
+                .ToArray();
+
+            Preferences.Set("auth_area_codes", string.Join(",", areaCodes));
+            Preferences.Set("auth_has_area_pack", areaCodes.Length > 0 ? "true" : "false");
+            return true;
+        }
+        catch { return false; }
+    }
 }
 
 public sealed class UserProfileDto
@@ -150,3 +218,48 @@ public sealed class DirectionsDto
 }
 public sealed class DestinationPoint { public double Lat { get; set; } public double Lng { get; set; } }
 public sealed class RouteCoord { public double Lat { get; set; } public double Lng { get; set; } }
+
+public sealed class AreaProductDto
+{
+    public int    AreaId       { get; set; }
+    public string AreaCode     { get; set; } = "";
+    public string AreaName     { get; set; } = "";
+    public string City         { get; set; } = "";
+    public string ProductCode  { get; set; } = "";
+    public decimal Price       { get; set; }
+    public int    DurationHours { get; set; }
+    public string PriceDisplay => $"{Price:N0}đ";
+}
+
+public sealed class PurchaseResultDto
+{
+    public bool      Success     { get; set; }
+    public string    PackageName { get; set; } = "";
+    public string    ProductType { get; set; } = "";
+    public DateTime? ExpiresAt   { get; set; }
+}
+
+public sealed class EntitlementDto
+{
+    public int      EntitlementId   { get; set; }
+    public string   ProductCode     { get; set; } = "";
+    public string   ProductName     { get; set; } = "";
+    public string   ProductType     { get; set; } = "";
+    public string   EntitlementType { get; set; } = "";
+    public DateTime StartsAt        { get; set; }
+    public DateTime? ExpiresAt      { get; set; }
+    public string   Status          { get; set; } = "";
+    public bool     IsValid         { get; set; }
+    public string[] AreaCodes       { get; set; } = [];
+    public int[]    AreaIds         { get; set; } = [];
+}
+
+public sealed class AccessCheckResultDto
+{
+    public bool   AccessGranted     { get; set; }
+    public string AccessReason      { get; set; } = "";
+    public int    RemainingFreeUses { get; set; }
+    public int?   MatchedAreaId     { get; set; }
+    public int    PoiId             { get; set; }
+    public bool   ShowPaywall       { get; set; }
+}

@@ -50,7 +50,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<PoiDatabase>();
         builder.Services.AddSingleton<SyncMetadataRepository>();
         builder.Services.AddSingleton<PoiNarrationCache>();
-        var defaultApiBaseUrl = "https://bhtgfcpw-7286.asse.devtunnels.ms/";
+        var defaultApiBaseUrl = "https://9tw6zr02-7286.asse.devtunnels.ms/";
         var rawApiBaseUrl = Preferences.Default.Get("ApiBaseUrl", defaultApiBaseUrl);
         var apiBaseUrl = NormalizeApiBaseUrl(rawApiBaseUrl, defaultApiBaseUrl);
 
@@ -123,6 +123,9 @@ public static class MauiProgram
         builder.Services.AddTransient<RegisterPage>();
         builder.Services.AddTransient<ProfilePage>();
         builder.Services.AddTransient<ProUpgradePage>();
+        builder.Services.AddTransient<AreaPackSelectPage>();
+        builder.Services.AddTransient<PaymentPage>();
+        builder.Services.AddTransient<PaymentSuccessPage>();
         builder.Services.AddTransient<TravelHistoryPage>();
         builder.Services.AddTransient<VisitedHistoryPage>();
         return builder.Build();

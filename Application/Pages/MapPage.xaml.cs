@@ -138,7 +138,7 @@ public partial class MapPage : ContentPage
             }
         });
 
-        if (!await EnsureUsageAllowedAsync("POI_LISTEN")) return;
+        if (!await EnsureUsageAllowedAsync("POI_LISTEN", poi.Id)) return;
         await _narrationHandler.PlayAsync(poi, evType, type);
     }
 
@@ -219,6 +219,7 @@ public partial class MapPage : ContentPage
         }
 
         _ = HandlePendingDeepLinkAsync();
+        _ = RefreshUsageBadgeAsync();
     }
 
     private async Task HandlePendingDeepLinkAsync()
@@ -334,7 +335,7 @@ public partial class MapPage : ContentPage
                         ShowDetail(p);
                         MyMap.MoveToRegion(MapSpan.FromCenterAndRadius(new Location(p.Latitude, p.Longitude), Distance.FromMeters(300)));
                         if (_sheetReady) _ = BottomSheet.TranslateToAsync(0, _sheetExpandedOffset, 250, Easing.CubicOut);
-                        if (!await EnsureUsageAllowedAsync("POI_LISTEN")) return;
+                        if (!await EnsureUsageAllowedAsync("POI_LISTEN", p.Id)) return;
                         await _narrationHandler.PlayAsync(p, PoiEventType.Tap, "TAP");
                     };
                     _pinMap[p.Id] = pin;
@@ -414,7 +415,7 @@ public partial class MapPage : ContentPage
 
                     if (GeofenceEventGate.ShouldAccept(nearest.Id, "NEAR", 3, nearest.CooldownSeconds))
                     {
-                        if (!await EnsureUsageAllowedAsync("POI_LISTEN")) continue;
+                        if (!await EnsureUsageAllowedAsync("POI_LISTEN", nearest.Id)) continue;
                         await _narrationHandler.PlayAsync(nearest, PoiEventType.Near, "NEAR", token);
                     }
                 }
@@ -556,36 +557,90 @@ public partial class MapPage : ContentPage
     private async Task OnListenButtonClickedAsync()
     {
         if (_nearestPoi == null) return;
-        if (!await EnsureUsageAllowedAsync("POI_LISTEN")) return;
+        if (!await EnsureUsageAllowedAsync("POI_LISTEN", _nearestPoi.Id)) return;
         await _narrationHandler.PlayAsync(_nearestPoi, PoiEventType.Tap, "TAP");
     }
 
-    private async Task<bool> EnsureUsageAllowedAsync(string actionType)
+    private async Task<bool> EnsureUsageAllowedAsync(string actionType, int poiId = 0)
     {
         try
         {
-            if (AuthApiClient.IsPro())
-                return true;
+            if (AuthApiClient.IsPro()) return true;
 
+            // Logged-in user: check via /api/access/check-poi (respects Area Pack + Free quota)
+            if (AuthApiClient.IsLoggedIn() && poiId > 0)
+            {
+                var deviceId = UsageApiClient.GetEntityId();
+                var result = await _usage.CheckPoiAccessAsync(poiId, deviceId);
+                if (actionType == "POI_LISTEN") _ = RefreshUsageBadgeAsync();
+                if (result.AccessGranted) return true;
+
+                if (result.AccessReason == "WRONG_AREA_PACK")
+                {
+                    await this.DisplayAlertAsync(
+                        "Ngoài khu vực",
+                        "POI này không thuộc khu vực bạn đã mua. Vui lòng mua thêm gói Area Pack cho khu vực này.",
+                        "Xem gói");
+                    await Shell.Current.GoToAsync("proupgrade", new Dictionary<string, object> { ["isPaywall"] = true });
+                }
+                else if (result.ShowPaywall)
+                {
+                    await Shell.Current.GoToAsync("proupgrade", new Dictionary<string, object> { ["isPaywall"] = true });
+                }
+                return false;
+            }
+
+            // Guest or no poiId: fall back to daily usage quota check
             var entityId = UsageApiClient.GetEntityId();
-            var (allowed, resetInHours) = await _usage.CheckAsync(entityId, actionType);
+            var (allowed, _) = await _usage.CheckAsync(entityId, actionType);
+            if (actionType == "POI_LISTEN") _ = RefreshUsageBadgeAsync();
             if (allowed) return true;
 
-            var goUpgrade = await DisplayAlertAsync(
-                "Hết lượt miễn phí",
-                $"Bạn đã dùng hết lượt trải nghiệm. Lượt sẽ được làm mới sau khoảng {resetInHours:F1} giờ.\n\nNâng cấp PRO để dùng không giới hạn.",
-                "Nâng cấp PRO",
-                "Đóng");
-
-            if (goUpgrade)
-                await Shell.Current.GoToAsync("proupgrade");
-
+            await Shell.Current.GoToAsync("proupgrade", new Dictionary<string, object> { ["isPaywall"] = true });
             return false;
         }
         catch
         {
             return true; // lỗi mạng → không chặn user
         }
+    }
+
+    private async Task RefreshUsageBadgeAsync()
+    {
+        try
+        {
+            if (AuthApiClient.IsPro())
+            {
+                MainThread.BeginInvokeOnMainThread(() => UsageBadge.IsVisible = false);
+                return;
+            }
+
+            var entityId = UsageApiClient.GetEntityId();
+            var status = await _usage.GetStatusAsync(entityId, "POI_LISTEN");
+            if (status != null)
+            {
+                MainThread.BeginInvokeOnMainThread(() =>
+                {
+                    UsageBadge.IsVisible = true;
+                    if (status.Allowed)
+                    {
+                        int remaining = status.Limit - status.Used;
+                        LblUsage.Text = $"🎧 Thuyết minh: {remaining}/{status.Limit} lượt (Free)";
+                        LblUsage.TextColor = Color.FromArgb("#F57F17");
+                        UsageBadge.BackgroundColor = Color.FromArgb("#FFF8E1");
+                        UsageBadge.Stroke = Color.FromArgb("#FFD54F");
+                    }
+                    else
+                    {
+                        LblUsage.Text = $"❌ Hết lượt. Làm mới sau {status.ResetInHours:F1}h";
+                        LblUsage.TextColor = Color.FromArgb("#D32F2F");
+                        UsageBadge.BackgroundColor = Color.FromArgb("#FFEBEE");
+                        UsageBadge.Stroke = Color.FromArgb("#EF5350");
+                    }
+                });
+            }
+        }
+        catch { }
     }
 
     private async Task DrawDirectionsAsync(Poi? poi)
@@ -600,12 +655,7 @@ public partial class MapPage : ContentPage
 
         if (!AuthApiClient.IsPro())
         {
-            var goUpgrade = await DisplayAlertAsync(
-                "Chỉ đường (PRO)",
-                "Tính năng chỉ đường chỉ dành cho Gói PRO. Bạn có muốn nâng cấp ngay không?",
-                "Nâng cấp PRO",
-                "Đóng");
-            if (goUpgrade) await Shell.Current.GoToAsync("proupgrade");
+            await Shell.Current.GoToAsync("proupgrade");
             return;
         }
 
@@ -648,12 +698,22 @@ public partial class MapPage : ContentPage
                 var imageUrls = await _poiApi.GetImagesAsync(poi.Id);
                 if (imageUrls.Count > 0)
                 {
-                    var fullUrls = imageUrls.Select(ToAbsoluteUrl).ToList();
+                    // Tạo UriImageSource objects trực tiếp để tránh lỗi string→ImageSource trong DataTemplate
+                    var sources = imageUrls
+                        .Select(url => new UriImageSource
+                        {
+                            Uri = new Uri(ToAbsoluteUrl(url)),
+                            CachingEnabled = true,
+                            CacheValidity = TimeSpan.FromHours(24)
+                        })
+                        .Cast<ImageSource>()
+                        .ToList();
+
                     await MainThread.InvokeOnMainThreadAsync(() =>
                     {
-                        PoiImageCarousel.ItemsSource = fullUrls;
+                        PoiImageCarousel.ItemsSource = sources;
                         PoiImageCarousel.IsVisible = true;
-                        PoiImageIndicator.IsVisible = fullUrls.Count > 1;
+                        PoiImageIndicator.IsVisible = sources.Count > 1;
                         PoiImage.IsVisible = false;
                     });
                     return;
@@ -669,7 +729,12 @@ public partial class MapPage : ContentPage
         if (!string.IsNullOrWhiteSpace(poi.ImageUrl))
         {
             await MainThread.InvokeOnMainThreadAsync(() =>
-                PoiImage.Source = ImageSource.FromUri(new Uri(ToAbsoluteUrl(poi.ImageUrl!))));
+                PoiImage.Source = new UriImageSource
+                {
+                    Uri = new Uri(ToAbsoluteUrl(poi.ImageUrl!)),
+                    CachingEnabled = true,
+                    CacheValidity = TimeSpan.FromHours(24)
+                });
         }
     }
 
@@ -766,7 +831,7 @@ public partial class MapPage : ContentPage
             MyMap.MoveToRegion(MapSpan.FromCenterAndRadius(new Location(closestPoi.Latitude, closestPoi.Longitude), Distance.FromMeters(300)));
             if (_sheetReady) _ = BottomSheet.TranslateToAsync(0, _sheetExpandedOffset, 250, Easing.CubicOut);
             
-            if (!await EnsureUsageAllowedAsync("POI_LISTEN"))
+            if (!await EnsureUsageAllowedAsync("POI_LISTEN", closestPoi.Id))
                 return;
             
             var lang = LanguageService.Current;

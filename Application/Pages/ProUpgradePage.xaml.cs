@@ -2,9 +2,12 @@ using MauiApp1.Services.Api;
 
 namespace MauiApp1.Pages;
 
+[QueryProperty(nameof(IsPaywall), "isPaywall")]
 public partial class ProUpgradePage : ContentPage
 {
     private readonly ProfileApiClient _profileApi;
+
+    public bool IsPaywall { get; set; }
 
     public ProUpgradePage(ProfileApiClient profileApi)
     {
@@ -15,43 +18,48 @@ public partial class ProUpgradePage : ContentPage
     protected override void OnAppearing()
     {
         base.OnAppearing();
+
+        if (IsPaywall)
+            PaywallBanner.IsVisible = true;
+
         if (AuthApiClient.IsPro())
         {
-            BtnUpgrade.Text            = "Đã là PRO";
-            BtnUpgrade.BackgroundColor = Color.FromArgb("#78909C");
-            BtnUpgrade.IsEnabled       = false;
+            BtnUpgradePro.Text            = "Đã là PRO ✅";
+            BtnUpgradePro.BackgroundColor = Color.FromArgb("#78909C");
+            BtnUpgradePro.IsEnabled       = false;
+            FreeStatusLabel.Text          = "PRO – Không giới hạn";
+            FreeStatusLabel.TextColor     = Color.FromArgb("#FFD700");
         }
     }
 
-    private async void OnUpgradeNowClicked(object sender, EventArgs e)
+    private async void OnCloseClicked(object sender, EventArgs e) =>
+        await Shell.Current.GoToAsync("..");
+
+    private async void OnChooseAreaClicked(object sender, EventArgs e)
     {
         if (!AuthApiClient.IsLoggedIn())
         {
-            await DisplayAlertAsync("Thông báo", "Vui lòng đăng nhập để nâng cấp.", "OK");
+            await DisplayAlert("Cần đăng nhập", "Vui lòng đăng nhập để mua Area Pack.", "OK");
+            return;
+        }
+        await Shell.Current.GoToAsync("areapackselect");
+    }
+
+    private async void OnUpgradeProClicked(object sender, EventArgs e)
+    {
+        if (!AuthApiClient.IsLoggedIn())
+        {
+            await DisplayAlert("Cần đăng nhập", "Vui lòng đăng nhập để nâng cấp.", "OK");
             return;
         }
 
-        BtnUpgrade.IsEnabled = false;
-        BtnUpgrade.Text      = "Đang xử lý...";
-
-        var success = await _profileApi.UpgradeToProAsync();
-
-        if (success)
+        await Shell.Current.GoToAsync("payment", new Dictionary<string, object>
         {
-            BtnUpgrade.Text            = "Đã là PRO ✅";
-            BtnUpgrade.BackgroundColor = Color.FromArgb("#4CAF50");
-            await DisplayAlertAsync("Chúc mừng! 🌟", "Bạn đã nâng cấp thành công lên Gói PRO.\nTận hưởng trải nghiệm không giới hạn!", "Tuyệt vời!");
-            await Shell.Current.GoToAsync("..");
-        }
-        else
-        {
-            BtnUpgrade.IsEnabled = true;
-            BtnUpgrade.Text      = "Nâng Cấp Ngay";
-            await DisplayAlertAsync("Lỗi", "Không thể nâng cấp lúc này. Vui lòng thử lại.", "OK");
-        }
-    }
-    private async void OnCloseProfileClicked(object sender, EventArgs e)
-    {
-        await Shell.Current.GoToAsync("//map");
+            [nameof(PaymentPage.ProductCode)]   = "PRO_30D",
+            [nameof(PaymentPage.ProductName)]   = "Pro Pack",
+            [nameof(PaymentPage.AreaName)]      = "",
+            [nameof(PaymentPage.Price)]         = "199.000đ",
+            [nameof(PaymentPage.DurationLabel)] = "30 ngày"
+        });
     }
 }
